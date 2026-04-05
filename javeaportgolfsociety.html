@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Javea Port Golf Society is a friendly golf society on the northern Costa Blanca. No joining fees, no share schemes — only €25 quarterly membership, and occasional €5 contribution on trophy competition events.">
+    <meta name="theme-color" content="#1B4D3E">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Javea Port Golf Society | Costa Blanca Golf Without the Club Fees">
+    <meta property="og:description" content="Play the finest courses across the northern Costa Blanca without joining fees or share schemes. Only €25 quarterly membership, and occasional €5 contribution on trophy competition events.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://javeaportgolfsociety.com/">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://javeaportgolfsociety.com/">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SportsClub",
+        "name": "Javea Port Golf Society",
+        "description": "Pay-and-play golf society on the Costa Blanca",
+        "url": "https://javeaportgolfsociety.com/",
+        "logo": "https://img1.wsimg.com/isteam/ip/50849c1b-35ea-4edd-8d86-da68f2ea2ede/Martin_final%20logoPrint%20(1).png",
+        "areaServed": "Costa Blanca, Spain",
+        "sameAs": []
+    }
+    </script>
+
+    <title>Javea Port Golf Society | Costa Blanca Golf Without the Club Fees</title>
+
+    <style>
+        :root {
+            --primary-green: #1B4D3E;
+            --primary-navy: #152847;
+            --gold: #C9A84C;
+            --light-gray: #F5F5F5;
+            --text-dark: #333;
+            --text-light: #666;
+            --white: #FFFFFF;
+            --border: #E0E0E0;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --danger: #E74C3C;
+            --info: #3498DB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .nav-logo {
+            max-height: 50px;
+            object-fit: contain;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--gold);
+        }
+
+        .nav-cta {
+            background: var(--gold);
+            color: var(--white);
+            padding: 0.6rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .nav-cta:hover {
+            background: #B8952A;
+        }
+
+        .my-account-link {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 5px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: var(--primary-navy);
+            border-radius: 2px;
+        }
+
+        /* Hero */
+        .hero {
+            height: 100vh;
+            background: linear-gradient(160deg, rgba(21, 40, 71, 0.30) 0%, rgba(27, 77, 62, 0.28) 100%),
+                        url('hero-banner.jpg') center top/cover;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            text-align: center;
+            color: var(--white);
+            padding: 8rem 2rem 2rem;
+        }
+
+        .hero-eyebrow {
+            display: inline-block;
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+            font-weight: 800;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            background: rgba(0,0,0,0.45);
+            border: 2px solid rgba(201,168,76,0.6);
+            padding: 14px 32px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            text-shadow: 2px 3px 6px rgba(0,0,0,0.8);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2.8rem, 6vw, 4.8rem);
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 4px 8px rgba(0,0,0,0.9), 0 2px 24px rgba(0,0,0,0.75);
+            line-height: 1.1;
+        }
+
+        .hero-content h1 em {
+            font-style: normal;
+            color: var(--gold);
+        }
+
+        .hero-content .subtitle {
+            font-size: 1.35rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            text-shadow: 1px 1px 6px rgba(0,0,0,0.5);
+            color: rgba(255,255,255,0.9);
+        }
+
+        .hero-content .tagline {
+            font-size: 1.05rem;
+            margin-bottom: 2.5rem;
+            color: rgba(255,255,255,0.92);
+            text-shadow: 1px 1px 6px rgba(0,0,0,0.9), 0 2px 16px rgba(0,0,0,0.7);
+            max-width: 580px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--gold);
+            color: var(--primary-navy);
+        }
+
+        .btn-primary:hover {
+            background: #B8952A;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--primary-navy);
+        }
+
+        .btn-secondary:hover {
+            background: var(--light-gray);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat-item {
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-item h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+            color: var(--gold);
+        }
+
+        .stat-item p {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Sections */
+        section {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--primary-navy);
+            text-align: center;
+        }
+
+        /* About Section */
+        .about {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .about-content h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+        }
+
+        .about-content p {
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-light);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-tile {
+            background: var(--light-gray);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--gold);
+        }
+
+        .feature-tile h4 {
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .about-image {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .about-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* How to Join */
+        .how-to-join {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+
+        .how-to-join h2 {
+            color: var(--white);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .step {
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .step-number {
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .step h3 {
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .pricing-box {
+            background: var(--white);
+            color: var(--primary-navy);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .pricing-box h3 {
+            margin-bottom: 1rem;
+        }
+
+        .price {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .price-label {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        /* Courses Section */
+        .courses {
+            max-width: 1400px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid var(--primary-green);
+            background: var(--white);
+            color: var(--primary-green);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+
+        .filter-btn:hover {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .course-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .course-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+        }
+
+        .course-card-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-navy));
+            color: var(--white);
+            padding: 1.5rem;
+        }
+
+        .course-card-header h3 {
+            margin-bottom: 0.3rem;
+        }
+
+        .course-card-header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .course-card-body {
+            padding: 1.5rem;
+        }
+
+        .course-detail {
+            margin-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .course-detail-label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .course-detail-value {
+            color: var(--primary-green);
+        }
+
+        .course-badge {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--white);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        /* News Section */
+        .news-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .news-card {
+            background: var(--light-gray);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .news-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .news-card-featured {
+            grid-row: span 2;
+        }
+
+        .news-card-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .news-tag {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--white);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-bottom: 0.8rem;
+            width: fit-content;
+        }
+
+        .news-card h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-navy);
+        }
+
+        .news-date {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+
+        /* Events Section */
+        .events-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 1rem 2rem;
+            border: none;
+            background: none;
+            color: var(--text-light);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .event-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .event-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+        }
+
+        .event-card-header {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 1.5rem;
+        }
+
+        .event-card-header h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .event-date {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .event-card-body {
+            padding: 1.5rem;
+        }
+
+        .event-info {
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+        }
+
+        .event-info-label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .event-cost {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* Who's Who Section */
+        .committee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .member-card {
+            background: var(--light-gray);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 4px solid var(--gold);
+        }
+
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 2rem;
+        }
+
+        .member-card h3 {
+            margin-bottom: 0.3rem;
+        }
+
+        .member-role {
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Join Banner */
+        .join-banner {
+            background: var(--gold);
+            color: var(--primary-navy);
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .join-banner h2 {
+            color: var(--primary-navy);
+        }
+
+        /* Contact Section */
+        .contact {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .contact-info h3 {
+            color: var(--primary-green);
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-item-label {
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 0.3rem;
+        }
+
+        .contact-form {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 2rem;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 3rem 2rem;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-col h4 {
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .footer-col a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .footer-col a:hover {
+            color: var(--gold);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 2rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .admin-link {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            cursor: pointer;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 700px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Event Detail Modal */
+        .event-detail-modal .modal-content {
+            background: var(--light-gray);
+        }
+
+        .event-detail-header {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 1.5rem;
+            margin: -2rem -2rem 1.5rem -2rem;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .event-detail-header h2 {
+            color: var(--white);
+            margin: 0 0 0.3rem 0;
+        }
+
+        .event-location {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .event-action-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .event-action-btn.primary {
+            background: var(--primary-navy);
+            color: var(--white);
+        }
+
+        .event-action-btn.secondary {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .event-action-btn.tertiary {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .event-details-table {
+            width: 100%;
+            margin-bottom: 1.5rem;
+            background: var(--white);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .event-details-table tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .event-details-table td {
+            padding: 0.8rem 1rem;
+        }
+
+        .event-details-table td:first-child {
+            font-weight: 600;
+            color: var(--text-light);
+            width: 30%;
+        }
+
+        .event-signup-info {
+            background: var(--white);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .signup-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .signup-buttons button {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            background: var(--primary-navy);
+            color: var(--white);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .signup-buttons button:hover {
+            background: var(--primary-green);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .status-badge.applied {
+            background: var(--warning);
+        }
+
+        .status-badge.probationary {
+            background: var(--info);
+        }
+
+        .status-badge.full_member {
+            background: var(--success);
+        }
+
+        .status-badge.suspended {
+            background: var(--danger);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: var(--white);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        th {
+            background: var(--primary-navy);
+            color: var(--white);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: var(--light-gray);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .nav-links.mobile-show {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                width: 100%;
+                background: var(--white);
+                padding: 1rem;
+                gap: 0;
+            }
+
+            .nav-links.mobile-show a {
+                padding: 0.8rem 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .hero-content h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero-eyebrow {
+                font-size: 1rem;
+                letter-spacing: 3px;
+                padding: 10px 20px;
+            }
+
+            .about {
+                grid-template-columns: 1fr;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .news-card-featured {
+                grid-row: auto;
+            }
+
+            .contact {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                margin: 20% auto;
+                width: 95%;
+            }
+
+            section {
+                padding: 2rem 1rem;
+            }
+
+            section h2 {
+                font-size: 1.8rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-item {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+                padding-bottom: 1rem;
+            }
+
+            .stat-item:last-child {
+                border-bottom: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-content h1 {
+                font-size: 1.5rem;
+            }
+
+            .hero-buttons {
+                gap: 0.5rem;
+            }
+
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .filter-buttons {
+                gap: 0.5rem;
+            }
+
+            .filter-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .success-message {
+            background: var(--success);
+            color: var(--white);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .error-message {
+            background: var(--danger);
+            color: var(--white);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .info-message {
+            background: var(--info);
+            color: var(--white);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <img src="https://img1.wsimg.com/isteam/ip/50849c1b-35ea-4edd-8d86-da68f2ea2ede/Martin_final%20logoPrint%20(1).png" alt="JPGS Logo" class="nav-logo">
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#about">About</a></li>
+            <li><a href="#how-to-join">How to Join</a></li>
+            <li><a href="#courses">Courses</a></li>
+            <li><a href="#events">Events</a></li>
+            <li><a href="#who-is-who">Who's Who</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#" class="my-account-link" id="myAccountLink">My Account</a></li>
+        </ul>
+
+        <button class="nav-cta" id="joinBtn">Join Us</button>
+
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-eyebrow">Javea Port Golf Society</div>
+            <h1>Costa Blanca Golf.<br><em>No Fees. No Fuss.</em></h1>
+            <p class="tagline">Play the finest courses across the northern Costa Blanca — no joining fees, no share schemes. Only €25 quarterly membership, and occasional €5 contribution on trophy competition events.</p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" id="heroJoinBtn">Join the Society</button>
+                <button class="btn btn-secondary" id="heroCoursesBtn">Our Courses</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <h3>10+</h3>
+            <p>Courses Played</p>
+        </div>
+        <div class="stat-item">
+            <h3>€25</h3>
+            <p>Quarterly Membership</p>
+        </div>
+        <div class="stat-item">
+            <h3>€5</h3>
+            <p>Trophy Competition Fee</p>
+        </div>
+        <div class="stat-item">
+            <h3>∞</h3>
+            <p>All Abilities Welcome</p>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <h2>About Javea Port Golf Society</h2>
+        <div class="about">
+            <div class="about-content">
+                <h3>Golf Without the Club Fees</h3>
+                <p>Javea Port Golf Society is a friendly, welcoming group of golfers who share a passion for great courses and good company. We rotate across the best courses on the northern Costa Blanca, from championship layouts to shorter 9-hole challenges.</p>
+                <p>Unlike traditional golf clubs, we have no joining fees and no share schemes. Members pay a €25 quarterly fee — which funds prizes and maintains a cash balance to partially cover booking fees in advance — plus the green fee, which we negotiate at discounted rates. An occasional €5 contribution applies on trophy competition events. Open to all abilities and nationalities.</p>
+
+                <div class="features">
+                    <div class="feature-tile">
+                        <h4>Simple & Affordable</h4>
+                        <p>No joining fee, no share scheme — just €25 per quarter and occasional €5 on trophy competitions.</p>
+                    </div>
+                    <div class="feature-tile">
+                        <h4>Choice of Courses</h4>
+                        <p>Rotate across 10+ premium courses throughout the season.</p>
+                    </div>
+                    <div class="feature-tile">
+                        <h4>Friendly Community</h4>
+                        <p>Mix with golfers of all abilities and nationalities.</p>
+                    </div>
+                    <div class="feature-tile">
+                        <h4>Organized Events</h4>
+                        <p>Away days, competitions, and social rounds.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="about-image">
+                <img src="https://img1.wsimg.com/isteam/ip/50849c1b-35ea-4edd-8d86-da68f2ea2ede/IMG_3152.JPG" alt="Javea Golf">
+            </div>
+        </div>
+    </section>
+
+    <!-- How to Join Section -->
+    <section id="how-to-join" class="how-to-join">
+        <h2>How to Join</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Register</h3>
+                <p>Fill out your details. The committee will review your application within 48 hours.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Get Approved</h3>
+                <p>You'll receive email confirmation of your membership status and can begin booking events.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Play & Pay</h3>
+                <p>Sign up for any event that suits you. Pay the green fee at our negotiated discounted rate. With occasional trophy days, €5 for additional prizes.</p>
+            </div>
+        </div>
+
+        <div class="pricing-box">
+            <h3>What It Costs</h3>
+            <p class="price-label">Quarterly membership:</p>
+            <div class="price">€25</div>
+            <p style="font-size:0.9rem; color: var(--text-light); margin-bottom: 1rem;">Covers prizes and helps pre-pay booking fees</p>
+            <p class="price-label">Trophy competition contribution:</p>
+            <div class="price">€5</div>
+            <p style="font-size:0.9rem; color: var(--text-light);">Occasional — on trophy competition events only</p>
+            <p style="margin-top:0.8rem;">+ course green fee at <strong>discounted society rates</strong></p>
+            <p style="margin-top:12px;font-size:0.85rem;opacity:0.8">No joining fee. No share scheme. Ever.</p>
+        </div>
+    </section>
+
+    <!-- Courses Section -->
+    <section id="courses" class="courses">
+        <h2>Our Courses</h2>
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All Courses</button>
+            <button class="filter-btn" data-filter="championship">Championship</button>
+            <button class="filter-btn" data-filter="9-hole">9-Hole</button>
+            <button class="filter-btn" data-filter="pitch-putt">Pitch & Putt</button>
+            <button class="filter-btn" data-filter="jpgs-played">JPGS Played</button>
+        </div>
+        <div class="courses-grid" id="coursesGrid">
+            <!-- Populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- News Section -->
+    <section id="news">
+        <h2>Latest News</h2>
+        <div class="news-grid" id="newsGrid">
+            <!-- Populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Events Section -->
+    <section id="events">
+        <h2>Events</h2>
+        <div class="events-tabs">
+            <button class="tab-btn active" data-tab="upcoming">Upcoming Events</button>
+            <button class="tab-btn" data-tab="past">Past Events</button>
+        </div>
+        <div class="events-grid" id="eventsGrid">
+            <!-- Populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Who's Who Section -->
+    <section id="who-is-who">
+        <h2>Who's Who</h2>
+        <div class="committee-grid" id="committeeGrid">
+            <!-- Populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Join Banner -->
+    <section class="join-banner">
+        <h2>Ready to Join the Costa Blanca's Premier Pay-and-Play Golf Society?</h2>
+        <p style="margin-top: 1rem; margin-bottom: 1.5rem;">No joining fees. No share schemes. Just €25 a quarter, great golf, great people, and great value.</p>
+        <button class="btn btn-secondary" id="bannerJoinBtn" style="background: var(--primary-navy); color: var(--white);">Join Us Today</button>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact">
+        <h2>Contact Us</h2>
+        <div class="contact">
+            <div class="contact-info">
+                <h3>Get in Touch</h3>
+                <div class="contact-item">
+                    <div class="contact-item-label">Email</div>
+                    <div><a href="mailto:jamesconaghan@hotmail.co.uk" style="color: var(--primary-green);">jamesconaghan@hotmail.co.uk</a></div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-item-label">Location</div>
+                    <div>Costa Blanca, Spain</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-item-label">Society</div>
+                    <div>Javea Port Golf Society</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-item-label">Hours</div>
+                    <div>Available during golf season</div>
+                </div>
+            </div>
+            <form class="contact-form" id="contactForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea name="message" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>About</h4>
+                <a href="#about">About JPGS</a>
+                <a href="#how-to-join">How to Join</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="footer-col">
+                <h4>Golf</h4>
+                <a href="#courses">Our Courses</a>
+                <a href="#events">Events</a>
+                <a href="#news">News</a>
+            </div>
+            <div class="footer-col">
+                <h4>Community</h4>
+                <a href="#who-is-who">Committee</a>
+                <a href="#" id="myAccountLink2">My Account</a>
+            </div>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#" class="admin-link" id="adminLink">Admin</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Javea Port Golf Society. All rights reserved. Costa Blanca, Spain.</p>
+        </div>
+    </footer>
+
+    <!-- Registration Modal -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Join Javea Port Golf Society</h2>
+                <button class="close-btn" onclick="closeModal('registerModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="registerBody">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Full Name*</label>
+                        <input type="text" name="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email*</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp Number</label>
+                        <input type="tel" name="whatsapp">
+                    </div>
+                    <div class="form-group">
+                        <label>Approximate Handicap</label>
+                        <select name="handicap">
+                            <option value="">Select...</option>
+                            <option value="scratch">Scratch</option>
+                            <option value="0-5">0-5</option>
+                            <option value="5-10">5-10</option>
+                            <option value="10-15">10-15</option>
+                            <option value="15-20">15-20</option>
+                            <option value="20-28">20-28</option>
+                            <option value="28+">28+</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>How did you hear about us?</label>
+                        <select name="hearAbout">
+                            <option value="">Select...</option>
+                            <option value="friend">Friend or Colleague</option>
+                            <option value="website">Website</option>
+                            <option value="social">Social Media</option>
+                            <option value="event">Society Event</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Apply for Membership</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Detail Modal -->
+    <div class="modal" id="eventDetailModal">
+        <div class="modal-content event-detail-modal">
+            <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+            <div id="eventDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- My Account Modal -->
+    <div class="modal" id="myAccountModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>My Account</h2>
+                <button class="close-btn" onclick="closeModal('myAccountModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="myAccountContent">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Admin Panel</h2>
+                <button class="close-btn" onclick="closeModal('adminModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="adminContent">
+                <!-- Content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin PIN Modal -->
+    <div class="modal" id="adminPinModal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header">
+                <h2>Admin Access</h2>
+                <button class="close-btn" onclick="closeModal('adminPinModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Enter PIN to access admin panel:</p>
+                <input type="password" id="adminPin" placeholder="PIN" style="width: 100%; padding: 0.8rem; margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px;">
+                <button class="btn btn-primary" onclick="verifyAdminPin()" style="width: 100%;">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data initialization
+        const COURSES = [
+            { id: 1, name: 'Alicante Golf', location: 'Alicante', holes: '18', par: 'Par 72', type: 'championship', jpgs: true, description: 'Designed by Seve Ballesteros, 5 lakes.', website: 'www.alicantegolf.com' },
+            { id: 2, name: 'Bonalba Golf & Spa', location: 'Mutxamel', holes: '18', par: 'Par 72', type: 'championship', jpgs: true, description: '5 lakes, 96 bunkers.', website: 'www.golfbonalba.com' },
+            { id: 3, name: 'El Plantío Golf', location: 'Alicante', holes: '18+9', par: 'Par 72', type: 'championship', jpgs: false, description: 'Close to airport.', website: 'www.elplantio.com' },
+            { id: 4, name: 'Ifach San Jaime', location: 'Benissa/Moraira', holes: '9', par: 'Par 60', type: '9-hole', jpgs: false, description: 'Views of Peñon de Ifach.', website: 'www.golfifach.com' },
+            { id: 5, name: 'Jávea Golf Club', location: 'Jávea', holes: '9/18', par: 'All Levels', type: '9-hole', jpgs: true, description: 'Our local course, opened 1981, 34 bunkers.', website: 'www.clubdegolfjavea.com' },
+            { id: 6, name: 'La Sella Golf Resort', location: 'Jesús Pobre, Dénia', holes: '27', par: 'Championship', type: 'championship', jpgs: false, description: 'Designed by Olazábal.', website: 'www.lasellagolf.com' },
+            { id: 7, name: 'Las Rejas Golf', location: 'Benidorm', holes: '9', par: 'Par 3', type: 'pitch-putt', jpgs: false, description: 'Pay and play near Poniente beach.', website: 'www.benidorm.lasrejasopenclub.com' },
+            { id: 8, name: 'Sierra Altea Golf', location: 'Altea Hills', holes: '9/18', par: 'Par 72', type: '9-hole', jpgs: true, description: 'Oldest on Costa Blanca (1974).', website: 'www.alteaclubdegolf.com' },
+            { id: 9, name: 'Sierra Cortina Golf', location: 'Finestrat/Benidorm', holes: '18', par: 'Par 3', type: 'pitch-putt', jpgs: false, description: 'Panoramic views, 2 hours to play.', website: 'www.golfparatodos.es' },
+            { id: 10, name: 'Villaitana Golf', location: 'Benidorm', holes: '36', par: 'Championship', type: 'championship', jpgs: true, description: '5-star resort, 2 courses.', website: 'www.meliavillaitanagolf.com' },
+            { id: 11, name: 'El Saler', location: 'El Saler Natural Park, Valencia', holes: '18', par: 'Par 72', type: 'championship', jpgs: true, description: 'PGA Championship course.', website: 'paradores.es/en/golf' },
+            { id: 12, name: 'Foressos', location: 'Picassent, Valencia', holes: '18', par: 'Par 72', type: 'championship', jpgs: false, description: '18-hole championship course off the A7/N340.', website: 'foressosclubgolf.com' },
+            { id: 13, name: 'Puig Campana', location: 'Alfarella, 03509 Finestrat', holes: '9 (played twice)', par: 'Par 72', type: '9-hole', jpgs: false, description: '9 holes played twice for a full 18-hole round.', website: 'puigcampanagolf.es' }
+        ];
+
+        const NEWS_ITEMS = [
+            { id: 1, title: 'Away Days Trophy — Murcia 2026: Lo Romero & Serena Golf', date: 'April 2026', tag: 'Away Days', featured: true },
+            { id: 2, title: 'El Valle Golf, Murcia — April 2025 | Clive Challenor took the honours', date: 'April 2025', tag: 'Trip Report', featured: false },
+            { id: 3, title: 'New Members Always Welcome', date: 'Ongoing', tag: 'Society News', featured: false }
+        ];
+
+        const COMMITTEE = [
+            { name: 'Jim Conaghan', role: 'Event Organiser', email: 'jamesconaghan@hotmail.co.uk' },
+            { name: 'Martin Leyshon', role: 'Committee Member' },
+            { name: 'Clive Challenor', role: 'Committee Member' },
+            { name: 'Rob Jardine', role: 'Committee Member' }
+        ];
+
+        // Initialize localStorage if needed
+        function initializeData() {
+            // Members
+            if (!localStorage.getItem('jpgs_members_v1')) {
+                const members = [
+                    { id:'mbr_001', name:'Alan Turpin',        email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_002', name:'Allister Smith',     email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_003', name:'Andrew Jagger',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_004', name:'Ben Van Zutphen',    email:null, phone:'', handicap:null, status:'probationary', joinedDate:'2025-09-01', notes:'New member' },
+                    { id:'mbr_005', name:'Clive Challenor',    email:null, phone:'', handicap:15.9, status:'full_member',  joinedDate:'2022-06-01', notes:'' },
+                    { id:'mbr_006', name:'Darren Graig',       email:null, phone:'', handicap:null, status:'suspended',    joinedDate:'2023-01-01', notes:'Dues outstanding' },
+                    { id:'mbr_007', name:'David Hamilton',     email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_008', name:'Erik Greuter',       email:null, phone:'', handicap:27,   status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_009', name:'Ian Hunt',           email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_010', name:'Jim Conaghan',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2022-01-01', notes:'Event Organiser' },
+                    { id:'mbr_011', name:'John Delaney',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_012', name:'Lawrence Stevenson', email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_013', name:'Martin Leyshon',     email:null, phone:'', handicap:17.1, status:'full_member',  joinedDate:'2022-06-01', notes:'' },
+                    { id:'mbr_014', name:'Max Gatric',         email:null, phone:'', handicap:null, status:'probationary', joinedDate:'2025-10-01', notes:'New member' },
+                    { id:'mbr_015', name:"Paul O'Neill",       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_016', name:'Rob Jardine',        email:null, phone:'', handicap:24,   status:'full_member',  joinedDate:'2022-06-01', notes:'' },
+                    { id:'mbr_017', name:'Robert Ellis',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_018', name:'Robert Giles',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_019', name:'Sean Kavanagh',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_020', name:'Stuart Connel',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
+                    { id:'mbr_021', name:'Tony Dijkers',       email:null, phone:'', handicap:null, status:'suspended',    joinedDate:'2023-01-01', notes:'Dues outstanding' },
+                    { id:'mbr_022', name:'William Marshal',    email:null, phone:'', handicap:19,   status:'full_member',  joinedDate:'2022-06-01', notes:'' }
+                ];
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+            }
+
+            // Events
+            if (!localStorage.getItem('jpgs_events_v1')) {
+                const events = [
+                    { id: 'evt_001', title: 'Poniente Golf', date: '2026-04-12', cutoffDate: '2026-04-10', course: 'Villaitana Poniente', location: 'Benidorm', cost: 60, includes: 'buggy', maxPlayers: 12, teeTime: '10:03', meetAt: 'clubhouse', meetTime: '09:30', transport: '', contact: 'Jim Conaghan', contactEmail: 'jamesconaghan@hotmail.co.uk', notes: '' },
+                    { id: 'evt_002', title: 'Spring Medal — Jávea Golf', date: '2026-05-03', cutoffDate: '2026-05-01', course: 'Jávea Golf Club', location: 'Jávea', cost: 45, includes: '', maxPlayers: 16, teeTime: '09:30', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: 'Stableford format' },
+                    { id: 'evt_003', title: 'La Sella Golf Resort', date: '2026-05-17', cutoffDate: '2026-05-15', course: 'La Sella', location: 'Dénia', cost: 55, includes: 'shared buggy', maxPlayers: 12, teeTime: '10:30', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: '' },
+                    { id: 'evt_past', title: 'Away Days Trophy — Murcia 2026', date: '2026-04-03', cutoffDate: '2026-04-01', course: 'Lo Romero & Serena Golf', location: 'Murcia', cost: 120, includes: '2 nights', maxPlayers: 12, teeTime: '', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: '', status: 'completed' }
+                ];
+                localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
+            }
+
+            // Event signups
+            if (!localStorage.getItem('jpgs_signups_v1')) {
+                const signups = [
+                    { eventId: 'evt_001', memberId: 'mbr_005', memberName: 'Clive Challenor', email: null, handicap: 15.9, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
+                    { eventId: 'evt_001', memberId: 'mbr_008', memberName: 'Erik Greuter', email: null, handicap: 27, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
+                    { eventId: 'evt_001', memberId: 'mbr_013', memberName: 'Martin Leyshon', email: null, handicap: 17.1, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
+                    { eventId: 'evt_001', memberId: 'mbr_015', memberName: "Paul O'Neill", email: null, handicap: null, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
+                    { eventId: 'evt_001', memberId: 'mbr_016', memberName: 'Rob Jardine', email: null, handicap: 24, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
+                    { eventId: 'evt_001', memberId: 'mbr_022', memberName: 'William Marshal', email: null, handicap: 19, requirements: '', signedUpDate: '2026-03-01', isDemo: true }
+                ];
+                localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
+            }
+        }
+
+        initializeData();
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+
+        // Hamburger menu
+        document.getElementById('hamburger').addEventListener('click', function() {
+            const navLinks = document.getElementById('navLinks');
+            navLinks.classList.toggle('mobile-show');
+        });
+
+        // Close mobile menu on link click
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.getElementById('navLinks').classList.remove('mobile-show');
+            });
+        });
+
+        // Join button handlers
+        document.getElementById('joinBtn').addEventListener('click', function() {
+            openModal('registerModal');
+        });
+        document.getElementById('heroJoinBtn').addEventListener('click', function() {
+            openModal('registerModal');
+        });
+        document.getElementById('bannerJoinBtn').addEventListener('click', function() {
+            openModal('registerModal');
+        });
+
+        // Hero courses button
+        document.getElementById('heroCoursesBtn').addEventListener('click', function() {
+            document.getElementById('courses').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Courses filter
+        let currentFilter = 'all';
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                renderCourses();
+            });
+        });
+
+        function renderCourses() {
+            const grid = document.getElementById('coursesGrid');
+            grid.innerHTML = '';
+
+            const filtered = currentFilter === 'all' ? COURSES : COURSES.filter(c => {
+                if (currentFilter === 'championship') return c.type === 'championship';
+                if (currentFilter === '9-hole') return c.type === '9-hole';
+                if (currentFilter === 'pitch-putt') return c.type === 'pitch-putt';
+                if (currentFilter === 'jpgs-played') return c.jpgs;
+                return true;
+            });
+
+            filtered.forEach(course => {
+                const card = document.createElement('div');
+                card.className = 'course-card';
+                card.innerHTML = `
+                    <div class="course-card-header">
+                        <h3>${course.name}</h3>
+                        <p>${course.location}</p>
+                    </div>
+                    <div class="course-card-body">
+                        ${course.jpgs ? '<span class="course-badge">JPGS Played</span>' : ''}
+                        <div class="course-detail">
+                            <span class="course-detail-label">Holes:</span>
+                            <span class="course-detail-value">${course.holes}</span>
+                        </div>
+                        <div class="course-detail">
+                            <span class="course-detail-label">Par:</span>
+                            <span class="course-detail-value">${course.par}</span>
+                        </div>
+                        <div class="course-detail">
+                            <span class="course-detail-label">Type:</span>
+                            <span class="course-detail-value">${course.type === 'championship' ? 'Championship' : course.type === '9-hole' ? '9-Hole' : 'Pitch & Putt'}</span>
+                        </div>
+                        <p style="margin-top: 1rem; color: var(--text-light);">${course.description}</p>
+                        <p style="margin-top: 0.5rem;"><a href="https://${course.website}" target="_blank" style="color: var(--gold); text-decoration: none;">${course.website}</a></p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        renderCourses();
+
+        // Render news
+        function renderNews() {
+            const grid = document.getElementById('newsGrid');
+            grid.innerHTML = '';
+            NEWS_ITEMS.forEach(item => {
+                const card = document.createElement('div');
+                card.className = item.featured ? 'news-card news-card-featured' : 'news-card';
+                card.innerHTML = `
+                    <div class="news-card-content">
+                        <span class="news-tag">${item.tag}</span>
+                        <h3>${item.title}</h3>
+                        <p class="news-date">${item.date}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        renderNews();
+
+        // Events handling
+        function getEvents() {
+            return JSON.parse(localStorage.getItem('jpgs_events_v1')) || [];
+        }
+
+        function getSignups() {
+            return JSON.parse(localStorage.getItem('jpgs_signups_v1')) || [];
+        }
+
+        function getMembers() {
+            return JSON.parse(localStorage.getItem('jpgs_members_v1')) || [];
+        }
+
+        function renderEvents(tab = 'upcoming') {
+            const grid = document.getElementById('eventsGrid');
+            grid.innerHTML = '';
+            const events = getEvents();
+            const today = new Date('2026-04-04');
+
+            const filtered = events.filter(e => {
+                const eventDate = new Date(e.date);
+                if (tab === 'upcoming') return eventDate >= today && e.status !== 'completed';
+                return eventDate < today || e.status === 'completed';
+            });
+
+            filtered.forEach(event => {
+                const signupCount = getSignups().filter(s => s.eventId === event.id).length;
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.onclick = () => showEventDetail(event.id);
+                card.innerHTML = `
+                    <div class="event-card-header">
+                        <h3>${event.title}</h3>
+                        <p class="event-date">${new Date(event.date).toLocaleDateString()}</p>
+                    </div>
+                    <div class="event-card-body">
+                        <div class="event-info">
+                            <span class="event-info-label">Course:</span> ${event.course}
+                        </div>
+                        <div class="event-info">
+                            <span class="event-info-label">Location:</span> ${event.location}
+                        </div>
+                        <div class="event-info">
+                            <span class="event-info-label">Cost:</span> <span class="event-cost">€${event.cost}</span>
+                        </div>
+                        <div class="event-info">
+                            <span class="event-info-label">Signups:</span> ${signupCount}/${event.maxPlayers}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showEventDetail(eventId) {
+            const events = getEvents();
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            const signups = getSignups().filter(s => s.eventId === eventId);
+            const today = new Date('2026-04-04');
+            const eventDate = new Date(event.date);
+            const cutoffDate = new Date(event.cutoffDate);
+            const isClosed = today > cutoffDate || event.status === 'completed';
+
+            let content = `
+                <div class="event-detail-header">
+                    <h2>${event.title}</h2>
+                    <p class="event-location">${event.course}, ${event.location}</p>
+                </div>
+                <div class="modal-body">
+            `;
+
+            if (event.status === 'completed') {
+                content += '<div class="info-message">This event has been completed.</div>';
+            } else if (isClosed) {
+                content += '<div class="error-message">Signups for this event have closed.</div>';
+            }
+
+            content += `
+                <div class="event-actions">
+                    ${!isClosed ? `
+                        <button class="event-action-btn primary" onclick="openSignUpForm('${eventId}')">⛳ Sign up for this Event</button>
+                        <button class="event-action-btn secondary" onclick="openWithdrawForm('${eventId}')">✗ Withdraw</button>
+                        <button class="event-action-btn tertiary" onclick="openCantAttendForm('${eventId}')">📋 Can't Attend</button>
+                    ` : ''}
+                </div>
+
+                <table class="event-details-table">
+                    <tr>
+                        <td>Date</td>
+                        <td>${new Date(event.date).toLocaleDateString()}</td>
+                    </tr>
+                    <tr>
+                        <td>Course</td>
+                        <td>${event.course}</td>
+                    </tr>
+                    <tr>
+                        <td>Location</td>
+                        <td>${event.location}</td>
+                    </tr>
+                    <tr>
+                        <td>Cost</td>
+                        <td>€${event.cost}</td>
+                    </tr>
+                    ${event.includes ? `<tr><td>Includes</td><td>${event.includes}</td></tr>` : ''}
+                    <tr>
+                        <td>Max Players</td>
+                        <td>${event.maxPlayers}</td>
+                    </tr>
+                    ${event.meetAt ? `<tr><td>Meet At</td><td>${event.meetAt}</td></tr>` : ''}
+                    ${event.meetTime ? `<tr><td>Meeting Time</td><td>${event.meetTime}</td></tr>` : ''}
+                    ${event.teeTime ? `<tr><td>Tee Time</td><td>${event.teeTime}</td></tr>` : ''}
+                    ${event.contact ? `<tr><td>Contact</td><td>${event.contact}</td></tr>` : ''}
+                    ${event.contactEmail ? `<tr><td>Email</td><td><a href="mailto:${event.contactEmail}">${event.contactEmail}</a></td></tr>` : ''}
+                    ${event.notes ? `<tr><td>Notes</td><td>${event.notes}</td></tr>` : ''}
+                    ${cutoffDate ? `<tr><td>Signup Cutoff</td><td>${new Date(event.cutoffDate).toLocaleDateString()}</td></tr>` : ''}
+                </table>
+
+                <div class="event-signup-info">
+                    <strong>${signups.length} Members Signed Up</strong>
+                    <div class="signup-buttons">
+                        <button onclick="showSignedUpList('${eventId}')">📋 View Signed Up List...</button>
+                        <button onclick="showStartSheet('${eventId}')">📄 View Start Sheet...</button>
+                    </div>
+                </div>
+                </div>
+            `;
+
+            document.getElementById('eventDetailContent').innerHTML = content;
+            openModal('eventDetailModal');
+        }
+
+        function openSignUpForm(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const members = getMembers().filter(m => m.status === 'full_member' || m.status === 'probationary');
+
+            let html = `
+                <div class="modal-header">
+                    <h2>Sign Up for ${event.title}</h2>
+                    <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="signupForm">
+                        <div class="form-group">
+                            <label>Select Your Name*</label>
+                            <select name="memberId" id="memberSelect" required onchange="updateMemberEmail()">
+                                <option value="">Choose...</option>
+            `;
+
+            members.forEach(m => {
+                html += `<option value="${m.id}">${m.name}</option>`;
+            });
+
+            html += `
+                            </select>
+                        </div>
+                        <div id="memberStatusMessage"></div>
+                        <div class="form-group">
+                            <label>Email*</label>
+                            <input type="email" name="email" id="signupEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Special Requirements</label>
+                            <textarea name="requirements" id="signupRequirements" placeholder="Any dietary or course requirements..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Complete Sign Up</button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('eventDetailContent').innerHTML = html;
+
+            document.getElementById('signupForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitSignUp(eventId);
+            });
+        }
+
+        function updateMemberEmail() {
+            const memberId = document.getElementById('memberSelect').value;
+            const members = getMembers();
+            const member = members.find(m => m.id === memberId);
+            const messageDiv = document.getElementById('memberStatusMessage');
+
+            if (!member) {
+                messageDiv.innerHTML = '';
+                document.getElementById('signupEmail').value = '';
+                return;
+            }
+
+            if (member.status === 'suspended') {
+                messageDiv.innerHTML = '<div class="error-message">Your membership is suspended due to unpaid dues. Contact jamesconaghan@hotmail.co.uk</div>';
+                document.getElementById('signupEmail').disabled = true;
+            } else if (member.status === 'applied') {
+                messageDiv.innerHTML = '<div class="info-message">Your application is pending approval.</div>';
+                document.getElementById('signupEmail').disabled = true;
+            } else {
+                messageDiv.innerHTML = '';
+                document.getElementById('signupEmail').disabled = false;
+            }
+
+            document.getElementById('signupEmail').value = member.email || '';
+        }
+
+        function submitSignUp(eventId) {
+            const memberId = document.getElementById('memberSelect').value;
+            const email = document.getElementById('signupEmail').value;
+            const requirements = document.getElementById('signupRequirements').value;
+
+            const members = getMembers();
+            const member = members.find(m => m.id === memberId);
+
+            if (member.status === 'suspended' || member.status === 'applied') {
+                alert('Cannot sign up with current membership status');
+                return;
+            }
+
+            // Update member email if new
+            if (!member.email) {
+                member.email = email;
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+            }
+
+            // Add signup
+            const signups = getSignups();
+            const existing = signups.find(s => s.eventId === eventId && s.memberId === memberId);
+
+            if (!existing) {
+                signups.push({
+                    eventId: eventId,
+                    memberId: memberId,
+                    memberName: member.name,
+                    email: email,
+                    handicap: member.handicap,
+                    requirements: requirements,
+                    signedUpDate: new Date().toISOString().split('T')[0],
+                    isDemo: false
+                });
+                localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
+                alert('Successfully signed up for ' + getEvents().find(e => e.id === eventId).title);
+                closeModal('eventDetailModal');
+            } else {
+                alert('You are already signed up for this event');
+            }
+        }
+
+        function openWithdrawForm(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const signups = getSignups().filter(s => s.eventId === eventId && !s.isDemo);
+            const memberNames = signups.map(s => s.memberName);
+
+            let html = `
+                <div class="modal-header">
+                    <h2>Withdraw from ${event.title}</h2>
+                    <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="withdrawForm">
+                        <div class="form-group">
+                            <label>Select Your Name*</label>
+                            <select name="memberName" required>
+                                <option value="">Choose...</option>
+            `;
+
+            memberNames.forEach(name => {
+                html += `<option value="${name}">${name}</option>`;
+            });
+
+            html += `
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Email (for verification)*</label>
+                            <input type="email" name="email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Confirm Withdrawal</button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('eventDetailContent').innerHTML = html;
+
+            document.getElementById('withdrawForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const memberName = this.querySelector('[name="memberName"]').value;
+                const email = this.querySelector('[name="email"]').value;
+
+                const signups = getSignups();
+                const index = signups.findIndex(s => s.eventId === eventId && s.memberName === memberName && !s.isDemo);
+
+                if (index >= 0 && signups[index].email === email) {
+                    signups.splice(index, 1);
+                    localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
+                    alert('Withdrawal confirmed');
+                    closeModal('eventDetailModal');
+                } else {
+                    alert('Email does not match');
+                }
+            });
+        }
+
+        function openCantAttendForm(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const signups = getSignups().filter(s => s.eventId === eventId);
+            const memberNames = signups.map(s => s.memberName);
+
+            let html = `
+                <div class="modal-header">
+                    <h2>Mark as Unable to Attend</h2>
+                    <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="cantAttendForm">
+                        <div class="form-group">
+                            <label>Select Your Name*</label>
+                            <select name="memberName" required>
+                                <option value="">Choose...</option>
+            `;
+
+            memberNames.forEach(name => {
+                html += `<option value="${name}">${name}</option>`;
+            });
+
+            html += `
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Email*</label>
+                            <input type="email" name="email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Confirm</button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('eventDetailContent').innerHTML = html;
+
+            document.getElementById('cantAttendForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Organizer has been notified');
+                closeModal('eventDetailModal');
+            });
+        }
+
+        function showSignedUpList(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const signups = getSignups().filter(s => s.eventId === eventId);
+
+            let html = `
+                <div class="modal-header">
+                    <h2>Signed Up: ${event.title}</h2>
+                    <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p><em>Due to privacy concerns email addresses have been suppressed.</em></p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Requirements</th>
+                                <th>Email</th>
+                                <th>Handicap</th>
+                                <th>Signed Up</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            signups.forEach(s => {
+                html += `
+                    <tr>
+                        <td>${s.memberName}</td>
+                        <td>${s.requirements || '-'}</td>
+                        <td>••••@••••</td>
+                        <td>${s.handicap || '-'}</td>
+                        <td>${s.signedUpDate}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                    <button class="btn btn-primary" onclick="showStartSheet('${eventId}')">📄 View Start Sheet</button>
+                </div>
+            `;
+
+            document.getElementById('eventDetailContent').innerHTML = html;
+        }
+
+        function showStartSheet(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const signups = getSignups().filter(s => s.eventId === eventId).sort((a, b) => {
+                const aHcp = a.handicap || 54;
+                const bHcp = b.handicap || 54;
+                return aHcp - bHcp;
+            });
+
+            const groups = [];
+            for (let i = 0; i < signups.length; i += 4) {
+                groups.push(signups.slice(i, i + 4));
+            }
+
+            let html = `
+                <div class="modal-header">
+                    <h2>Start Sheet: ${event.title}</h2>
+                    <button class="close-btn" onclick="closeModal('eventDetailModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>First Tee Time:</strong> ${event.teeTime || 'TBD'}</p>
+            `;
+
+            groups.forEach((group, idx) => {
+                const teeHour = parseInt(event.teeTime?.split(':')[0] || 9);
+                const teeMin = parseInt(event.teeTime?.split(':')[1] || 0);
+                const totalMin = teeHour * 60 + teeMin + (idx * 10);
+                const groupHour = Math.floor(totalMin / 60);
+                const groupMin = totalMin % 60;
+                const groupTime = `${String(groupHour).padStart(2, '0')}:${String(groupMin).padStart(2, '0')}`;
+
+                html += `
+                    <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Group ${idx + 1} - Tee: ${groupTime}</h4>
+                    <table style="font-size: 0.9rem;">
+                        <tbody>
+                `;
+
+                group.forEach((signup, pos) => {
+                    html += `
+                        <tr>
+                            <td style="width: 30%;">${pos + 1}. ${signup.memberName}</td>
+                            <td style="width: 30%;">HCP: ${signup.handicap || '-'}</td>
+                            <td style="width: 40%;">${signup.requirements ? '📝 ' + signup.requirements : ''}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+            });
+
+            html += `</div>`;
+
+            document.getElementById('eventDetailContent').innerHTML = html;
+        }
+
+        // Events tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                renderEvents(this.dataset.tab);
+            });
+        });
+
+        renderEvents('upcoming');
+
+        // Registration form
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const fullName = this.querySelector('[name="fullName"]').value;
+            const email = this.querySelector('[name="email"]').value;
+
+            const members = getMembers();
+            const newMember = {
+                id: 'mbr_' + Date.now(),
+                name: fullName,
+                email: email,
+                phone: this.querySelector('[name="whatsapp"]').value,
+                handicap: this.querySelector('[name="handicap"]').value || null,
+                status: 'applied',
+                joinedDate: new Date().toISOString().split('T')[0],
+                notes: ''
+            };
+
+            members.push(newMember);
+            localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+
+            document.getElementById('registerBody').innerHTML = `
+                <div class="success-message">
+                    <h3>Application Submitted!</h3>
+                    <p>Thank you for applying to Javea Port Golf Society. Our committee will review your application and you should receive an email within 48 hours confirming your membership status.</p>
+                    <p>In the meantime, you can browse our courses and upcoming events.</p>
+                </div>
+                <button class="btn btn-primary" onclick="closeModal('registerModal'); location.reload();">Close</button>
+            `;
+        });
+
+        // Contact form
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Thank you for your message. We will get back to you soon!');
+            this.reset();
+        });
+
+        // My Account
+        document.getElementById('myAccountLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            openMyAccount();
+        });
+
+        document.getElementById('myAccountLink2').addEventListener('click', function(e) {
+            e.preventDefault();
+            openMyAccount();
+        });
+
+        function openMyAccount() {
+            const email = prompt('Enter your email to access your account:');
+            if (!email) return;
+
+            const members = getMembers();
+            const member = members.find(m => m.email === email);
+
+            if (!member) {
+                alert('Account not found. Please check your email or register first.');
+                return;
+            }
+
+            let statusMsg = '';
+            if (member.status === 'applied') {
+                statusMsg = 'Your application is being reviewed by the committee.';
+            } else if (member.status === 'probationary') {
+                statusMsg = 'You are a probationary member. Welcome!';
+            } else if (member.status === 'full_member') {
+                statusMsg = 'Your membership is active and up to date.';
+            } else if (member.status === 'suspended') {
+                statusMsg = 'Your membership is currently suspended. Annual dues of €150 are outstanding. Please contact jamesconaghan@hotmail.co.uk';
+            }
+
+            const upcomingSignups = getSignups().filter(s => {
+                const event = getEvents().find(e => e.id === s.eventId);
+                return s.email === email && event && new Date(event.date) >= new Date('2026-04-04');
+            });
+
+            let html = `
+                <div class="modal-header">
+                    <h2>My Account</h2>
+                    <button class="close-btn" onclick="closeModal('myAccountModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="background: var(--light-gray); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <h3>${member.name}</h3>
+                        <p style="margin: 0.5rem 0;"><span class="status-badge ${member.status}">${member.status === 'applied' ? 'Application Pending' : member.status === 'probationary' ? 'Probationary Member' : member.status === 'full_member' ? 'Full Member' : 'Membership Suspended'}</span></p>
+                        <p style="margin-top: 0.5rem;">${statusMsg}</p>
+                    </div>
+            `;
+
+            if (upcomingSignups.length > 0) {
+                html += `
+                    <h4>Your Upcoming Events</h4>
+                    <ul style="list-style: none; padding: 0;">
+                `;
+
+                upcomingSignups.forEach(signup => {
+                    const event = getEvents().find(e => e.id === signup.eventId);
+                    html += `<li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <strong>${event.title}</strong> - ${new Date(event.date).toLocaleDateString()}
+                    </li>`;
+                });
+
+                html += `</ul>`;
+            } else {
+                html += `<p>No upcoming events signed up. <a href="#" onclick="closeModal('myAccountModal'); document.getElementById('events').scrollIntoView();">Browse events</a></p>`;
+            }
+
+            html += `</div>`;
+
+            document.getElementById('myAccountContent').innerHTML = html;
+            openModal('myAccountModal');
+        }
+
+        // Render committee
+        function renderCommittee() {
+            const grid = document.getElementById('committeeGrid');
+            grid.innerHTML = '';
+            COMMITTEE.forEach(member => {
+                const card = document.createElement('div');
+                card.className = 'member-card';
+                card.innerHTML = `
+                    <div class="member-avatar">${member.name.charAt(0)}</div>
+                    <h3>${member.name}</h3>
+                    <p class="member-role">${member.role}</p>
+                    ${member.email ? `<p><a href="mailto:${member.email}" style="color: var(--gold); text-decoration: none;">${member.email}</a></p>` : ''}
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        renderCommittee();
+
+        // Admin panel
+        document.getElementById('adminLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            openModal('adminPinModal');
+        });
+
+        function verifyAdminPin() {
+            const pin = document.getElementById('adminPin').value;
+            if (pin === '4321') {
+                closeModal('adminPinModal');
+                showAdminPanel();
+            } else {
+                alert('Invalid PIN');
+            }
+        }
+
+        function showAdminPanel() {
+            const adminContent = document.getElementById('adminContent');
+            adminContent.innerHTML = `
+                <div class="events-tabs">
+                    <button class="tab-btn active" data-admin-tab="events">Events</button>
+                    <button class="tab-btn" data-admin-tab="members">Members</button>
+                </div>
+                <div id="adminTabContent"></div>
+            `;
+
+            document.querySelectorAll('[data-admin-tab]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('[data-admin-tab]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    showAdminTab(this.dataset.adminTab);
+                });
+            });
+
+            showAdminTab('events');
+            openModal('adminModal');
+        }
+
+        function showAdminTab(tab) {
+            const content = document.getElementById('adminTabContent');
+
+            if (tab === 'events') {
+                const events = getEvents();
+                let html = `
+                    <button class="btn btn-primary" onclick="showAddEventForm()" style="margin-bottom: 1.5rem;">+ Add New Event</button>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Title</th>
+                                <th>Signups</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                events.forEach(event => {
+                    const signupCount = getSignups().filter(s => s.eventId === event.id).length;
+                    html += `
+                        <tr>
+                            <td>${new Date(event.date).toLocaleDateString()}</td>
+                            <td>${event.title}</td>
+                            <td>${signupCount}/${event.maxPlayers}</td>
+                            <td>${event.status === 'completed' ? 'Completed' : 'Active'}</td>
+                            <td>
+                                <button onclick="showViewSignups('${event.id}')" style="background: var(--info); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.3rem;">View</button>
+                                <button onclick="deleteEvent('${event.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+
+            } else if (tab === 'members') {
+                const members = getMembers();
+                const applications = members.filter(m => m.status === 'applied');
+
+                let html = ``;
+
+                if (applications.length > 0) {
+                    html += `
+                        <h4 style="margin-bottom: 1rem; color: var(--danger);">Pending Applications (${applications.length})</h4>
+                        <table style="margin-bottom: 2rem;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Applied</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    applications.forEach(m => {
+                        html += `
+                            <tr>
+                                <td>${m.name}</td>
+                                <td>${m.email}</td>
+                                <td>${m.joinedDate}</td>
+                                <td>
+                                    <button onclick="approveMember('${m.id}')" style="background: var(--success); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.3rem;">Approve</button>
+                                    <button onclick="rejectMember('${m.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">Reject</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `</tbody></table>`;
+                }
+
+                html += `
+                    <h4 style="margin-bottom: 1rem;">All Members</h4>
+                    <button class="btn btn-primary" onclick="showAddMemberForm()" style="margin-bottom: 1.5rem;">+ Add Member</button>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Email</th>
+                                <th>Handicap</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                members.forEach(m => {
+                    html += `
+                        <tr>
+                            <td>${m.name}</td>
+                            <td><span class="status-badge ${m.status}">${m.status === 'applied' ? 'Applied' : m.status === 'probationary' ? 'Probationary' : m.status === 'full_member' ? 'Full Member' : 'Suspended'}</span></td>
+                            <td>${m.email || '-'}</td>
+                            <td>${m.handicap || '-'}</td>
+                            <td>${m.joinedDate}</td>
+                            <td>
+                                <select onchange="changeMemberStatus('${m.id}', this.value); this.value = '${m.status}'" style="padding: 0.4rem;">
+                                    <option value="applied" ${m.status === 'applied' ? 'selected' : ''}>Applied</option>
+                                    <option value="probationary" ${m.status === 'probationary' ? 'selected' : ''}>Probationary</option>
+                                    <option value="full_member" ${m.status === 'full_member' ? 'selected' : ''}>Full Member</option>
+                                    <option value="suspended" ${m.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                                </select>
+                                <button onclick="deleteMember('${m.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-left: 0.3rem;">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+            }
+        }
+
+        function approveMember(memberId) {
+            const members = getMembers();
+            const member = members.find(m => m.id === memberId);
+            if (member) {
+                member.status = 'probationary';
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                alert(`Approved ${member.name}. They are now probationary members.`);
+                showAdminTab('members');
+            }
+        }
+
+        function rejectMember(memberId) {
+            const members = getMembers();
+            const index = members.findIndex(m => m.id === memberId);
+            if (index >= 0) {
+                members.splice(index, 1);
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                alert('Application rejected and member removed.');
+                showAdminTab('members');
+            }
+        }
+
+        function changeMemberStatus(memberId, newStatus) {
+            const members = getMembers();
+            const member = members.find(m => m.id === memberId);
+            if (member) {
+                member.status = newStatus;
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                alert(`${member.name} status changed to ${newStatus}`);
+            }
+        }
+
+        function deleteMember(memberId) {
+            if (confirm('Are you sure you want to delete this member?')) {
+                const members = getMembers();
+                const index = members.findIndex(m => m.id === memberId);
+                if (index >= 0) {
+                    members.splice(index, 1);
+                    localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                    showAdminTab('members');
+                }
+            }
+        }
+
+        function deleteEvent(eventId) {
+            if (confirm('Delete this event and all signups?')) {
+                const events = getEvents();
+                const signups = getSignups();
+
+                const eventIndex = events.findIndex(e => e.id === eventId);
+                if (eventIndex >= 0) {
+                    events.splice(eventIndex, 1);
+                    localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
+
+                    const newSignups = signups.filter(s => s.eventId !== eventId);
+                    localStorage.setItem('jpgs_signups_v1', JSON.stringify(newSignups));
+
+                    showAdminTab('events');
+                }
+            }
+        }
+
+        function showViewSignups(eventId) {
+            const event = getEvents().find(e => e.id === eventId);
+            const signups = getSignups().filter(s => s.eventId === eventId);
+
+            let html = `<h4 style="margin-bottom: 1rem;">${event.title} - Signups</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Handicap</th>
+                            <th>Requirements</th>
+                            <th>Signed Up</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            signups.forEach(s => {
+                html += `
+                    <tr>
+                        <td>${s.memberName}</td>
+                        <td>${s.email || '-'}</td>
+                        <td>${s.handicap || '-'}</td>
+                        <td>${s.requirements || '-'}</td>
+                        <td>${s.signedUpDate}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            document.getElementById('adminTabContent').innerHTML = html;
+        }
+
+        function showAddMemberForm() {
+            const html = `
+                <h4 style="margin-bottom: 1rem;">Add New Member</h4>
+                <form id="addMemberForm">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label>Handicap</label>
+                        <input type="number" name="handicap" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="applied">Applied</option>
+                            <option value="probationary">Probationary</option>
+                            <option value="full_member">Full Member</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </form>
+            `;
+
+            document.getElementById('adminTabContent').innerHTML = html;
+
+            document.getElementById('addMemberForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const members = getMembers();
+                const newMember = {
+                    id: 'mbr_' + Date.now(),
+                    name: this.querySelector('[name="name"]').value,
+                    email: this.querySelector('[name="email"]').value || null,
+                    phone: '',
+                    handicap: this.querySelector('[name="handicap"]').value || null,
+                    status: this.querySelector('[name="status"]').value,
+                    joinedDate: new Date().toISOString().split('T')[0],
+                    notes: ''
+                };
+
+                members.push(newMember);
+                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                alert('Member added successfully');
+                showAdminTab('members');
+            });
+        }
+
+        function showAddEventForm() {
+            const html = `
+                <h4 style="margin-bottom: 1rem;">Add New Event</h4>
+                <form id="addEventForm">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Signup Cutoff Date</label>
+                        <input type="date" name="cutoffDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Course</label>
+                        <input type="text" name="course" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" name="location" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cost (€)</label>
+                        <input type="number" name="cost" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Includes</label>
+                        <input type="text" name="includes" placeholder="e.g. buggy, shared buggy">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Players</label>
+                        <input type="number" name="maxPlayers" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tee Time</label>
+                        <input type="time" name="teeTime">
+                    </div>
+                    <div class="form-group">
+                        <label>Meet At</label>
+                        <input type="text" name="meetAt" placeholder="e.g. clubhouse">
+                    </div>
+                    <div class="form-group">
+                        <label>Meeting Time</label>
+                        <input type="time" name="meetTime">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact</label>
+                        <input type="text" name="contact">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" name="contactEmail">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Event</button>
+                </form>
+            `;
+
+            document.getElementById('adminTabContent').innerHTML = html;
+
+            document.getElementById('addEventForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const events = getEvents();
+                const newEvent = {
+                    id: 'evt_' + Date.now(),
+                    title: this.querySelector('[name="title"]').value,
+                    date: this.querySelector('[name="date"]').value,
+                    cutoffDate: this.querySelector('[name="cutoffDate"]').value,
+                    course: this.querySelector('[name="course"]').value,
+                    location: this.querySelector('[name="location"]').value,
+                    cost: parseInt(this.querySelector('[name="cost"]').value),
+                    includes: this.querySelector('[name="includes"]').value,
+                    maxPlayers: parseInt(this.querySelector('[name="maxPlayers"]').value),
+                    teeTime: this.querySelector('[name="teeTime"]').value,
+                    meetAt: this.querySelector('[name="meetAt"]').value,
+                    meetTime: this.querySelector('[name="meetTime"]').value,
+                    transport: '',
+                    contact: this.querySelector('[name="contact"]').value,
+                    contactEmail: this.querySelector('[name="contactEmail"]').value,
+                    notes: this.querySelector('[name="notes"]').value
+                };
+
+                events.push(newEvent);
+                localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
+                alert('Event added successfully');
+                showAdminTab('events');
+            });
+        }
+    </script>
+</body>
+</html>

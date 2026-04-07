@@ -771,6 +771,105 @@
             cursor: pointer;
         }
 
+        /* Member Quotes Section */
+        .quotes-section {
+            background: var(--primary-navy);
+            color: var(--white);
+        }
+
+        .quotes-section h2 {
+            color: var(--white);
+        }
+
+        .quotes-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .quote-card {
+            background: rgba(255,255,255,0.07);
+            border-left: 4px solid var(--gold);
+            padding: 1.5rem 1.8rem;
+            border-radius: 6px;
+            font-style: italic;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .quote-card .quote-attr {
+            display: block;
+            margin-top: 1rem;
+            font-style: normal;
+            font-size: 0.85rem;
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* Trophy Calendar Section */
+        .trophies-section {
+            background: var(--light-gray);
+        }
+
+        .trophy-intro {
+            max-width: 780px;
+            margin-bottom: 2.5rem;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        .trophy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.8rem;
+        }
+
+        .trophy-card {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 1.8rem;
+            border-top: 4px solid var(--gold);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .trophy-card .trophy-icon {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+            display: block;
+        }
+
+        .trophy-card h3 {
+            color: var(--primary-navy);
+            font-size: 1.05rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .trophy-card p {
+            color: var(--text-light);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .trophy-card .trophy-new-badge {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--primary-navy);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        @media (max-width: 768px) {
+            .quotes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* Modals */
         .modal {
             display: none;
@@ -1130,6 +1229,8 @@
         <ul class="nav-links" id="navLinks">
             <li><a href="#about">About</a></li>
             <li><a href="#how-to-join">How to Join</a></li>
+            <li><a href="#trophies">Trophies</a></li>
+            <li><a href="#member-quotes">Members</a></li>
             <li><a href="#courses">Courses</a></li>
             <li><a href="#events">Events</a></li>
             <li><a href="#who-is-who">Who's Who</a></li>
@@ -1287,6 +1388,66 @@
         <h2>Who's Who</h2>
         <div class="committee-grid" id="committeeGrid">
             <!-- Populated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Member Quotes Section -->
+    <section id="member-quotes" class="quotes-section">
+        <h2>What Our Members Say</h2>
+        <div class="quotes-grid">
+            <div class="quote-card">
+                "I have been a member of Javea Port Golf Society for over six years now and it genuinely gets better every year. Yes the golf is great, but it is the friendships you forge along the way that make this society something truly special. A wonderful group of people."
+                <span class="quote-attr">— Society Member, 6+ years</span>
+            </div>
+            <div class="quote-card">
+                "I joined not knowing many people in Javea and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."
+                <span class="quote-attr">— Society Member</span>
+            </div>
+            <div class="quote-card">
+                "What I really like about this Society is the variety of competition formats — from Texas Scramble, Better Ball, and Reverse Waltz to Individual Stableford. The organisers really do try and mix things up."
+                <span class="quote-attr">— Society Member</span>
+            </div>
+            <div class="quote-card">
+                "Javea Port Golf Society is everything a golf society should be — competitive enough to keep you sharp, friendly enough to keep you coming back. I would not change a thing."
+                <span class="quote-attr">— Society Member</span>
+            </div>
+            <div class="quote-card">
+                "It is not just about the golf — although the courses we play are fantastic. It is the people, the banter, the whole social side. This society has given me some of my best memories on the Costa Blanca."
+                <span class="quote-attr">— Society Member</span>
+            </div>
+            <div class="quote-card">
+                "Been a member for 6 years, love the different cultures coming together — always healthy competition."
+                <span class="quote-attr">— Society Member</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trophy Calendar Section -->
+    <section id="trophies" class="trophies-section">
+        <h2>🏆 Tournament &amp; Trophy Calendar</h2>
+        <p class="trophy-intro">Alongside weekly competitions across the Costa Blanca, four times a year we raise the stakes with our prestigious trophy events — occasions that bring out the best in our members and create memories that last long after the final putt drops.</p>
+        <div class="trophy-grid">
+            <div class="trophy-card">
+                <span class="trophy-icon">🏆</span>
+                <h3>The Francis McNeil Memorial Trophy</h3>
+                <p>One of our most cherished competitions — a fitting tribute to a much-missed member. A true test of skill and nerve, this is a day when reputations are made and rivalries renewed. Will your name be next on the trophy?</p>
+            </div>
+            <div class="trophy-card">
+                <span class="trophy-icon">✈️</span>
+                <h3>The Away Days Trophies</h3>
+                <p>Twice a year the society packs its bags and heads out on tour — taking on some of the finest courses the region has to offer. Two trophies are up for grabs across the two away day events, making them among the most eagerly anticipated fixtures in the calendar.</p>
+            </div>
+            <div class="trophy-card">
+                <span class="trophy-icon">🥇</span>
+                <h3>The Captain's Trophy</h3>
+                <p>One of the most prestigious events in the society year. Played in honour of the current Captain, this is a day that carries real weight — every member wants their name associated with this one.</p>
+            </div>
+            <div class="trophy-card">
+                <span class="trophy-icon">🏅</span>
+                <span class="trophy-new-badge">New for 2026</span>
+                <h3>The Society Trophy</h3>
+                <p>Brand new for 2026, the Society Trophy is set to become the most coveted prize in the society. Only one player can claim the honour of being the inaugural winner — who will it be?</p>
+            </div>
         </div>
     </section>
 
@@ -1489,9 +1650,30 @@
         ];
 
         const NEWS_ITEMS = [
-            { id: 1, title: 'Away Days Trophy — Murcia 2026: Lo Romero & Serena Golf', date: 'April 2026', tag: 'Away Days', featured: true },
-            { id: 2, title: 'El Valle Golf, Murcia — April 2025 | Clive Challenor took the honours', date: 'April 2025', tag: 'Trip Report', featured: false },
-            { id: 3, title: 'New Members Always Welcome', date: 'Ongoing', tag: 'Society News', featured: false }
+            {
+                id: 1,
+                title: 'Away Days Trophy — Murcia 2026',
+                date: '2–3 April 2026',
+                tag: 'Away Days',
+                featured: true,
+                summary: 'Martin Leyshon claimed the Winners Cup and Medal across Lo Romero and Serena Golf, with Robert Giles pushing him hard to the wire — runner-up on countback. Nearest the Pin honours went to John Delaney, Robert Giles, and William Marshall. The trip was organised by Ben Van Zutphen and William Marshall. Congratulations to all who made the tour.'
+            },
+            {
+                id: 2,
+                title: '🏆 Francis McNeil Memorial Trophy — Jávea de Golf',
+                date: '4 February 2026',
+                tag: 'Trophy Event',
+                featured: false,
+                summary: 'Contested over medal format, it was Ben Van Zutphen who took the honours with an outstanding net score of 69. David Hamilton pushed him hard, finishing second with a net 74. Results announced at the evening presentation. Well played Ben — a thoroughly deserved win.'
+            },
+            {
+                id: 3,
+                title: 'El Valle Golf, Murcia — Clive Challenor took the honours',
+                date: 'April 2025',
+                tag: 'Away Days',
+                featured: false,
+                summary: 'Last year\'s away day saw Clive Challenor claim top spot at El Valle Golf in Murcia. Another outstanding trip on a superb course.'
+            }
         ];
 
         const COMMITTEE = [
@@ -1670,6 +1852,7 @@
                         <span class="news-tag">${item.tag}</span>
                         <h3>${item.title}</h3>
                         <p class="news-date">${item.date}</p>
+                        ${item.summary ? `<p style="margin-top:0.8rem;font-size:0.9rem;line-height:1.6;opacity:0.9;">${item.summary}</p>` : ''}
                     </div>
                 `;
                 grid.appendChild(card);

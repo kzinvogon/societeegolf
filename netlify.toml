@@ -1,2 +1,8 @@
 [build]
   publish = "."
+
+# Serve index.html for any unmatched route (SPA behaviour)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

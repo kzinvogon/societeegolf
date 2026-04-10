@@ -2609,11 +2609,13 @@
                 if (!messages || messages.length === 0) {
                     html += `<p>No messages yet.</p>`;
                 } else {
-                    html += `<table><thead><tr><th>Date</th><th>Title</th><th>Priority</th><th>Actions</th></tr></thead><tbody>`;
+                    html += `<table><thead><tr><th>Date</th><th>Title</th><th>To</th><th>Priority</th><th>Actions</th></tr></thead><tbody>`;
                     messages.forEach(m => {
+                        const recipientLabel = !m.recipients || m.recipients === 'all' ? 'All Members' : m.recipients.split(',').length + ' selected';
                         html += `<tr>
                             <td>${new Date(m.created_at).toLocaleDateString()}</td>
                             <td>${m.title}</td>
+                            <td>${recipientLabel}</td>
                             <td><span class="status-badge ${m.priority}">${m.priority}</span></td>
                             <td>
                                 <button onclick="showEditMessageForm(${m.id})" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
@@ -2938,28 +2940,51 @@
         }
 
         // ===== ADMIN: Messages CRUD =====
-        function showAddMessageForm() {
+        async function showAddMessageForm() {
+            await refreshData();
+            const members = getMembers().filter(m => m.status === 'active' || m.status === 'applied');
             document.getElementById('adminTabContent').innerHTML = `
-                <h4 style="margin-bottom:1rem;">Post Announcement</h4>
+                <h4 style="margin-bottom:1rem;">Post Message</h4>
                 <form id="addMessageForm">
                     <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
                     <div class="form-group"><label>Priority</label>
                         <select name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select>
                     </div>
+                    <div class="form-group"><label>Send To</label>
+                        <select name="sendTo" id="msgSendTo" onchange="document.getElementById('msgMemberList').style.display = this.value === 'selected' ? 'block' : 'none'">
+                            <option value="all">All Members</option>
+                            <option value="selected">Selected Members</option>
+                        </select>
+                    </div>
+                    <div id="msgMemberList" style="display:none; margin-bottom:1rem; max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:4px; padding:0.5rem;">
+                        ${members.map(m => `
+                            <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">
+                                <input type="checkbox" name="member_${m.id}" value="${m.id}"> ${m.name} <span style="color:var(--text-light);font-size:0.8rem;">${m.email||''}</span>
+                            </label>
+                        `).join('')}
+                    </div>
                     <div class="form-group"><label>Message</label><textarea name="body" rows="5" required></textarea></div>
-                    <button type="submit" class="btn btn-primary">Post</button>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
                     <button type="button" class="btn btn-secondary" onclick="showAdminTab('messages')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
             `;
             document.getElementById('addMessageForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
+                const sendTo = this.querySelector('[name="sendTo"]').value;
+                let recipients = 'all';
+                if (sendTo === 'selected') {
+                    const checked = Array.from(this.querySelectorAll('#msgMemberList input:checked')).map(cb => cb.value);
+                    if (checked.length === 0) { alert('Please select at least one member.'); return; }
+                    recipients = checked.join(',');
+                }
                 const { error } = await sb.from('messages').insert({
                     title: this.querySelector('[name="title"]').value,
                     body: this.querySelector('[name="body"]').value,
-                    priority: this.querySelector('[name="priority"]').value
+                    priority: this.querySelector('[name="priority"]').value,
+                    recipients: recipients
                 });
                 if (error) { alert('Error: ' + error.message); return; }
-                alert('Message posted.');
+                alert('Message sent to ' + (sendTo === 'all' ? 'all members' : 'selected members') + '.');
                 showAdminTab('messages');
             });
         }

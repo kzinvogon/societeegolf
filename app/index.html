@@ -1988,9 +1988,11 @@
       </div>
     `;
 
-    // Latest message
-    if (messages.length > 0) {
-      const msg = messages[0];
+    // Latest message (filtered for this member)
+    const myId2 = currentUser?.id || 'demo-1';
+    const myMessages = messages.filter(msg => !msg.recipients || msg.recipients === 'all' || msg.recipients.split(',').includes(myId2));
+    if (myMessages.length > 0) {
+      const msg = myMessages[0];
       const priorityClass = 'priority-' + msg.priority;
       document.getElementById('latestMessage').innerHTML = `
         <div class="card msg-card ${priorityClass}" onclick="switchTab('messages')">
@@ -2297,7 +2299,13 @@
 
   // ===== RENDER: MESSAGES TAB =====
   async function renderMessages() {
-    const messages = await getMessages();
+    const allMessages = await getMessages();
+    // Filter: show messages sent to 'all' or specifically to this member
+    const myId = currentUser?.id || 'demo-1';
+    const messages = allMessages.filter(msg => {
+      if (!msg.recipients || msg.recipients === 'all') return true;
+      return msg.recipients.split(',').includes(myId);
+    });
     const container = document.getElementById('messagesList');
 
     if (messages.length === 0) {

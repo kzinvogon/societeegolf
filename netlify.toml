@@ -1,7 +1,13 @@
 [build]
   publish = "."
 
-# Serve index.html for any unmatched route (SPA behaviour)
+# Serve the mobile app SPA for /app/* routes
+[[redirects]]
+  from = "/app/*"
+  to = "/app/index.html"
+  status = 200
+
+# Serve index.html for any unmatched route (main site SPA behaviour)
 [[redirects]]
   from = "/*"
   to = "/index.html"

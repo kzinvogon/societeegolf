@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#152847">
+  <title>JPGS — Javea Port Golf Society</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="supabase-config.js"></script>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #152847;
+      --green: #1B4D3E;
+      --gold: #C9A84C;
+      --gold-light: #F5EDD6;
+      --bg: #F7F8FA;
+      --card: #FFFFFF;
+      --text: #1A1A2E;
+      --text-secondary: #6B7280;
+      --border: #E5E7EB;
+      --red: #DC2626;
+      --amber: #F59E0B;
+      --green-light: #10B981;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100%;
+      overflow: hidden;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== APP SHELL ===== */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--bg);
+      position: relative;
+    }
+
+    @media (min-width: 481px) {
+      .app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--navy);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      min-height: 56px;
+    }
+
+    .header-brand {
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-brand span { color: var(--gold); }
+
+    .header-back {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 2px;
+      line-height: 1;
+      opacity: 0.9;
+    }
+
+    .header-back:hover { opacity: 1; }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .header-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* ===== MODE TOGGLE ===== */
+    .mode-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      background: white;
+      color: var(--navy);
+    }
+
+    /* ===== CONTENT AREA ===== */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(72px + var(--safe-bottom));
+    }
+
+    .content-inner { padding: 16px; }
+
+    /* ===== BOTTOM TAB BAR ===== */
+    .tab-bar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 6px 0 calc(6px + var(--safe-bottom));
+      z-index: 100;
+    }
+
+    .tab-bar.visible { display: flex; }
+
+    .tab-bar-inner {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      width: 100%;
+    }
+
+    .tab-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 8px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 500;
+      transition: color 0.2s;
+      min-width: 56px;
+    }
+
+    .tab-btn.active { color: var(--gold); }
+    .tab-btn.active .tab-icon { color: var(--gold); }
+
+    .tab-icon { font-size: 22px; line-height: 1; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .card-body { font-size: 14px; color: var(--text-secondary); }
+
+    /* ===== HERO CARD (visitor) ===== */
+    .hero-card {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--green) 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .hero-card h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .hero-card p {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .hero-card .price-tag {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 15px;
+      padding: 8px 20px;
+      border-radius: 24px;
+      margin-bottom: 12px;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .btn-primary { background: var(--gold); color: var(--navy); }
+    .btn-primary:hover { background: #b8972f; }
+
+    .btn-secondary { background: var(--navy); color: white; }
+    .btn-secondary:hover { background: #1d3a6a; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--navy);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-danger { background: #FEE2E2; color: var(--red); }
+
+    .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+    .btn-full { width: 100%; }
+    .btn-ghost { background: none; border: none; color: var(--gold); font-weight: 600; padding: 4px; }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-green { background: #D1FAE5; color: #065F46; }
+    .badge-amber { background: #FEF3C7; color: #92400E; }
+    .badge-red { background: #FEE2E2; color: #991B1B; }
+    .badge-navy { background: #E0E7FF; color: var(--navy); }
+    .badge-gold { background: var(--gold-light); color: #92400E; }
+
+    /* ===== EVENT CARDS ===== */
+    .event-card { padding: 0; overflow: hidden; }
+
+    .event-card-top {
+      padding: 14px 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .event-date-box {
+      min-width: 48px;
+      text-align: center;
+      background: var(--navy);
+      color: white;
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      flex-shrink: 0;
+    }
+
+    .event-date-box .month {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+
+    .event-date-box .day {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .event-info { flex: 1; min-width: 0; }
+    .event-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .event-meta-item { display: flex; align-items: center; gap: 3px; }
+
+    .event-card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 14px;
+    }
+
+    /* ===== STAT CARDS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 2px;
+    }
+
+    /* ===== LIST ITEMS ===== */
+    .list-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .list-item:last-child { border-bottom: none; }
+
+    .list-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .list-text { flex: 1; min-width: 0; }
+    .list-text h4 { font-size: 14px; font-weight: 600; }
+    .list-text p { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+    /* ===== MESSAGE CARDS ===== */
+    .msg-card {
+      border-left: 3px solid var(--border);
+      cursor: pointer;
+    }
+
+    .msg-card.priority-urgent { border-left-color: var(--red); }
+    .msg-card.priority-important { border-left-color: var(--amber); }
+    .msg-card.priority-normal { border-left-color: var(--green-light); }
+
+    .msg-time { font-size: 11px; color: var(--text-secondary); }
+    .msg-body { display: none; margin-top: 10px; font-size: 14px; line-height: 1.6; }
+    .msg-card.expanded .msg-body { display: block; }
+
+    /* ===== TEE TIME GROUPS ===== */
+    .tee-group {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .tee-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--navy);
+      color: white;
+    }
+
+    .tee-time { font-size: 16px; font-weight: 700; }
+    .tee-group-label { font-size: 12px; opacity: 0.7; }
+
+    .tee-player {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .tee-player:last-child { border-bottom: none; }
+
+    .tee-player .handicap {
+      background: var(--gold-light);
+      color: #92400E;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .tee-player.is-me {
+      background: #EFF6FF;
+      font-weight: 600;
+    }
+
+    /* ===== PROFILE ===== */
+    .profile-header {
+      text-align: center;
+      padding: 24px 16px;
+    }
+
+    .profile-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700;
+      margin: 0 auto 12px;
+    }
+
+    .profile-name { font-size: 20px; font-weight: 700; }
+    .profile-email { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* ===== AUTH SCREEN ===== */
+    .auth-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+      min-height: 60vh;
+    }
+
+    .auth-screen h2 { font-size: 22px; margin-bottom: 8px; }
+    .auth-screen p { color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
+
+    .auth-form { width: 100%; max-width: 320px; }
+
+    .input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .input:focus { border-color: var(--gold); }
+
+    .auth-message {
+      background: #EFF6FF;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--navy);
+      margin-top: 12px;
+    }
+
+    /* ===== VISITOR SECTIONS ===== */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .course-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
+      margin: 0 -16px;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .course-scroll::-webkit-scrollbar { display: none; }
+
+    .course-card {
+      min-width: 260px;
+      scroll-snap-align: start;
+      flex-shrink: 0;
+    }
+
+    .course-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+
+    .course-details {
+      display: flex; gap: 10px;
+      font-size: 12px; color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .steps-list { counter-reset: step; }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-item:last-child { border-bottom: none; }
+
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .step-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .step-text p { font-size: 13px; color: var(--text-secondary); }
+
+    /* ===== COUNTDOWN ===== */
+    .countdown {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 12px 0;
+    }
+
+    .countdown-item {
+      text-align: center;
+      background: var(--navy);
+      color: white;
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      min-width: 52px;
+    }
+
+    .countdown-item .num { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .countdown-item .label { font-size: 9px; text-transform: uppercase; opacity: 0.7; letter-spacing: 0.5px; }
+
+    /* ===== EVENT DETAIL MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 0;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 10px auto;
+    }
+
+    .modal-header {
+      padding: 4px 20px 16px;
+    }
+
+    .modal-header h2 { font-size: 20px; font-weight: 700; }
+
+    .modal-body { padding: 0 20px 24px; }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .detail-label { color: var(--text-secondary); }
+    .detail-value { font-weight: 600; text-align: right; }
+
+    /* ===== SECTION TOGGLE ===== */
+    .toggle-tabs {
+      display: flex;
+      background: var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 14px;
+    }
+
+    .toggle-tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-tab.active {
+      background: white;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 16px; color: var(--text); margin-bottom: 4px; }
+    .empty-state p { font-size: 13px; }
+
+    /* ===== RESULTS TABLE ===== */
+    .results-table {
+      width: 100%;
+      font-size: 13px;
+      border-collapse: collapse;
+    }
+
+    .results-table th {
+      text-align: left;
+      padding: 8px 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .results-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-table .pos-1 td { background: #FEF3C7; }
+
+    /* ===== LOADING SKELETON ===== */
+    .skeleton {
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ===== SUBVIEW (full-screen overlay panels) ===== */
+    .subview {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .subview-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--navy);
+      color: white;
+      min-height: 56px;
+    }
+
+    .subview-back {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .subview-title { font-size: 17px; font-weight: 700; }
+
+    .subview-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px;
+    }
+
+    .course-list-card {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+    }
+
+    .course-list-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: var(--green);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .course-list-info { flex: 1; min-width: 0; }
+    .course-list-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .course-list-info p { font-size: 12px; color: var(--text-secondary); }
+
+    .course-list-meta {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .course-list-meta span {
+      font-size: 11px;
+      background: var(--gold-light);
+      color: #92400E;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    /* ===== UTILITIES ===== */
+    .hidden { display: none !important; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-16 { margin-bottom: 16px; }
+    .text-center { text-align: center; }
+    .text-sm { font-size: 13px; }
+    .text-secondary { color: var(--text-secondary); }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="header-back hidden" id="headerBack" onclick="goBack()">←</button>
+      <div class="header-brand">J<span>P</span>GS</div>
+    </div>
+    <div class="header-right">
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="visitor" onclick="setMode('visitor')">Visitor</button>
+        <button class="mode-btn" data-mode="member" onclick="setMode('member')">Member</button>
+      </div>
+      <div class="header-avatar hidden" id="headerAvatar" onclick="switchTab('profile')"></div>
+    </div>
+  </header>
+
+  <!-- ===== CONTENT ===== -->
+  <main class="content" id="content">
+
+    <!-- VISITOR VIEW -->
+    <div id="visitorView" class="content-inner">
+
+      <!-- Hero -->
+      <div class="hero-card">
+        <h1>Costa Blanca Golf.<br>No Fees. No Fuss.</h1>
+        <p>A friendly golf society based in Javea, playing the best courses on the Costa Blanca. All abilities welcome.</p>
+        <div class="price-tag">€25 / Quarter</div>
+        <br>
+        <button class="btn btn-primary" onclick="setMode('member')">Member Login</button>
+      </div>
+
+      <!-- What We're About — compact pitch -->
+      <div class="card">
+        <h3 class="card-title">Golf Without the Club Fees</h3>
+        <p class="card-body mt-8">We rotate across the best courses on the northern Costa Blanca — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. Just great golf and good company.</p>
+      </div>
+
+      <!-- Key selling points — feature tiles -->
+      <div class="stats-grid">
+        <div class="stat-card" style="cursor:pointer" onclick="showCoursesView()">
+          <div style="font-size:22px; margin-bottom:4px;">⛳</div>
+          <div class="stat-value">13</div>
+          <div class="stat-label">Courses</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:22px; margin-bottom:4px;">🌍</div>
+          <div class="stat-value">All</div>
+          <div class="stat-label">Abilities Welcome</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div style="font-size:22px; margin-bottom:4px;">💶</div>
+          <div class="stat-value">€25</div>
+          <div class="stat-label">Per Quarter</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:22px; margin-bottom:4px;">🤝</div>
+          <div class="stat-value">€0</div>
+          <div class="stat-label">Joining Fee</div>
+        </div>
+      </div>
+
+      <!-- Why Join — feature list -->
+      <h2 class="section-title">Why Join Us?</h2>
+      <div class="card">
+        <div class="list-item">
+          <div class="list-icon" style="background: #D1FAE5;">💰</div>
+          <div class="list-text">
+            <h4>Simple & Affordable</h4>
+            <p>No joining fee, no share scheme. €25 per quarter and green fees at discounted society rates.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: #E0E7FF;">🏌️</div>
+          <div class="list-text">
+            <h4>Great Courses</h4>
+            <p>Rotate across 13 courses — Seve-designed championship layouts, coastal gems, and mountain backdrops.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: var(--gold-light);">🏆</div>
+          <div class="list-text">
+            <h4>Competitions & Trophies</h4>
+            <p>Stableford, Medal, Texas Scramble, Better Ball — varied formats plus four prestigious annual trophies.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: #FEE2E2;">🍻</div>
+          <div class="list-text">
+            <h4>More Than Golf</h4>
+            <p>Friendships, banter, away days, and social events. A community, not just a club.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next Event Preview -->
+      <div id="visitorNextEvent"></div>
+
+      <!-- Events -->
+      <h2 class="section-title">Events</h2>
+      <div class="toggle-tabs" id="visitorEventTabs">
+        <button class="toggle-tab active" onclick="showVisitorEvents('upcoming')">Upcoming</button>
+        <button class="toggle-tab" onclick="showVisitorEvents('past')">Past</button>
+      </div>
+      <div id="visitorEventsList"></div>
+
+      <div class="mt-16"></div>
+
+      <!-- Member Quotes — social proof -->
+      <h2 class="section-title">What Members Say</h2>
+      <div class="card msg-card priority-normal" style="cursor:default;">
+        <p class="card-body" style="font-style:italic; color:var(--text);">"I joined not knowing many people in Javea and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."</p>
+        <p class="msg-time mt-8">— Society Member</p>
+      </div>
+      <div class="card msg-card priority-normal" style="cursor:default;">
+        <p class="card-body" style="font-style:italic; color:var(--text);">"Everything a golf society should be — competitive enough to keep you sharp, friendly enough to keep you coming back."</p>
+        <p class="msg-time mt-8">— Society Member</p>
+      </div>
+      <div class="card msg-card priority-normal" style="cursor:default;">
+        <p class="card-body" style="font-style:italic; color:var(--text);">"What I really like is the variety — Texas Scramble, Better Ball, Reverse Waltz, Individual Stableford. The organisers really mix things up."</p>
+        <p class="msg-time mt-8">— Society Member</p>
+      </div>
+
+      <div class="mt-16"></div>
+
+      <!-- Trophy Calendar — prestige -->
+      <h2 class="section-title">Trophy Calendar</h2>
+      <div class="card">
+        <div class="list-item">
+          <div class="list-icon" style="background: var(--gold-light); font-size:20px;">🏆</div>
+          <div class="list-text">
+            <h4>Francis McNeil Memorial</h4>
+            <p>Our most cherished competition — a tribute to a much-missed member.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: #E0E7FF; font-size:20px;">✈️</div>
+          <div class="list-text">
+            <h4>Away Days Trophies</h4>
+            <p>Twice a year the society hits the road — two trophies across the best regional courses.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: #D1FAE5; font-size:20px;">🥇</div>
+          <div class="list-text">
+            <h4>Captain's Trophy</h4>
+            <p>One of the most prestigious events in the society year. Every member wants this one.</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background: #FEF3C7; font-size:20px;">🏅</div>
+          <div class="list-text">
+            <h4>Society Trophy <span class="badge badge-gold" style="margin-left:6px;">New 2026</span></h4>
+            <p>Brand new — who will be the inaugural winner?</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16"></div>
+
+      <!-- What It Costs — clear pricing -->
+      <h2 class="section-title">What It Costs</h2>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:36px; font-weight:700; color:var(--navy);">€25</div>
+        <div class="text-sm text-secondary">per quarter — covers prizes & pre-pays booking fees</div>
+        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
+        <div style="font-size:20px; font-weight:700; color:var(--navy);">+ €5</div>
+        <div class="text-sm text-secondary">comp prizes contribution (on trophy events only)</div>
+        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
+        <div class="text-sm text-secondary">+ green fee at <strong>discounted society rates</strong></div>
+        <div style="margin-top:12px;">
+          <span class="badge badge-green">No joining fee. No share scheme. Ever.</span>
+        </div>
+      </div>
+
+      <div class="mt-16"></div>
+
+      <!-- How to Join -->
+      <h2 class="section-title">How to Join</h2>
+      <div class="card">
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-text">
+              <h4>Register Your Interest</h4>
+              <p>Contact us via email or the main website form.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-text">
+              <h4>Play 3 Rounds</h4>
+              <p>Join us for 3 games — a chance for you and us to decide if it's a good fit.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-text">
+              <h4>Play & Pay</h4>
+              <p>€25 quarterly membership + €5 comp prizes contribution. That's it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16"></div>
+
+      <!-- Contact -->
+      <div class="card">
+        <h3 class="card-title">Get in Touch</h3>
+        <div class="card-body mt-8">
+          <div class="list-item" style="border-bottom:none; padding-top:4px;">
+            <div class="list-icon" style="background:var(--gold-light);">📧</div>
+            <div class="list-text">
+              <h4>javeaportgolfsociety@gmail.com</h4>
+              <p>We usually reply within 24 hours</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16"></div>
+
+      <!-- Join Us Form -->
+      <h2 class="section-title">Join Us</h2>
+      <div class="card">
+        <p class="card-body mb-16">Interested in joining? Fill in your details and we'll be in touch within 24 hours.</p>
+        <form id="joinForm" onsubmit="submitJoinForm(event)" novalidate>
+          <input type="text" class="input" id="joinName" placeholder="Your full name" required>
+          <input type="email" class="input" id="joinEmail" placeholder="Email address" required>
+          <div style="display:flex; gap:8px;">
+            <select class="input" id="joinCountryCode" style="width:110px; flex-shrink:0;">
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+353">🇮🇪 +353</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+46">🇸🇪 +46</option>
+              <option value="+47">🇳🇴 +47</option>
+              <option value="+45">🇩🇰 +45</option>
+              <option value="+32">🇧🇪 +32</option>
+              <option value="+1">🇺🇸 +1</option>
+            </select>
+            <input type="tel" class="input" id="joinPhone" placeholder="WhatsApp number" style="flex:1;" required>
+          </div>
+          <div id="joinPhoneError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;"></div>
+          <label style="font-size:13px; font-weight:600; color:var(--text); display:block; margin-bottom:8px;">Notify me by</label>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyEmailLabel">
+              <input type="checkbox" id="notifyEmail" value="email" checked onchange="updateNotifyStyle()"> 📧 Email
+            </label>
+            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyWhatsappLabel">
+              <input type="checkbox" id="notifyWhatsapp" value="whatsapp" checked onchange="updateNotifyStyle()"> 💬 WhatsApp
+            </label>
+          </div>
+          <div id="joinNotifyError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;">Please select at least one option</div>
+          <button type="submit" class="btn btn-primary btn-full" id="joinSubmitBtn">Send My Details</button>
+        </form>
+        <div id="joinSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">
+          ✅ Thanks! We'll be in touch soon.
+        </div>
+      </div>
+
+      <div class="mt-16"></div>
+    </div>
+
+    <!-- AUTH SCREEN (shown when member mode selected but not logged in) -->
+    <div id="authView" class="hidden">
+      <div class="auth-screen">
+        <div style="font-size:48px; margin-bottom:16px;">⛳</div>
+        <h2>Member Login</h2>
+        <p>Enter your email to receive a magic login link. No password needed.</p>
+        <div class="auth-form">
+          <input type="email" class="input" id="authEmail" placeholder="your@email.com" autocomplete="email">
+          <button class="btn btn-primary btn-full" id="authSubmit" onclick="sendMagicLink()">Send Login Link</button>
+          <div id="authMessage" class="hidden"></div>
+        </div>
+        <div class="mt-16">
+          <button class="btn-ghost" onclick="setMode('visitor')">← Back to visitor view</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMBER VIEW TABS -->
+    <div id="memberView" class="hidden">
+
+      <!-- TAB: Home / Dashboard -->
+      <div id="tabHome" class="content-inner tab-content">
+        <div id="welcomeCard"></div>
+        <div id="nextEventCountdown"></div>
+        <div id="quickActions"></div>
+        <div id="latestMessage"></div>
+        <div id="memberStats"></div>
+      </div>
+
+      <!-- TAB: Events -->
+      <div id="tabEvents" class="content-inner tab-content hidden">
+        <div class="toggle-tabs">
+          <button class="toggle-tab active" onclick="showEventTab('upcoming')">Upcoming</button>
+          <button class="toggle-tab" onclick="showEventTab('past')">Past & Results</button>
+        </div>
+        <div id="eventsList"></div>
+      </div>
+
+      <!-- TAB: Tee Times -->
+      <div id="tabTee" class="content-inner tab-content hidden">
+        <h2 class="section-title">Your Tee Times</h2>
+        <div id="teeTimesList"></div>
+      </div>
+
+      <!-- TAB: Messages -->
+      <div id="tabMessages" class="content-inner tab-content hidden">
+        <h2 class="section-title">Messages</h2>
+        <div id="messagesList"></div>
+      </div>
+
+      <!-- TAB: Profile -->
+      <div id="tabProfile" class="content-inner tab-content hidden">
+        <div id="profileContent"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== BOTTOM TAB BAR ===== -->
+  <nav class="tab-bar" id="tabBar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" data-tab="home" onclick="switchTab('home')">
+        <span class="tab-icon">🏠</span>
+        <span>Home</span>
+      </button>
+      <button class="tab-btn" data-tab="events" onclick="switchTab('events')">
+        <span class="tab-icon">📅</span>
+        <span>Events</span>
+      </button>
+      <button class="tab-btn" data-tab="tee" onclick="switchTab('tee')">
+        <span class="tab-icon">⛳</span>
+        <span>Tee Times</span>
+      </button>
+      <button class="tab-btn" data-tab="messages" onclick="switchTab('messages')">
+        <span class="tab-icon">💬</span>
+        <span>Messages</span>
+      </button>
+      <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
+        <span class="tab-icon">👤</span>
+        <span>Me</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== EVENT DETAIL MODAL ===== -->
+  <!-- ===== COURSES LIST VIEW ===== -->
+  <div class="subview hidden" id="coursesView">
+    <div class="subview-header">
+      <button class="subview-back" onclick="hideCoursesView()">←</button>
+      <span class="subview-title">Our Courses</span>
+    </div>
+    <div class="subview-body" id="coursesListBody"></div>
+  </div>
+
+  <div class="modal-overlay" id="eventModal" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h2 id="modalTitle"></h2>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ===== DEMO DATA =====
+  const DEMO_MEMBER = {
+    id: 'demo-1',
+    name: 'David Hamilton',
+    email: 'david@example.com',
+    handicap: 18,
+    status: 'active',
+    role: 'member',
+    joined_date: '2025-01-15'
+  };
+
+  const DEMO_EVENTS = [
+    {
+      id: 1,
+      title: 'Poniente Golf Day',
+      date: '2026-04-18',
+      course: 'Poniente Golf',
+      location: 'Calpe',
+      format: 'Stableford',
+      cost: 55,
+      payment_link: 'https://revolut.me/jpgs-golf',
+      signup_limit: 24,
+      signup_cutoff: '2026-04-15',
+      tee_time_start: '09:00',
+      tee_interval: 10,
+      notes: 'Buggies available for €30 extra. Meet in car park at 08:15.'
+    },
+    {
+      id: 2,
+      title: 'Spring Medal',
+      date: '2026-05-03',
+      course: 'Jávea Golf Club',
+      location: 'Jávea',
+      format: 'Medal',
+      cost: 48,
+      payment_link: 'https://revolut.me/jpgs-golf',
+      signup_limit: 20,
+      signup_cutoff: '2026-04-30',
+      tee_time_start: '08:30',
+      tee_interval: 10,
+      notes: 'Handicap certificates required.'
+    },
+    {
+      id: 3,
+      title: 'La Sella Away Day',
+      date: '2026-05-17',
+      course: 'La Sella Golf',
+      location: 'Dénia',
+      format: 'Texas Scramble',
+      cost: 60,
+      payment_link: '',
+      signup_limit: 32,
+      signup_cutoff: '2026-05-14',
+      tee_time_start: '09:30',
+      tee_interval: 10,
+      notes: 'Teams of 4. Lunch included.'
+    },
+    {
+      id: 4,
+      title: 'Francis McNeil Memorial',
+      date: '2026-03-22',
+      course: 'Bonalba Golf',
+      location: 'Alicante',
+      format: 'Stableford',
+      cost: 52,
+      payment_link: '',
+      signup_limit: 24,
+      signup_cutoff: '2026-03-19',
+      tee_time_start: '09:00',
+      tee_interval: 10,
+      notes: 'Annual memorial trophy event.'
+    }
+  ];
+
+  const DEMO_SIGNUPS = [
+    // Poniente Golf Day — 16 players, 4 groups
+    { event_id: 1, member_id: 'demo-1',  handicap_at_signup: 18, paid: true },
+    { event_id: 1, member_id: 'demo-2',  handicap_at_signup: 12, paid: true },
+    { event_id: 1, member_id: 'demo-3',  handicap_at_signup: 17, paid: true },
+    { event_id: 1, member_id: 'demo-4',  handicap_at_signup: 24, paid: true },
+    { event_id: 1, member_id: 'demo-5',  handicap_at_signup: 16, paid: false },
+    { event_id: 1, member_id: 'demo-6',  handicap_at_signup: 27, paid: true },
+    { event_id: 1, member_id: 'demo-7',  handicap_at_signup: 19, paid: false },
+    { event_id: 1, member_id: 'demo-8',  handicap_at_signup: 15, paid: true },
+    { event_id: 1, member_id: 'demo-9',  handicap_at_signup: 22, paid: true },
+    { event_id: 1, member_id: 'demo-10', handicap_at_signup: 10, paid: true },
+    { event_id: 1, member_id: 'demo-11', handicap_at_signup: 28, paid: false },
+    { event_id: 1, member_id: 'demo-12', handicap_at_signup: 14, paid: true },
+    { event_id: 1, member_id: 'demo-13', handicap_at_signup: 20, paid: true },
+    { event_id: 1, member_id: 'demo-14', handicap_at_signup: 25, paid: false },
+    { event_id: 1, member_id: 'demo-15', handicap_at_signup: 11, paid: true },
+    { event_id: 1, member_id: 'demo-16', handicap_at_signup: 23, paid: true },
+    // Spring Medal
+    { event_id: 2, member_id: 'demo-1',  handicap_at_signup: 18, paid: false },
+    // Francis McNeil (past)
+    { event_id: 4, member_id: 'demo-1',  handicap_at_signup: 18, paid: true }
+  ];
+
+  const DEMO_MEMBERS_LIST = [
+    { id: 'demo-1',  name: 'David Hamilton',     handicap: 18 },
+    { id: 'demo-2',  name: 'Jim Conaghan',       handicap: 12 },
+    { id: 'demo-3',  name: 'Martin Leyshon',     handicap: 17 },
+    { id: 'demo-4',  name: 'Rob Jardine',        handicap: 24 },
+    { id: 'demo-5',  name: 'Clive Challenor',    handicap: 16 },
+    { id: 'demo-6',  name: 'Erik Greuter',       handicap: 27 },
+    { id: 'demo-7',  name: 'William Marshal',    handicap: 19 },
+    { id: 'demo-8',  name: 'Sean Kavanagh',      handicap: 15 },
+    { id: 'demo-9',  name: 'Stuart Connel',      handicap: 22 },
+    { id: 'demo-10', name: 'Andrew Jagger',      handicap: 10 },
+    { id: 'demo-11', name: 'Alan Turpin',        handicap: 28 },
+    { id: 'demo-12', name: 'Lawrence Stevenson', handicap: 14 },
+    { id: 'demo-13', name: "Paul O'Neill",       handicap: 20 },
+    { id: 'demo-14', name: 'Robert Ellis',       handicap: 25 },
+    { id: 'demo-15', name: 'Ian Hunt',           handicap: 11 },
+    { id: 'demo-16', name: 'John Delaney',       handicap: 23 }
+  ];
+
+  const DEMO_RESULTS = [
+    { event_id: 4, member_id: 'demo-8', score: 72, points: 38, position: 1, name: 'Steve Clarke' },
+    { event_id: 4, member_id: 'demo-2', score: 78, points: 36, position: 2, name: 'Jim Conaghan' },
+    { event_id: 4, member_id: 'demo-1', score: 85, points: 33, position: 3, name: 'David Hamilton' },
+    { event_id: 4, member_id: 'demo-4', score: 76, points: 32, position: 4, name: 'Rob Jardine' },
+    { event_id: 4, member_id: 'demo-5', score: 88, points: 31, position: 5, name: 'Clive Challenor' }
+  ];
+
+  const DEMO_MESSAGES = [
+    {
+      id: 1,
+      title: 'Poniente Golf Day — Reminders',
+      body: 'Just a reminder that the Poniente event is on April 18th. Please arrive by 08:15 in the car park. Buggies are available for €30 — let Jim know by April 12th if you want one reserved.\n\nPayment link has been sent separately. Please pay before the cutoff.',
+      priority: 'important',
+      created_at: '2026-04-08T10:00:00Z'
+    },
+    {
+      id: 2,
+      title: 'New Member Welcome',
+      body: 'Welcome to Peter Wilson who joined us last week. Peter plays off 20 and is based in Javea town. Say hello at the next event!',
+      priority: 'normal',
+      created_at: '2026-04-05T14:30:00Z'
+    },
+    {
+      id: 3,
+      title: 'Quarterly Fees Due',
+      body: 'Q2 membership fees (€25) are now due. Please pay via the usual Revolut link or bank transfer. Details in the members WhatsApp group.',
+      priority: 'urgent',
+      created_at: '2026-04-01T09:00:00Z'
+    },
+    {
+      id: 4,
+      title: 'Francis McNeil Memorial — Results',
+      body: 'Congratulations to Steve Clarke who won the Francis McNeil Memorial Trophy with 38 points! Full results are now available in the Events tab under Past & Results.',
+      priority: 'normal',
+      created_at: '2026-03-23T16:00:00Z'
+    }
+  ];
+
+  const COURSES = [
+    { name: 'Alicante Golf', location: 'Alicante', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: 'Designed by Seve Ballesteros, 5 lakes.', website: 'https://www.alicantegolf.com' },
+    { name: 'Bonalba Golf & Spa', location: 'Mutxamel', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: '5 lakes, 96 bunkers.', website: 'https://www.golfbonalba.com' },
+    { name: 'El Plantío Golf', location: 'Alicante', holes: '18+9', par: 'Par 72', type: 'Championship', jpgs: false, description: 'Close to airport.', website: 'https://www.elplantio.com' },
+    { name: 'Ifach San Jaime', location: 'Benissa/Moraira', holes: '9', par: 'Par 60', type: '9-Hole', jpgs: false, description: 'Views of Peñon de Ifach.', website: 'https://www.golfifach.com' },
+    { name: 'Jávea Golf Club', location: 'Jávea', holes: '9/18', par: 'All Levels', type: '9-Hole', jpgs: true, description: 'Our local course, opened 1981, 34 bunkers.', website: 'https://www.clubdegolfjavea.com' },
+    { name: 'La Sella Golf Resort', location: 'Jesús Pobre, Dénia', holes: '27', par: 'Championship', type: 'Championship', jpgs: false, description: 'Designed by Olazábal.', website: 'https://www.lasellagolf.com' },
+    { name: 'Las Rejas Golf', location: 'Benidorm', holes: '9', par: 'Par 3', type: 'Pitch & Putt', jpgs: false, description: 'Pay and play near Poniente beach.', website: 'https://www.benidorm.lasrejasopenclub.com' },
+    { name: 'Sierra Altea Golf', location: 'Altea Hills', holes: '9/18', par: 'Par 72', type: '9-Hole', jpgs: true, description: 'Oldest on Costa Blanca (1974).', website: 'https://www.alteaclubdegolf.com' },
+    { name: 'Sierra Cortina Golf', location: 'Finestrat/Benidorm', holes: '18', par: 'Par 3', type: 'Pitch & Putt', jpgs: false, description: 'Panoramic views, 2 hours to play.', website: 'https://www.golfparatodos.es' },
+    { name: 'Villaitana Golf', location: 'Benidorm', holes: '36', par: 'Championship', type: 'Championship', jpgs: true, description: '5-star resort, 2 courses.', website: 'https://www.meliavillaitanagolf.com' },
+    { name: 'El Saler', location: 'El Saler Natural Park, Valencia', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: 'PGA Championship course.', website: 'https://paradores.es/en/golf' },
+    { name: 'Foressos', location: 'Picassent, Valencia', holes: '18', par: 'Par 72', type: 'Championship', jpgs: false, description: '18-hole championship course off the A7/N340.', website: 'https://foressosclubgolf.com' },
+    { name: 'Puig Campana', location: 'Finestrat', holes: '9 (x2)', par: 'Par 72', type: '9-Hole', jpgs: false, description: '9 holes played twice for a full 18-hole round.', website: 'https://puigcampanagolf.es' }
+  ];
+
+  // ===== STATE =====
+  let currentMode = 'visitor';    // 'visitor' or 'member'
+  let currentTab = 'home';
+  let currentUser = null;         // null or member object
+  let isAuthenticated = false;
+  let eventTabView = 'upcoming';  // 'upcoming' or 'past'
+  let navHistory = [];            // tab navigation history
+
+  // ===== SUPABASE CLIENT =====
+  let supabase = null;
+
+  async function initSupabase() {
+    if (typeof DEMO_MODE !== 'undefined' && DEMO_MODE) return;
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await loginWithSession(session);
+      }
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          await loginWithSession(session);
+        } else if (event === 'SIGNED_OUT') {
+          logout();
+        }
+      });
+    } catch (e) {
+      console.warn('Supabase not configured, using demo mode', e);
+    }
+  }
+
+  async function loginWithSession(session) {
+    if (supabase) {
+      const { data } = await supabase.from('members').select('*').eq('id', session.user.id).single();
+      if (data) {
+        currentUser = data;
+        isAuthenticated = true;
+        setMode('member');
+      }
+    }
+  }
+
+  // ===== DATA ACCESS LAYER =====
+  // Returns demo data or Supabase data depending on mode
+
+  async function getEvents() {
+    if (!supabase) return DEMO_EVENTS;
+    const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
+    return data || [];
+  }
+
+  async function getSignups(eventId) {
+    if (!supabase) return DEMO_SIGNUPS.filter(s => s.event_id === eventId);
+    const { data } = await supabase.from('signups').select('*, members(name, handicap)').eq('event_id', eventId);
+    return data || [];
+  }
+
+  async function getMySignups() {
+    if (!supabase) return DEMO_SIGNUPS.filter(s => s.member_id === 'demo-1');
+    const { data } = await supabase.from('signups').select('*, events(*)').eq('member_id', currentUser.id);
+    return data || [];
+  }
+
+  async function getResults(eventId) {
+    if (!supabase) return DEMO_RESULTS.filter(r => r.event_id === eventId);
+    const { data } = await supabase.from('results').select('*, members(name)').eq('event_id', eventId).order('position');
+    return data || [];
+  }
+
+  async function getMessages() {
+    if (!supabase) return DEMO_MESSAGES;
+    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+    return data || [];
+  }
+
+  async function signUpForEvent(eventId) {
+    if (!supabase) {
+      DEMO_SIGNUPS.push({ event_id: eventId, member_id: 'demo-1', handicap_at_signup: DEMO_MEMBER.handicap, paid: false });
+      return true;
+    }
+    const { error } = await supabase.from('signups').insert({
+      event_id: eventId,
+      member_id: currentUser.id,
+      handicap_at_signup: currentUser.handicap
+    });
+    return !error;
+  }
+
+  async function withdrawFromEvent(eventId) {
+    if (!supabase) {
+      const idx = DEMO_SIGNUPS.findIndex(s => s.event_id === eventId && s.member_id === 'demo-1');
+      if (idx >= 0) DEMO_SIGNUPS.splice(idx, 1);
+      return true;
+    }
+    const { error } = await supabase.from('signups').delete().eq('event_id', eventId).eq('member_id', currentUser.id);
+    return !error;
+  }
+
+  // ===== MODE SWITCHING =====
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+
+    const visitorView = document.getElementById('visitorView');
+    const authView = document.getElementById('authView');
+    const memberView = document.getElementById('memberView');
+    const tabBar = document.getElementById('tabBar');
+    const avatar = document.getElementById('headerAvatar');
+
+    if (mode === 'visitor') {
+      visitorView.classList.remove('hidden');
+      authView.classList.add('hidden');
+      memberView.classList.add('hidden');
+      tabBar.classList.remove('visible');
+      avatar.classList.add('hidden');
+      navHistory = [];
+      updateBackButton();
+      renderVisitorView();
+    } else {
+      visitorView.classList.add('hidden');
+      if (isAuthenticated || (!supabase && typeof DEMO_MODE !== 'undefined' && DEMO_MODE)) {
+        // In demo mode, auto-login
+        if (!isAuthenticated && !supabase) {
+          currentUser = DEMO_MEMBER;
+          isAuthenticated = true;
+        }
+        authView.classList.add('hidden');
+        memberView.classList.remove('hidden');
+        tabBar.classList.add('visible');
+        avatar.classList.remove('hidden');
+        avatar.textContent = currentUser.name.charAt(0);
+        switchTab(currentTab);
+      } else {
+        authView.classList.remove('hidden');
+        memberView.classList.add('hidden');
+        tabBar.classList.remove('visible');
+        avatar.classList.add('hidden');
+        updateBackButton();
+      }
+    }
+  }
+
+  // ===== AUTH =====
+  async function sendMagicLink() {
+    const email = document.getElementById('authEmail').value.trim();
+    if (!email) return;
+
+    const btn = document.getElementById('authSubmit');
+    const msg = document.getElementById('authMessage');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin + '/app/' }
+      });
+      btn.disabled = false;
+      btn.textContent = 'Send Login Link';
+      msg.classList.remove('hidden');
+      if (error) {
+        msg.className = 'auth-message';
+        msg.style.background = '#FEE2E2';
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Error: ' + error.message;
+      } else {
+        msg.className = 'auth-message';
+        msg.style.background = '#EFF6FF';
+        msg.style.color = 'var(--navy)';
+        msg.innerHTML = '✉️ Check your inbox!<br><span style="font-size:12px">Click the link in the email we sent to <strong>' + email + '</strong></span>';
+      }
+    } else {
+      // Demo mode: simulate login
+      setTimeout(() => {
+        currentUser = DEMO_MEMBER;
+        isAuthenticated = true;
+        btn.disabled = false;
+        btn.textContent = 'Send Login Link';
+        setMode('member');
+      }, 800);
+    }
+  }
+
+  function logout() {
+    if (supabase) supabase.auth.signOut();
+    currentUser = null;
+    isAuthenticated = false;
+    setMode('visitor');
+  }
+
+  // ===== JOIN FORM =====
+  function updateNotifyStyle() {
+    const emailCb = document.getElementById('notifyEmail');
+    const whatsappCb = document.getElementById('notifyWhatsapp');
+    document.getElementById('notifyEmailLabel').style.borderColor = emailCb.checked ? 'var(--gold)' : 'var(--border)';
+    document.getElementById('notifyEmailLabel').style.background = emailCb.checked ? 'var(--gold-light)' : 'transparent';
+    document.getElementById('notifyWhatsappLabel').style.borderColor = whatsappCb.checked ? 'var(--gold)' : 'var(--border)';
+    document.getElementById('notifyWhatsappLabel').style.background = whatsappCb.checked ? 'var(--gold-light)' : 'transparent';
+    document.getElementById('joinNotifyError').classList.add('hidden');
+  }
+
+  function submitJoinForm(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('joinName').value.trim();
+    const email = document.getElementById('joinEmail').value.trim();
+    const code = document.getElementById('joinCountryCode').value;
+    const phone = document.getElementById('joinPhone').value.trim();
+    const errorEl = document.getElementById('joinPhoneError');
+    const notifyEmail = document.getElementById('notifyEmail').checked;
+    const notifyWhatsapp = document.getElementById('notifyWhatsapp').checked;
+
+    // Validate name
+    if (!name) { document.getElementById('joinName').focus(); return; }
+
+    // Validate email
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('joinEmail').focus();
+      return;
+    }
+
+    // Validate phone — digits only, 6-15 digits
+    const digitsOnly = phone.replace(/[\s\-().]/g, '');
+    if (!digitsOnly || !/^\d{6,15}$/.test(digitsOnly)) {
+      errorEl.textContent = 'Enter a valid phone number (digits only, 6-15 digits)';
+      errorEl.classList.remove('hidden');
+      document.getElementById('joinPhone').focus();
+      return;
+    }
+    errorEl.classList.add('hidden');
+
+    // Validate notify preference
+    if (!notifyEmail && !notifyWhatsapp) {
+      document.getElementById('joinNotifyError').classList.remove('hidden');
+      return;
+    }
+
+    const fullPhone = code + digitsOnly;
+    const notifyBy = [notifyEmail && 'email', notifyWhatsapp && 'whatsapp'].filter(Boolean).join(', ');
+    const btn = document.getElementById('joinSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    // Submit via Netlify form or store locally
+    const formData = { name, email, phone: fullPhone, notifyBy, submitted: new Date().toISOString() };
+
+    if (supabase) {
+      // Could insert into a join_requests table if you add one
+      console.log('Join request:', formData);
+    }
+
+    // Store locally as backup
+    const existing = JSON.parse(localStorage.getItem('jpgs_join_requests') || '[]');
+    existing.push(formData);
+    localStorage.setItem('jpgs_join_requests', JSON.stringify(existing));
+
+    // Show success
+    setTimeout(() => {
+      document.getElementById('joinForm').classList.add('hidden');
+      document.getElementById('joinSuccess').classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Send My Details';
+    }, 600);
+  }
+
+  // ===== TAB SWITCHING =====
+  function switchTab(tab, skipHistory) {
+    // Track history for back navigation (don't push if going back or same tab)
+    if (!skipHistory && currentTab && currentTab !== tab) {
+      navHistory.push(currentTab);
+    }
+
+    currentTab = tab;
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+    const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', profile: 'tabProfile' };
+    document.getElementById(tabMap[tab]).classList.remove('hidden');
+
+    // Scroll to top
+    document.getElementById('content').scrollTop = 0;
+
+    // Show/hide back button
+    updateBackButton();
+
+    // Render tab content
+    if (tab === 'home') renderDashboard();
+    else if (tab === 'events') renderEvents();
+    else if (tab === 'tee') renderTeeTimes();
+    else if (tab === 'messages') renderMessages();
+    else if (tab === 'profile') renderProfile();
+  }
+
+  function goBack() {
+    // Close any open modal first
+    const modal = document.getElementById('eventModal');
+    if (modal.classList.contains('open')) {
+      modal.classList.remove('open');
+      return;
+    }
+
+    // Close courses subview if open
+    const coursesView = document.getElementById('coursesView');
+    if (!coursesView.classList.contains('hidden')) {
+      hideCoursesView();
+      return;
+    }
+
+    // Navigate back through tab history
+    if (navHistory.length > 0) {
+      const prevTab = navHistory.pop();
+      switchTab(prevTab, true);
+    } else if (currentMode === 'member') {
+      // If no history, go to home tab
+      if (currentTab !== 'home') {
+        switchTab('home', true);
+      } else {
+        // From home, go back to visitor
+        setMode('visitor');
+      }
+    }
+  }
+
+  function updateBackButton() {
+    const btn = document.getElementById('headerBack');
+    if (currentMode === 'member' && isAuthenticated) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  // ===== UTILITY =====
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function getMonthShort(dateStr) {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+  }
+
+  function getDay(dateStr) {
+    return new Date(dateStr + 'T00:00:00').getDate();
+  }
+
+  function daysUntil(dateStr) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(dateStr + 'T00:00:00');
+    return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  }
+
+  function timeAgo(isoStr) {
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return mins + 'm ago';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'h ago';
+    const days = Math.floor(hours / 24);
+    if (days < 7) return days + 'd ago';
+    return new Date(isoStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function getMemberName(memberId) {
+    const m = DEMO_MEMBERS_LIST.find(m => m.id === memberId);
+    return m ? m.name : 'Unknown';
+  }
+
+  function isSignedUp(eventId) {
+    if (!supabase) return DEMO_SIGNUPS.some(s => s.event_id === eventId && s.member_id === 'demo-1');
+    return false; // Will be checked via async
+  }
+
+  // ===== RENDER: VISITOR VIEW =====
+  function renderVisitorView() {
+    renderVisitorNextEvent();
+    renderVisitorEvents();
+  }
+
+  async function renderVisitorNextEvent() {
+    const events = await getEvents();
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+
+    const container = document.getElementById('visitorNextEvent');
+    if (upcoming.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    const evt = upcoming[0];
+    const days = daysUntil(evt.date);
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Next Event</div>
+            <div class="card-subtitle">${days > 0 ? 'In ' + days + ' days' : 'Today!'}</div>
+          </div>
+          <span class="badge badge-green">${evt.format}</span>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div class="event-date-box">
+            <div class="month">${getMonthShort(evt.date)}</div>
+            <div class="day">${getDay(evt.date)}</div>
+          </div>
+          <div>
+            <strong>${evt.title}</strong><br>
+            <span class="text-sm text-secondary">${evt.course} · ${evt.location}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  let visitorEventView = 'upcoming';
+
+  function showVisitorEvents(view) {
+    visitorEventView = view;
+    document.querySelectorAll('#visitorEventTabs .toggle-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`#visitorEventTabs .toggle-tab:${view === 'upcoming' ? 'first' : 'last'}-child`).classList.add('active');
+    renderVisitorEvents();
+  }
+
+  async function renderVisitorEvents() {
+    const events = await getEvents();
+    const today = new Date().toISOString().split('T')[0];
+    const container = document.getElementById('visitorEventsList');
+
+    let filtered;
+    if (visitorEventView === 'upcoming') {
+      filtered = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+      filtered = events.filter(e => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">${visitorEventView === 'upcoming' ? '📅' : '🏆'}</div>
+          <h3>No ${visitorEventView} events</h3>
+          <p>${visitorEventView === 'upcoming' ? 'Check back soon for new events.' : 'Past events will appear here.'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filtered.map(evt => {
+      const isPast = evt.date < today;
+      const signupCount = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length : 0;
+      return `
+        <div class="card event-card">
+          <div class="event-card-top">
+            <div class="event-date-box">
+              <div class="month">${getMonthShort(evt.date)}</div>
+              <div class="day">${getDay(evt.date)}</div>
+            </div>
+            <div class="event-info">
+              <h3>${evt.title}</h3>
+              <div class="text-sm text-secondary">${evt.course}</div>
+              <div class="event-meta">
+                <span class="event-meta-item">📍 ${evt.location}</span>
+                <span class="event-meta-item">🏌️ ${evt.format}</span>
+                <span class="event-meta-item">💶 €${evt.cost}</span>
+                ${!isPast ? `<span class="event-meta-item">👥 ${signupCount}/${evt.signup_limit || '∞'}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== COURSES LIST VIEW =====
+  function showCoursesView() {
+    const body = document.getElementById('coursesListBody');
+    body.innerHTML = COURSES.map(c => `
+      <div class="course-list-card" style="flex-wrap:wrap;">
+        <div class="course-list-icon">${c.jpgs ? '⭐' : '⛳'}</div>
+        <div class="course-list-info">
+          <h3>${c.name}</h3>
+          <p>${c.location}</p>
+          <div class="course-list-meta">
+            <span>${c.holes} holes</span>
+            <span>${c.par}</span>
+            <span>${c.type}</span>
+            ${c.jpgs ? '<span style="background:#D1FAE5; color:#065F46;">JPGS Played</span>' : ''}
+          </div>
+          <p style="margin-top:6px; font-size:12px; color:var(--text-secondary);">${c.description}</p>
+          <a href="${c.website}" target="_blank" rel="noopener" style="display:inline-block; margin-top:6px; font-size:12px; color:var(--gold); font-weight:600; text-decoration:none;">${c.website.replace('https://', '')} →</a>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('coursesView').classList.remove('hidden');
+  }
+
+  function hideCoursesView() {
+    document.getElementById('coursesView').classList.add('hidden');
+  }
+
+  // ===== RENDER: DASHBOARD (Home Tab) =====
+  async function renderDashboard() {
+    if (!currentUser) return;
+
+    const events = await getEvents();
+    const messages = await getMessages();
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    const nextEvent = upcoming[0];
+
+    // Welcome
+    const firstName = currentUser.name.split(' ')[0];
+    document.getElementById('welcomeCard').innerHTML = `
+      <div class="card" style="background: linear-gradient(135deg, var(--navy), var(--green)); color:white;">
+        <h2 style="font-size:18px; font-weight:700;">Welcome back, ${firstName}</h2>
+        <p style="font-size:13px; opacity:0.85; margin-top:4px;">Handicap: ${currentUser.handicap} · Member since ${new Date(currentUser.joined_date).getFullYear()}</p>
+      </div>
+    `;
+
+    // Next event countdown
+    if (nextEvent) {
+      const days = daysUntil(nextEvent.date);
+      const signed = isSignedUp(nextEvent.id);
+      document.getElementById('nextEventCountdown').innerHTML = `
+        <div class="card">
+          <div class="flex-between mb-16">
+            <div class="card-title">Next Event</div>
+            ${signed ? '<span class="badge badge-green">Signed Up</span>' : '<span class="badge badge-amber">Not Signed Up</span>'}
+          </div>
+          <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+            <div class="event-date-box">
+              <div class="month">${getMonthShort(nextEvent.date)}</div>
+              <div class="day">${getDay(nextEvent.date)}</div>
+            </div>
+            <div>
+              <strong>${nextEvent.title}</strong><br>
+              <span class="text-sm text-secondary">${nextEvent.course} · ${nextEvent.format}</span>
+            </div>
+          </div>
+          <div class="countdown">
+            <div class="countdown-item">
+              <div class="num">${days}</div>
+              <div class="label">Days</div>
+            </div>
+          </div>
+          ${!signed ? `<button class="btn btn-primary btn-full btn-sm mt-8" onclick="handleSignup(${nextEvent.id})">Sign Up Now</button>` : ''}
+        </div>
+      `;
+    } else {
+      document.getElementById('nextEventCountdown').innerHTML = '';
+    }
+
+    // Quick actions
+    document.getElementById('quickActions').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card" style="cursor:pointer" onclick="switchTab('events')">
+          <div style="font-size:24px; margin-bottom:4px;">📅</div>
+          <div class="stat-label">View Events</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer" onclick="switchTab('tee')">
+          <div style="font-size:24px; margin-bottom:4px;">⛳</div>
+          <div class="stat-label">Tee Times</div>
+        </div>
+      </div>
+    `;
+
+    // Latest message
+    if (messages.length > 0) {
+      const msg = messages[0];
+      const priorityClass = 'priority-' + msg.priority;
+      document.getElementById('latestMessage').innerHTML = `
+        <div class="card msg-card ${priorityClass}" onclick="switchTab('messages')">
+          <div class="flex-between">
+            <div class="card-title" style="font-size:14px;">${msg.title}</div>
+            <span class="badge badge-${msg.priority === 'urgent' ? 'red' : msg.priority === 'important' ? 'amber' : 'green'}">${msg.priority}</span>
+          </div>
+          <p class="text-sm text-secondary mt-8">${msg.body.substring(0, 80)}...</p>
+          <p class="msg-time mt-8">${timeAgo(msg.created_at)}</p>
+        </div>
+      `;
+    }
+
+    // Stats
+    document.getElementById('memberStats').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${upcoming.length}</div>
+          <div class="stat-label">Upcoming Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${messages.length}</div>
+          <div class="stat-label">Messages</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ===== RENDER: EVENTS TAB =====
+  function showEventTab(view) {
+    eventTabView = view;
+    document.querySelectorAll('#tabEvents .toggle-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`#tabEvents .toggle-tab:${view === 'upcoming' ? 'first' : 'last'}-child`).classList.add('active');
+    renderEvents();
+  }
+
+  async function renderEvents() {
+    const events = await getEvents();
+    const today = new Date().toISOString().split('T')[0];
+    const container = document.getElementById('eventsList');
+
+    let filtered;
+    if (eventTabView === 'upcoming') {
+      filtered = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    } else {
+      filtered = events.filter(e => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">${eventTabView === 'upcoming' ? '📅' : '🏆'}</div>
+          <h3>No ${eventTabView} events</h3>
+          <p>${eventTabView === 'upcoming' ? 'Check back soon for new events.' : 'Past events will appear here.'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filtered.map(evt => {
+      const signed = isSignedUp(evt.id);
+      const isPast = evt.date < today;
+      const signupCount = (supabase ? 0 : DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length);
+      const cutoffPassed = evt.signup_cutoff && evt.signup_cutoff < today;
+
+      return `
+        <div class="card event-card">
+          <div class="event-card-top" onclick="openEventDetail(${evt.id})" style="cursor:pointer">
+            <div class="event-date-box">
+              <div class="month">${getMonthShort(evt.date)}</div>
+              <div class="day">${getDay(evt.date)}</div>
+            </div>
+            <div class="event-info">
+              <h3>${evt.title}</h3>
+              <div class="text-sm text-secondary">${evt.course}</div>
+              <div class="event-meta">
+                <span class="event-meta-item">📍 ${evt.location}</span>
+                <span class="event-meta-item">🏌️ ${evt.format}</span>
+                <span class="event-meta-item">💶 €${evt.cost}</span>
+                <span class="event-meta-item">👥 ${signupCount}/${evt.signup_limit || '∞'}</span>
+              </div>
+            </div>
+          </div>
+          ${!isPast ? `
+          <div class="event-card-actions">
+            ${signed
+              ? `<button class="btn btn-outline btn-sm" onclick="handleWithdraw(${evt.id})">Withdraw</button>
+                 ${evt.payment_link ? `<a href="${evt.payment_link}" target="_blank" class="btn btn-primary btn-sm" style="flex:1; text-decoration:none;">Pay €${evt.cost}</a>` : ''}`
+              : `<button class="btn btn-primary btn-sm" style="flex:1" onclick="handleSignup(${evt.id})" ${cutoffPassed ? 'disabled' : ''}>
+                  ${cutoffPassed ? 'Signup Closed' : 'Sign Up'}
+                </button>`
+            }
+          </div>` : `
+          <div class="event-card-actions">
+            <button class="btn btn-outline btn-sm" style="flex:1" onclick="openEventDetail(${evt.id})">View Results</button>
+          </div>`}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== EVENT DETAIL MODAL =====
+  async function openEventDetail(eventId) {
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    if (!evt) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const isPast = evt.date < today;
+    const signups = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === eventId) : await getSignups(eventId);
+
+    document.getElementById('modalTitle').textContent = evt.title;
+
+    let html = `
+      <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${formatDate(evt.date)}</span></div>
+      <div class="detail-row"><span class="detail-label">Course</span><span class="detail-value">${evt.course}</span></div>
+      <div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${evt.location}</span></div>
+      <div class="detail-row"><span class="detail-label">Format</span><span class="detail-value">${evt.format}</span></div>
+      <div class="detail-row"><span class="detail-label">Cost</span><span class="detail-value">€${evt.cost}</span></div>
+      <div class="detail-row"><span class="detail-label">Tee Off</span><span class="detail-value">${evt.tee_time_start || 'TBC'}</span></div>
+      <div class="detail-row"><span class="detail-label">Signed Up</span><span class="detail-value">${signups.length} / ${evt.signup_limit || '∞'}</span></div>
+    `;
+
+    if (evt.notes) {
+      html += `<div class="card mt-16" style="background:var(--gold-light); border:none;">
+        <p class="text-sm"><strong>Notes:</strong> ${evt.notes}</p>
+      </div>`;
+    }
+
+    // Signed-up players
+    if (signups.length > 0 && isAuthenticated) {
+      html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Signed Up Players</h3>`;
+
+      // Generate tee time groups
+      const sorted = [...signups].sort((a, b) => (a.handicap_at_signup || 99) - (b.handicap_at_signup || 99));
+      const groups = [];
+      for (let i = 0; i < sorted.length; i += 4) {
+        groups.push(sorted.slice(i, i + 4));
+      }
+
+      const startTime = evt.tee_time_start || '09:00';
+      const interval = evt.tee_interval || 10;
+
+      groups.forEach((group, gi) => {
+        const [h, m] = startTime.split(':').map(Number);
+        const totalMins = h * 60 + m + (gi * interval);
+        const teeH = String(Math.floor(totalMins / 60)).padStart(2, '0');
+        const teeM = String(totalMins % 60).padStart(2, '0');
+
+        html += `
+          <div class="tee-group">
+            <div class="tee-group-header">
+              <span class="tee-time">${teeH}:${teeM}</span>
+              <span class="tee-group-label">Group ${gi + 1}</span>
+            </div>
+            ${group.map(s => {
+              const name = !supabase ? getMemberName(s.member_id) : (s.members?.name || 'Member');
+              const isMe = s.member_id === (currentUser?.id || 'demo-1');
+              return `<div class="tee-player ${isMe ? 'is-me' : ''}">
+                <span>${name} ${isMe ? '(You)' : ''}</span>
+                <span class="handicap">HCP ${s.handicap_at_signup}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        `;
+      });
+    }
+
+    // Results (for past events)
+    if (isPast) {
+      const results = await getResults(eventId);
+      if (results.length > 0) {
+        html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Results</h3>`;
+        html += `<table class="results-table">
+          <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Pts</th></tr></thead>
+          <tbody>
+            ${results.map(r => `
+              <tr class="${r.position === 1 ? 'pos-1' : ''}">
+                <td>${r.position}</td>
+                <td>${r.name || (r.members?.name) || 'Unknown'}</td>
+                <td>${r.score}</td>
+                <td><strong>${r.points}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+      }
+    }
+
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('eventModal').classList.add('open');
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('eventModal')) {
+      document.getElementById('eventModal').classList.remove('open');
+    }
+  }
+
+  // ===== SIGNUP / WITHDRAW =====
+  async function handleSignup(eventId) {
+    const success = await signUpForEvent(eventId);
+    if (success) {
+      renderEvents();
+      renderDashboard();
+    }
+  }
+
+  async function handleWithdraw(eventId) {
+    if (confirm('Withdraw from this event?')) {
+      const success = await withdrawFromEvent(eventId);
+      if (success) {
+        renderEvents();
+        renderDashboard();
+      }
+    }
+  }
+
+  // ===== RENDER: TEE TIMES TAB =====
+  async function renderTeeTimes() {
+    const events = await getEvents();
+    const today = new Date().toISOString().split('T')[0];
+    const container = document.getElementById('teeTimesList');
+
+    // Find events where user is signed up and that are upcoming
+    const myEventIds = (!supabase ? DEMO_SIGNUPS.filter(s => s.member_id === 'demo-1') : await getMySignups())
+      .map(s => s.event_id);
+
+    const myEvents = events
+      .filter(e => myEventIds.includes(e.id) && e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (myEvents.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⛳</div>
+          <h3>No tee times yet</h3>
+          <p>Sign up for an event to see your tee times here.</p>
+          <button class="btn btn-primary btn-sm mt-16" onclick="switchTab('events')">Browse Events</button>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    for (const evt of myEvents) {
+      const signups = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === evt.id) : await getSignups(evt.id);
+      const sorted = [...signups].sort((a, b) => (a.handicap_at_signup || 99) - (b.handicap_at_signup || 99));
+      const groups = [];
+      for (let i = 0; i < sorted.length; i += 4) {
+        groups.push(sorted.slice(i, i + 4));
+      }
+
+      const startTime = evt.tee_time_start || '09:00';
+      const interval = evt.tee_interval || 10;
+
+      // Find which group the user is in
+      let userGroupIdx = -1;
+      groups.forEach((g, i) => {
+        if (g.some(s => s.member_id === (currentUser?.id || 'demo-1'))) userGroupIdx = i;
+      });
+
+      html += `
+        <div class="card mb-16">
+          <div class="flex-between mb-16">
+            <div>
+              <div class="card-title">${evt.title}</div>
+              <div class="card-subtitle">${formatDate(evt.date)} · ${evt.course}</div>
+            </div>
+            <span class="badge badge-navy">${evt.format}</span>
+          </div>
+      `;
+
+      if (userGroupIdx >= 0) {
+        const group = groups[userGroupIdx];
+        const [h, m] = startTime.split(':').map(Number);
+        const totalMins = h * 60 + m + (userGroupIdx * interval);
+        const teeH = String(Math.floor(totalMins / 60)).padStart(2, '0');
+        const teeM = String(totalMins % 60).padStart(2, '0');
+
+        html += `
+          <div class="tee-group">
+            <div class="tee-group-header">
+              <span class="tee-time">${teeH}:${teeM}</span>
+              <span class="tee-group-label">Your Group (#${userGroupIdx + 1})</span>
+            </div>
+            ${group.map(s => {
+              const name = !supabase ? getMemberName(s.member_id) : (s.members?.name || 'Member');
+              const isMe = s.member_id === (currentUser?.id || 'demo-1');
+              return `<div class="tee-player ${isMe ? 'is-me' : ''}">
+                <span>${name} ${isMe ? '(You)' : ''}</span>
+                <span class="handicap">HCP ${s.handicap_at_signup}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  // ===== RENDER: MESSAGES TAB =====
+  async function renderMessages() {
+    const messages = await getMessages();
+    const container = document.getElementById('messagesList');
+
+    if (messages.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">💬</div>
+          <h3>No messages</h3>
+          <p>Announcements from the committee will appear here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = messages.map(msg => `
+      <div class="card msg-card priority-${msg.priority}" onclick="this.classList.toggle('expanded')">
+        <div class="flex-between">
+          <div class="card-title" style="font-size:14px; flex:1; margin-right:8px;">${msg.title}</div>
+          <span class="badge badge-${msg.priority === 'urgent' ? 'red' : msg.priority === 'important' ? 'amber' : 'green'}">${msg.priority}</span>
+        </div>
+        <p class="msg-time mt-8">${timeAgo(msg.created_at)}</p>
+        <div class="msg-body">${msg.body.replace(/\n/g, '<br>')}</div>
+        <p class="text-sm text-secondary mt-8" style="font-style:italic;">Tap to ${msg.priority === 'urgent' ? 'read' : 'expand'}</p>
+      </div>
+    `).join('');
+  }
+
+  // ===== RENDER: PROFILE TAB =====
+  async function renderProfile() {
+    if (!currentUser) return;
+
+    const events = await getEvents();
+    const today = new Date().toISOString().split('T')[0];
+    const pastEventIds = (!supabase ? DEMO_SIGNUPS.filter(s => s.member_id === 'demo-1') : []).map(s => s.event_id);
+    const pastEvents = events.filter(e => pastEventIds.includes(e.id) && e.date < today);
+
+    let resultsHtml = '';
+    for (const evt of pastEvents) {
+      const results = await getResults(evt.id);
+      const myResult = results.find(r => r.member_id === (currentUser?.id || 'demo-1'));
+      if (myResult) {
+        resultsHtml += `
+          <div class="list-item">
+            <div class="list-icon" style="background:${myResult.position === 1 ? 'var(--gold-light)' : '#E5E7EB'};">
+              ${myResult.position === 1 ? '🏆' : '#' + myResult.position}
+            </div>
+            <div class="list-text">
+              <h4>${evt.title}</h4>
+              <p>${formatDate(evt.date)} · ${myResult.points} pts</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    document.getElementById('profileContent').innerHTML = `
+      <div class="profile-header">
+        <div class="profile-avatar">${currentUser.name.charAt(0)}</div>
+        <div class="profile-name">${currentUser.name}</div>
+        <div class="profile-email">${currentUser.email}</div>
+        <div class="mt-8">
+          <span class="badge badge-green">${currentUser.status}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="list-item" style="border-bottom: 1px solid var(--border);">
+          <div class="list-icon" style="background:var(--gold-light);">🏌️</div>
+          <div class="list-text">
+            <h4>Handicap</h4>
+            <p>${currentUser.handicap}</p>
+          </div>
+        </div>
+        <div class="list-item" style="border-bottom: 1px solid var(--border);">
+          <div class="list-icon" style="background:#E0E7FF;">📅</div>
+          <div class="list-text">
+            <h4>Member Since</h4>
+            <p>${formatDate(currentUser.joined_date)}</p>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="list-icon" style="background:#D1FAE5;">📊</div>
+          <div class="list-text">
+            <h4>Events Played</h4>
+            <p>${pastEvents.length}</p>
+          </div>
+        </div>
+      </div>
+
+      ${resultsHtml ? `
+        <h3 class="section-title mt-16">Recent Results</h3>
+        <div class="card">${resultsHtml}</div>
+      ` : ''}
+
+      <div class="mt-16">
+        <button class="btn btn-danger btn-full" onclick="logout()">Log Out</button>
+      </div>
+
+      <div class="mt-16 text-center">
+        <a href="/" class="text-sm text-secondary" style="text-decoration:none;">← Back to main website</a>
+      </div>
+    `;
+  }
+
+  // ===== INIT =====
+  async function init() {
+    await initSupabase();
+    renderVisitorView();
+    updateNotifyStyle();
+
+    // Browser back button support
+    window.addEventListener('popstate', () => {
+      goBack();
+    });
+  }
+
+  init();
+</script>
+
+</body>
+</html>

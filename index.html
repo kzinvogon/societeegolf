@@ -1615,7 +1615,7 @@
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
                 <h2>Admin Panel</h2>
-                <button class="close-btn" onclick="closeModal('adminModal')">&times;</button>
+                <button class="close-btn" onclick="closeModal('adminModal')" title="Exit Admin" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;font-size:0.85rem;">Exit Admin</button>
             </div>
             <div class="modal-body" id="adminContent">
                 <!-- Content populated by JavaScript -->
@@ -1709,7 +1709,7 @@
         }
 
         window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
+            if (event.target.classList.contains('modal') && event.target.id !== 'adminModal') {
                 event.target.classList.remove('show');
             }
         }

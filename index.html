@@ -1778,9 +1778,6 @@
         });
 
         // Join button handlers
-        document.getElementById('joinBtn').addEventListener('click', function() {
-            openModal('registerModal');
-        });
         document.getElementById('heroJoinBtn').addEventListener('click', function() {
             openModal('registerModal');
         });
@@ -1886,7 +1883,7 @@
             const grid = document.getElementById('eventsGrid');
             grid.innerHTML = '';
             const events = getEvents();
-            const today = new Date('2026-04-04');
+            const today = new Date();
 
             const filtered = events.filter(e => {
                 const eventDate = new Date(e.date);
@@ -1929,7 +1926,7 @@
             if (!event) return;
 
             const signups = getSignups().filter(s => s.eventId === eventId);
-            const today = new Date('2026-04-04');
+            const today = new Date();
             const eventDate = new Date(event.date);
             const cutoffDate = new Date(event.cutoffDate);
             const isClosed = today > cutoffDate || event.status === 'completed';
@@ -2391,11 +2388,6 @@
         });
 
         // My Account
-        document.getElementById('myAccountLink').addEventListener('click', function(e) {
-            e.preventDefault();
-            openMyAccount();
-        });
-
         document.getElementById('myAccountLink2').addEventListener('click', function(e) {
             e.preventDefault();
             openMyAccount();
@@ -2426,7 +2418,7 @@
 
             const upcomingSignups = getSignups().filter(s => {
                 const event = getEvents().find(e => e.id === s.eventId);
-                return s.email === email && event && new Date(event.date) >= new Date('2026-04-04');
+                return s.email === email && event && new Date(event.date) >= new Date();
             });
 
             let html = `

@@ -1937,7 +1937,7 @@
     document.getElementById('welcomeCard').innerHTML = `
       <div class="card" style="background: linear-gradient(135deg, var(--navy), var(--green)); color:white;">
         <h2 style="font-size:18px; font-weight:700;">Welcome back, ${firstName}</h2>
-        <p style="font-size:13px; opacity:0.85; margin-top:4px;">Handicap: ${currentUser.handicap} · Member since ${new Date(currentUser.joined_date).getFullYear()}</p>
+        <p style="font-size:13px; opacity:0.85; margin-top:4px;">HCP: ${currentUser.handicap || '–'}${currentUser.handicap ? ' (TheGrint)' : ''} · Member since ${new Date(currentUser.joined_date).getFullYear()}</p>
       </div>
     `;
 
@@ -2374,8 +2374,9 @@
         <div class="list-item" style="border-bottom: 1px solid var(--border);">
           <div class="list-icon" style="background:var(--gold-light);">🏌️</div>
           <div class="list-text">
-            <h4>Handicap</h4>
-            <p>${currentUser.handicap}</p>
+            <h4>Handicap Index</h4>
+            <p>${currentUser.handicap || 'Not set'} ${currentUser.handicap ? '<span style="font-size:11px;color:var(--text-secondary);">via TheGrint</span>' : ''}</p>
+            ${currentUser.grint_id ? `<p style="margin-top:2px;"><a href="https://thegrint.com/hdcp_lookup/" target="_blank" rel="noopener" style="font-size:11px;color:var(--gold);text-decoration:none;">Verify on TheGrint (${currentUser.grint_id}) →</a></p>` : '<p style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Add your TheGrint ID in Edit Profile to link your handicap</p>'}
           </div>
         </div>
         <div class="list-item" style="border-bottom: 1px solid var(--border);">
@@ -2669,8 +2670,17 @@
         <form id="editProfileForm">
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Name</label>
           <input class="input" type="text" name="name" value="${u.name}" required>
-          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Handicap</label>
-          <input class="input" type="number" step="0.1" name="handicap" value="${u.handicap||''}">
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">TheGrint ID <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(username, email or GHIN#)</span></label>
+          <input class="input" type="text" name="grint_id" value="${u.grint_id||''}" placeholder="e.g. john.smith or 1234567">
+          <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">Enter your TheGrint username or GHIN number. Your handicap index will be sourced from TheGrint.</p>
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Handicap Index <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(from TheGrint)</span></label>
+          <input class="input" type="number" step="0.1" name="handicap" value="${u.handicap||''}" placeholder="e.g. 18.4">
+          <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">
+            Check your current index on <a href="https://thegrint.com/hdcp_lookup/" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600;">TheGrint Handicap Lookup</a> and enter it here.
+          </p>
+
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Phone / WhatsApp</label>
           <div style="display:flex;gap:8px;">
             <select class="input" name="country_code" style="width:110px;flex-shrink:0;">
@@ -2692,6 +2702,7 @@
       e.preventDefault();
       const updates = {
         name: this.name.value,
+        grint_id: this.grint_id.value || null,
         handicap: parseFloat(this.handicap.value) || null,
         phone: this.phone.value || null,
         country_code: this.country_code.value

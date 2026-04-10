@@ -1643,7 +1643,7 @@
         // Supabase setup
         const SUPABASE_URL = 'https://fxpgaiktflyvikxovjxo.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_2YI9M0mJ0jaeBxAurdFtSA_PRP8vmYP';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentAdminUser = null;
 
         // Data initialization
@@ -1824,9 +1824,9 @@
 
         async function refreshData() {
             const [m, e, s] = await Promise.all([
-                supabase.from('members').select('*'),
-                supabase.from('events').select('*').order('date', { ascending: true }),
-                supabase.from('signups').select('*, members(name, handicap)')
+                sb.from('members').select('*'),
+                sb.from('events').select('*').order('date', { ascending: true }),
+                sb.from('signups').select('*, members(name, handicap)')
             ]);
             _members = m.data || [];
             _events = (e.data || []).map(ev => ({
@@ -2062,11 +2062,11 @@
 
             // Update member email if new
             if (!member.email) {
-                await supabase.from('members').update({ email }).eq('id', memberId);
+                await sb.from('members').update({ email }).eq('id', memberId);
             }
 
             // Add signup
-            const { error } = await supabase.from('signups').insert({
+            const { error } = await sb.from('signups').insert({
                 event_id: parseInt(eventId),
                 member_id: memberId,
                 handicap_at_signup: member.handicap
@@ -2127,7 +2127,7 @@
                 // Find the signup by member name
                 const signup = _signups.find(s => s.eventId === eventId && s.memberName === memberName);
                 if (signup) {
-                    await supabase.from('signups').delete()
+                    await sb.from('signups').delete()
                         .eq('event_id', parseInt(eventId))
                         .eq('member_id', signup.memberId);
                     alert('Withdrawal confirmed');
@@ -2304,7 +2304,7 @@
             const email = this.querySelector('[name="email"]').value;
             const phone = this.querySelector('[name="whatsapp"]')?.value || '';
 
-            const { error } = await supabase.from('join_requests').insert({
+            const { error } = await sb.from('join_requests').insert({
                 name: fullName,
                 email: email,
                 phone: phone,
@@ -2574,7 +2574,7 @@
                 content.innerHTML = html;
 
             } else if (tab === 'messages') {
-                const { data: messages } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+                const { data: messages } = await sb.from('messages').select('*').order('created_at', { ascending: false });
                 let html = `<button class="btn btn-primary" onclick="showAddMessageForm()" style="margin-bottom:1.5rem;">+ Post Announcement</button>`;
                 if (!messages || messages.length === 0) {
                     html += `<p>No messages yet.</p>`;
@@ -2596,7 +2596,7 @@
                 content.innerHTML = html;
 
             } else if (tab === 'joinrequests') {
-                const { data: requests } = await supabase.from('join_requests').select('*').order('created_at', { ascending: false });
+                const { data: requests } = await sb.from('join_requests').select('*').order('created_at', { ascending: false });
                 let html = `<h4 style="margin-bottom:1rem;">Join Requests from Website</h4>`;
                 if (!requests || requests.length === 0) {
                     html += `<p>No join requests yet.</p>`;
@@ -2628,14 +2628,14 @@
 
         // ===== ADMIN: Member CRUD =====
         async function approveMember(memberId) {
-            await supabase.from('members').update({ status: 'active' }).eq('id', memberId);
+            await sb.from('members').update({ status: 'active' }).eq('id', memberId);
             alert('Member approved and set to active.');
             showAdminTab('members');
         }
 
         async function rejectMember(memberId) {
             if (confirm('Reject and delete this application?')) {
-                await supabase.from('members').delete().eq('id', memberId);
+                await sb.from('members').delete().eq('id', memberId);
                 alert('Application rejected.');
                 showAdminTab('members');
             }
@@ -2643,14 +2643,14 @@
 
         async function changeMemberStatus(memberId, newStatus) {
             if (!newStatus) return;
-            await supabase.from('members').update({ status: newStatus }).eq('id', memberId);
+            await sb.from('members').update({ status: newStatus }).eq('id', memberId);
             alert('Status updated to ' + newStatus);
             showAdminTab('members');
         }
 
         async function deleteMember(memberId) {
             if (confirm('Are you sure you want to delete this member?')) {
-                await supabase.from('members').delete().eq('id', memberId);
+                await sb.from('members').delete().eq('id', memberId);
                 showAdminTab('members');
             }
         }
@@ -2692,7 +2692,7 @@
                     status: this.querySelector('[name="status"]').value,
                     role: this.querySelector('[name="role"]').value
                 };
-                await supabase.from('members').update(updates).eq('id', memberId);
+                await sb.from('members').update(updates).eq('id', memberId);
                 alert('Member updated.');
                 showAdminTab('members');
             });
@@ -2720,7 +2720,7 @@
                 e.preventDefault();
                 // Admin-created members need a Supabase auth account — for now insert directly
                 // (they won't be able to login via magic link until they sign up via auth)
-                const { error } = await supabase.from('join_requests').insert({
+                const { error } = await sb.from('join_requests').insert({
                     name: this.querySelector('[name="name"]').value,
                     email: this.querySelector('[name="email"]').value,
                     phone: this.querySelector('[name="phone"]').value || null,
@@ -2736,7 +2736,7 @@
         // ===== ADMIN: Event CRUD =====
         async function deleteEvent(eventId) {
             if (confirm('Delete this event and all signups?')) {
-                await supabase.from('events').delete().eq('id', parseInt(eventId));
+                await sb.from('events').delete().eq('id', parseInt(eventId));
                 showAdminTab('events');
             }
         }
@@ -2766,7 +2766,7 @@
         }
 
         async function togglePaid(eventId, memberId, paid) {
-            await supabase.from('signups').update({ paid }).eq('event_id', parseInt(eventId)).eq('member_id', memberId);
+            await sb.from('signups').update({ paid }).eq('event_id', parseInt(eventId)).eq('member_id', memberId);
             showViewSignups(eventId);
         }
 
@@ -2808,7 +2808,7 @@
                     tee_interval: parseInt(this.querySelector('[name="teeInterval"]').value) || 10,
                     notes: this.querySelector('[name="notes"]').value || null
                 };
-                await supabase.from('events').update(updates).eq('id', parseInt(eventId));
+                await sb.from('events').update(updates).eq('id', parseInt(eventId));
                 alert('Event updated.');
                 showAdminTab('events');
             });
@@ -2836,7 +2836,7 @@
             `;
             document.getElementById('addEventForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const { error } = await supabase.from('events').insert({
+                const { error } = await sb.from('events').insert({
                     title: this.querySelector('[name="title"]').value,
                     date: this.querySelector('[name="date"]').value,
                     signup_cutoff: this.querySelector('[name="cutoffDate"]').value || null,
@@ -2861,7 +2861,7 @@
             if (!eventId) { document.getElementById('resultsEntryArea').innerHTML = ''; return; }
             await refreshData();
             const signups = getSignups().filter(s => s.eventId === eventId);
-            const { data: existingResults } = await supabase.from('results').select('*').eq('event_id', parseInt(eventId));
+            const { data: existingResults } = await sb.from('results').select('*').eq('event_id', parseInt(eventId));
             const resultsMap = {};
             (existingResults||[]).forEach(r => { resultsMap[r.member_id] = r; });
 
@@ -2898,9 +2898,9 @@
                 for (const entry of entries) {
                     const existing = resultsMap[entry.member_id];
                     if (existing) {
-                        await supabase.from('results').update(entry).eq('id', existing.id);
+                        await sb.from('results').update(entry).eq('id', existing.id);
                     } else {
-                        await supabase.from('results').insert(entry);
+                        await sb.from('results').insert(entry);
                     }
                 }
                 alert('Results saved! Positions auto-calculated from points.');
@@ -2923,7 +2923,7 @@
             `;
             document.getElementById('addMessageForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const { error } = await supabase.from('messages').insert({
+                const { error } = await sb.from('messages').insert({
                     title: this.querySelector('[name="title"]').value,
                     body: this.querySelector('[name="body"]').value,
                     priority: this.querySelector('[name="priority"]').value
@@ -2935,7 +2935,7 @@
         }
 
         async function showEditMessageForm(msgId) {
-            const { data: msg } = await supabase.from('messages').select('*').eq('id', msgId).single();
+            const { data: msg } = await sb.from('messages').select('*').eq('id', msgId).single();
             if (!msg) return;
             document.getElementById('adminTabContent').innerHTML = `
                 <h4 style="margin-bottom:1rem;">Edit Message</h4>
@@ -2955,7 +2955,7 @@
             `;
             document.getElementById('editMessageForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                await supabase.from('messages').update({
+                await sb.from('messages').update({
                     title: this.querySelector('[name="title"]').value,
                     body: this.querySelector('[name="body"]').value,
                     priority: this.querySelector('[name="priority"]').value
@@ -2967,14 +2967,14 @@
 
         async function deleteMessage(msgId) {
             if (confirm('Delete this message?')) {
-                await supabase.from('messages').delete().eq('id', msgId);
+                await sb.from('messages').delete().eq('id', msgId);
                 showAdminTab('messages');
             }
         }
 
         // ===== ADMIN: Join Requests =====
         async function updateJoinRequestStatus(requestId, status) {
-            await supabase.from('join_requests').update({ status }).eq('id', requestId);
+            await sb.from('join_requests').update({ status }).eq('id', requestId);
             alert('Status updated.');
         }
     </script>

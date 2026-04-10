@@ -1751,14 +1751,19 @@
             });
         });
 
-        function renderCourses() {
+        async function renderCourses() {
             const grid = document.getElementById('coursesGrid');
             grid.innerHTML = '';
 
-            const filtered = currentFilter === 'all' ? COURSES : COURSES.filter(c => {
-                if (currentFilter === 'championship') return c.type === 'championship';
-                if (currentFilter === '9-hole') return c.type === '9-hole';
-                if (currentFilter === 'pitch-putt') return c.type === 'pitch-putt';
+            // Load courses from Supabase
+            const { data: dbCourses } = await sb.from('courses').select('*').order('name');
+            const allCourses = dbCourses || COURSES;
+
+            const filtered = currentFilter === 'all' ? allCourses : allCourses.filter(c => {
+                const t = (c.type||'').toLowerCase();
+                if (currentFilter === 'championship') return t === 'championship';
+                if (currentFilter === '9-hole') return t === '9-hole';
+                if (currentFilter === 'pitch-putt') return t === 'pitch & putt' || t === 'pitch-putt';
                 if (currentFilter === 'jpgs-played') return c.jpgs;
                 return true;
             });
@@ -1766,6 +1771,8 @@
             filtered.forEach(course => {
                 const card = document.createElement('div');
                 card.className = 'course-card';
+                const websiteUrl = course.website?.startsWith('http') ? course.website : 'https://' + course.website;
+                const websiteDisplay = (course.website||'').replace(/^https?:\/\//, '');
                 card.innerHTML = `
                     <div class="course-card-header">
                         <h3>${course.name}</h3>
@@ -1775,18 +1782,18 @@
                         ${course.jpgs ? '<span class="course-badge">JPGS Played</span>' : ''}
                         <div class="course-detail">
                             <span class="course-detail-label">Holes:</span>
-                            <span class="course-detail-value">${course.holes}</span>
+                            <span class="course-detail-value">${course.holes||'-'}</span>
                         </div>
                         <div class="course-detail">
                             <span class="course-detail-label">Par:</span>
-                            <span class="course-detail-value">${course.par}</span>
+                            <span class="course-detail-value">${course.par||'-'}</span>
                         </div>
                         <div class="course-detail">
                             <span class="course-detail-label">Type:</span>
-                            <span class="course-detail-value">${course.type === 'championship' ? 'Championship' : course.type === '9-hole' ? '9-Hole' : 'Pitch & Putt'}</span>
+                            <span class="course-detail-value">${course.type||'-'}</span>
                         </div>
-                        <p style="margin-top: 1rem; color: var(--text-light);">${course.description}</p>
-                        <p style="margin-top: 0.5rem;"><a href="https://${course.website}" target="_blank" style="color: var(--gold); text-decoration: none;">${course.website}</a></p>
+                        <p style="margin-top: 1rem; color: var(--text-light);">${course.description||''}</p>
+                        ${course.website ? `<p style="margin-top: 0.5rem;"><a href="${websiteUrl}" target="_blank" style="color: var(--gold); text-decoration: none;">${websiteDisplay}</a></p>` : ''}
                     </div>
                 `;
                 grid.appendChild(card);
@@ -2469,6 +2476,7 @@
                 <div class="events-tabs">
                     <button class="tab-btn active" data-admin-tab="events">Events</button>
                     <button class="tab-btn" data-admin-tab="members">Members</button>
+                    <button class="tab-btn" data-admin-tab="courses">Courses</button>
                     <button class="tab-btn" data-admin-tab="results">Results</button>
                     <button class="tab-btn" data-admin-tab="messages">Messages</button>
                     <button class="tab-btn" data-admin-tab="joinrequests">Join Requests</button>
@@ -2554,6 +2562,28 @@
                                 <option value="suspended">Suspended</option>
                             </select>
                             <button onclick="deleteMember('${m.id}')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+
+            } else if (tab === 'courses') {
+                const { data: courses } = await sb.from('courses').select('*').order('name');
+                let html = `
+                    <button class="btn btn-primary" onclick="showAddCourseForm()" style="margin-bottom:1.5rem;">+ Add Course</button>
+                    <table><thead><tr><th>Name</th><th>Location</th><th>Holes</th><th>Par</th><th>Type</th><th>JPGS</th><th>Actions</th></tr></thead><tbody>`;
+                (courses||[]).forEach(c => {
+                    html += `<tr>
+                        <td>${c.name}</td>
+                        <td>${c.location}</td>
+                        <td>${c.holes||'-'}</td>
+                        <td>${c.par||'-'}</td>
+                        <td>${c.type||'-'}</td>
+                        <td>${c.jpgs ? '✅' : '❌'}</td>
+                        <td>
+                            <button onclick="showEditCourseForm(${c.id})" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
+                            <button onclick="deleteCourse(${c.id})" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>
                         </td>
                     </tr>`;
                 });
@@ -2976,6 +3006,81 @@
         async function updateJoinRequestStatus(requestId, status) {
             await sb.from('join_requests').update({ status }).eq('id', requestId);
             alert('Status updated.');
+        }
+
+        // ===== ADMIN: Courses CRUD =====
+        function courseFormHtml(c = {}) {
+            return `
+                <div class="form-group"><label>Name</label><input type="text" name="name" value="${c.name||''}" required></div>
+                <div class="form-group"><label>Location</label><input type="text" name="location" value="${c.location||''}" required></div>
+                <div class="form-group"><label>Holes</label><input type="text" name="holes" value="${c.holes||''}" placeholder="e.g. 18, 9/18, 27"></div>
+                <div class="form-group"><label>Par</label><input type="text" name="par" value="${c.par||''}" placeholder="e.g. Par 72"></div>
+                <div class="form-group"><label>Type</label>
+                    <select name="type">
+                        <option value="Championship" ${c.type==='Championship'?'selected':''}>Championship</option>
+                        <option value="9-Hole" ${c.type==='9-Hole'?'selected':''}>9-Hole</option>
+                        <option value="Pitch & Putt" ${c.type==='Pitch & Putt'?'selected':''}>Pitch & Putt</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>JPGS Played</label>
+                    <select name="jpgs"><option value="true" ${c.jpgs?'selected':''}>Yes</option><option value="false" ${!c.jpgs?'selected':''}>No</option></select>
+                </div>
+                <div class="form-group"><label>Description</label><textarea name="description">${c.description||''}</textarea></div>
+                <div class="form-group"><label>Website URL</label><input type="url" name="website" value="${c.website||''}" placeholder="https://..."></div>
+            `;
+        }
+
+        function getCourseFormData(form) {
+            return {
+                name: form.querySelector('[name="name"]').value,
+                location: form.querySelector('[name="location"]').value,
+                holes: form.querySelector('[name="holes"]').value || null,
+                par: form.querySelector('[name="par"]').value || null,
+                type: form.querySelector('[name="type"]').value,
+                jpgs: form.querySelector('[name="jpgs"]').value === 'true',
+                description: form.querySelector('[name="description"]').value || null,
+                website: form.querySelector('[name="website"]').value || null
+            };
+        }
+
+        function showAddCourseForm() {
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Add Course</h4>
+                <form id="addCourseForm">${courseFormHtml()}
+                    <button type="submit" class="btn btn-primary">Add Course</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('courses')" style="margin-left:0.5rem;">Cancel</button>
+                </form>`;
+            document.getElementById('addCourseForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const { error } = await sb.from('courses').insert(getCourseFormData(this));
+                if (error) { alert('Error: ' + error.message); return; }
+                alert('Course added.');
+                showAdminTab('courses');
+            });
+        }
+
+        async function showEditCourseForm(courseId) {
+            const { data: c } = await sb.from('courses').select('*').eq('id', courseId).single();
+            if (!c) return;
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Edit Course: ${c.name}</h4>
+                <form id="editCourseForm">${courseFormHtml(c)}
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('courses')" style="margin-left:0.5rem;">Cancel</button>
+                </form>`;
+            document.getElementById('editCourseForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await sb.from('courses').update(getCourseFormData(this)).eq('id', courseId);
+                alert('Course updated.');
+                showAdminTab('courses');
+            });
+        }
+
+        async function deleteCourse(courseId) {
+            if (confirm('Delete this course?')) {
+                await sb.from('courses').delete().eq('id', courseId);
+                showAdminTab('courses');
+            }
         }
     </script>
 </body>

@@ -2802,86 +2802,158 @@
             showViewSignups(eventId);
         }
 
-        function showEditEventForm(eventId) {
+        // Helper: calculate Friday before a date at 12:00
+        function getFridayBefore(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T00:00:00');
+            const day = d.getDay(); // 0=Sun
+            // Days to subtract to get to Friday (5)
+            const diff = (day + 2) % 7; // Mon=3, Tue=4, Wed=5, Thu=6, Fri=0, Sat=1, Sun=2
+            if (diff === 0 && day !== 5) { /* already Friday is fine */ }
+            d.setDate(d.getDate() - (diff === 0 ? 7 : diff));
+            return d.toISOString().split('T')[0];
+        }
+
+        // Helper: build course select + new course option, auto-fill location
+        async function buildEventFormHtml(ev = {}) {
+            const { data: courses } = await sb.from('courses').select('*').order('name');
+            const courseOptions = (courses || []).map(c =>
+                `<option value="${c.name}" data-location="${c.location}" ${ev.course === c.name ? 'selected' : ''}>${c.name}</option>`
+            ).join('');
+
+            return `
+                <div class="form-group"><label>Title</label><input type="text" name="title" value="${ev.title||''}" required></div>
+                <div class="form-group"><label>Date</label><input type="date" name="date" value="${ev.date||''}" required onchange="eventDateChanged(this.value)"></div>
+                <div class="form-group"><label>Signup Cutoff <span style="font-weight:normal;color:var(--text-light);font-size:0.8rem;">(auto: Friday 12:00 before event)</span></label><input type="date" name="cutoffDate" value="${ev.cutoffDate||''}" id="eventCutoffDate"></div>
+                <div class="form-group"><label>Course</label>
+                    <select name="course" id="eventCourseSelect" required onchange="eventCourseChanged(this)">
+                        <option value="">Select course...</option>
+                        ${courseOptions}
+                        <option value="__new__">+ Add new course...</option>
+                    </select>
+                </div>
+                <div id="newCourseInput" style="display:none;" class="form-group">
+                    <label>New Course Name</label>
+                    <input type="text" name="newCourseName" id="newCourseName" placeholder="Enter new course name">
+                </div>
+                <div class="form-group"><label>Location</label><input type="text" name="location" value="${ev.location||''}" id="eventLocationInput"></div>
+                <div class="form-group"><label>Format</label><input type="text" name="format" value="${ev.format||''}" placeholder="e.g. Stableford, Medal"></div>
+                <div class="form-group"><label>Cost (€)</label><input type="number" name="cost" value="${ev.cost||''}" required></div>
+                <div class="form-group"><label>Payment Link</label><input type="url" name="payment_link" value="${ev.payment_link||''}" placeholder="https://revolut.me/..."></div>
+                <div class="form-group"><label>Max Players</label><input type="number" name="maxPlayers" value="${ev.maxPlayers||''}"></div>
+                <div class="form-group"><label>Tee Time</label><input type="time" name="teeTime" value="${ev.teeTime||''}"></div>
+                <div class="form-group"><label>Tee Interval (mins)</label><input type="number" name="teeInterval" value="${ev.tee_interval||10}"></div>
+                <div class="form-group"><label>Notes</label><textarea name="notes">${ev.notes||''}</textarea></div>
+            `;
+        }
+
+        function eventDateChanged(dateStr) {
+            const cutoff = document.getElementById('eventCutoffDate');
+            // Only auto-set if empty or unchanged from a previous auto-set
+            if (!cutoff.dataset.manual) {
+                cutoff.value = getFridayBefore(dateStr);
+            }
+        }
+
+        // Mark cutoff as manually set if user changes it
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'eventCutoffDate') {
+                e.target.dataset.manual = 'true';
+            }
+        });
+
+        function eventCourseChanged(select) {
+            const newCourseDiv = document.getElementById('newCourseInput');
+            const locationInput = document.getElementById('eventLocationInput');
+
+            if (select.value === '__new__') {
+                newCourseDiv.style.display = 'block';
+                locationInput.value = '';
+                document.getElementById('newCourseName').focus();
+            } else {
+                newCourseDiv.style.display = 'none';
+                // Auto-fill location from selected course
+                const opt = select.options[select.selectedIndex];
+                if (opt && opt.dataset.location) {
+                    locationInput.value = opt.dataset.location;
+                }
+            }
+        }
+
+        function getEventFormData(form) {
+            let courseName = form.querySelector('[name="course"]').value;
+            if (courseName === '__new__') {
+                courseName = form.querySelector('[name="newCourseName"]').value;
+            }
+            return {
+                title: form.querySelector('[name="title"]').value,
+                date: form.querySelector('[name="date"]').value,
+                signup_cutoff: form.querySelector('[name="cutoffDate"]').value || null,
+                course: courseName,
+                location: form.querySelector('[name="location"]').value,
+                format: form.querySelector('[name="format"]').value || null,
+                cost: parseFloat(form.querySelector('[name="cost"]').value),
+                payment_link: form.querySelector('[name="payment_link"]').value || null,
+                signup_limit: parseInt(form.querySelector('[name="maxPlayers"]').value) || null,
+                tee_time_start: form.querySelector('[name="teeTime"]').value || null,
+                tee_interval: parseInt(form.querySelector('[name="teeInterval"]').value) || 10,
+                notes: form.querySelector('[name="notes"]').value || null
+            };
+        }
+
+        async function showEditEventForm(eventId) {
             const ev = _events.find(e => e.id === eventId);
             if (!ev) return;
+            const formHtml = await buildEventFormHtml(ev);
             document.getElementById('adminTabContent').innerHTML = `
                 <h4 style="margin-bottom:1rem;">Edit Event: ${ev.title}</h4>
                 <form id="editEventForm">
-                    <div class="form-group"><label>Title</label><input type="text" name="title" value="${ev.title}" required></div>
-                    <div class="form-group"><label>Date</label><input type="date" name="date" value="${ev.date}" required></div>
-                    <div class="form-group"><label>Signup Cutoff</label><input type="date" name="cutoffDate" value="${ev.cutoffDate||''}"></div>
-                    <div class="form-group"><label>Course</label><input type="text" name="course" value="${ev.course}" required></div>
-                    <div class="form-group"><label>Location</label><input type="text" name="location" value="${ev.location||''}"></div>
-                    <div class="form-group"><label>Format</label><input type="text" name="format" value="${ev.format||''}" placeholder="e.g. Stableford, Medal"></div>
-                    <div class="form-group"><label>Cost (€)</label><input type="number" name="cost" value="${ev.cost||''}" required></div>
-                    <div class="form-group"><label>Payment Link</label><input type="url" name="payment_link" value="${ev.payment_link||''}" placeholder="https://revolut.me/..."></div>
-                    <div class="form-group"><label>Max Players</label><input type="number" name="maxPlayers" value="${ev.maxPlayers||''}"></div>
-                    <div class="form-group"><label>Tee Time</label><input type="time" name="teeTime" value="${ev.teeTime||''}"></div>
-                    <div class="form-group"><label>Tee Interval (mins)</label><input type="number" name="teeInterval" value="${ev.tee_interval||10}"></div>
-                    <div class="form-group"><label>Notes</label><textarea name="notes">${ev.notes||''}</textarea></div>
+                    ${formHtml}
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                     <button type="button" class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
             `;
+            // Mark cutoff as manual since it already has a value
+            const cutoff = document.getElementById('eventCutoffDate');
+            if (cutoff.value) cutoff.dataset.manual = 'true';
+
             document.getElementById('editEventForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const updates = {
-                    title: this.querySelector('[name="title"]').value,
-                    date: this.querySelector('[name="date"]').value,
-                    signup_cutoff: this.querySelector('[name="cutoffDate"]').value || null,
-                    course: this.querySelector('[name="course"]').value,
-                    location: this.querySelector('[name="location"]').value,
-                    format: this.querySelector('[name="format"]').value || null,
-                    cost: parseFloat(this.querySelector('[name="cost"]').value),
-                    payment_link: this.querySelector('[name="payment_link"]').value || null,
-                    signup_limit: parseInt(this.querySelector('[name="maxPlayers"]').value) || null,
-                    tee_time_start: this.querySelector('[name="teeTime"]').value || null,
-                    tee_interval: parseInt(this.querySelector('[name="teeInterval"]').value) || 10,
-                    notes: this.querySelector('[name="notes"]').value || null
-                };
-                await sb.from('events').update(updates).eq('id', parseInt(eventId));
+                const data = getEventFormData(this);
+                // If new course was entered, add it to courses table
+                if (this.querySelector('[name="course"]').value === '__new__') {
+                    const newName = this.querySelector('[name="newCourseName"]').value;
+                    if (newName) {
+                        await sb.from('courses').insert({ name: newName, location: data.location });
+                    }
+                }
+                await sb.from('events').update(data).eq('id', parseInt(eventId));
                 alert('Event updated.');
                 showAdminTab('events');
             });
         }
 
-        function showAddEventForm() {
+        async function showAddEventForm() {
+            const formHtml = await buildEventFormHtml();
             document.getElementById('adminTabContent').innerHTML = `
                 <h4 style="margin-bottom:1rem;">Add New Event</h4>
                 <form id="addEventForm">
-                    <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
-                    <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
-                    <div class="form-group"><label>Signup Cutoff</label><input type="date" name="cutoffDate"></div>
-                    <div class="form-group"><label>Course</label><input type="text" name="course" required></div>
-                    <div class="form-group"><label>Location</label><input type="text" name="location" required></div>
-                    <div class="form-group"><label>Format</label><input type="text" name="format" placeholder="e.g. Stableford, Medal"></div>
-                    <div class="form-group"><label>Cost (€)</label><input type="number" name="cost" required></div>
-                    <div class="form-group"><label>Payment Link</label><input type="url" name="payment_link" placeholder="https://revolut.me/..."></div>
-                    <div class="form-group"><label>Max Players</label><input type="number" name="maxPlayers"></div>
-                    <div class="form-group"><label>Tee Time</label><input type="time" name="teeTime"></div>
-                    <div class="form-group"><label>Tee Interval (mins)</label><input type="number" name="teeInterval" value="10"></div>
-                    <div class="form-group"><label>Notes</label><textarea name="notes"></textarea></div>
+                    ${formHtml}
                     <button type="submit" class="btn btn-primary">Add Event</button>
                     <button type="button" class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
             `;
             document.getElementById('addEventForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const { error } = await sb.from('events').insert({
-                    title: this.querySelector('[name="title"]').value,
-                    date: this.querySelector('[name="date"]').value,
-                    signup_cutoff: this.querySelector('[name="cutoffDate"]').value || null,
-                    course: this.querySelector('[name="course"]').value,
-                    location: this.querySelector('[name="location"]').value,
-                    format: this.querySelector('[name="format"]').value || null,
-                    cost: parseFloat(this.querySelector('[name="cost"]').value),
-                    payment_link: this.querySelector('[name="payment_link"]').value || null,
-                    signup_limit: parseInt(this.querySelector('[name="maxPlayers"]').value) || null,
-                    tee_time_start: this.querySelector('[name="teeTime"]').value || null,
-                    tee_interval: parseInt(this.querySelector('[name="teeInterval"]').value) || 10,
-                    notes: this.querySelector('[name="notes"]').value || null
-                });
+                const data = getEventFormData(this);
+                // If new course was entered, add it to courses table
+                if (this.querySelector('[name="course"]').value === '__new__') {
+                    const newName = this.querySelector('[name="newCourseName"]').value;
+                    if (newName) {
+                        await sb.from('courses').insert({ name: newName, location: data.location });
+                    }
+                }
+                const { error } = await sb.from('events').insert(data);
                 if (error) { alert('Error: ' + error.message); return; }
                 alert('Event added.');
                 showAdminTab('events');

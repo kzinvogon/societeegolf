@@ -2483,21 +2483,54 @@
   }
 
   // Admin action screens
-  function showAdminCreateEvent() {
+  function appGetFridayBefore(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = (day + 2) % 7;
+    d.setDate(d.getDate() - (diff === 0 ? 7 : diff));
+    return d.toISOString().split('T')[0];
+  }
+
+  async function showAdminCreateEvent() {
+    const { data: courses } = await supabase.from('courses').select('*').order('name');
+    const courseOpts = (courses||[]).map(c =>
+      `<option value="${c.name}" data-loc="${c.location}">${c.name}</option>`
+    ).join('');
+
     document.getElementById('adminContent').innerHTML = `
       <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
       <h3 class="section-title">Create Event</h3>
       <div class="card">
         <form id="appAdminEventForm">
           <input class="input" type="text" name="title" placeholder="Event title" required>
-          <input class="input" type="date" name="date" required>
-          <input class="input" type="text" name="course" placeholder="Course name" required>
-          <input class="input" type="text" name="location" placeholder="Location" required>
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Date</label>
+          <input class="input" type="date" name="date" required onchange="
+            var co = document.getElementById('appCutoff');
+            if (!co.dataset.manual) co.value = appGetFridayBefore(this.value);
+          ">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Signup Cutoff <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(auto: Friday before event)</span></label>
+          <input class="input" type="date" name="signup_cutoff" id="appCutoff" onchange="this.dataset.manual='true'">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Course</label>
+          <select class="input" name="course" id="appCourseSelect" required onchange="
+            var loc = document.getElementById('appLocInput');
+            var newDiv = document.getElementById('appNewCourse');
+            if (this.value === '__new__') { newDiv.style.display='block'; loc.value=''; }
+            else { newDiv.style.display='none'; var o=this.options[this.selectedIndex]; if(o.dataset.loc) loc.value=o.dataset.loc; }
+          ">
+            <option value="">Select course...</option>
+            ${courseOpts}
+            <option value="__new__">+ Add new course...</option>
+          </select>
+          <div id="appNewCourse" style="display:none;">
+            <input class="input" type="text" name="newCourseName" placeholder="New course name">
+          </div>
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
+          <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
           <input class="input" type="text" name="format" placeholder="Format (e.g. Stableford)">
           <input class="input" type="number" name="cost" placeholder="Cost (€)" required>
           <input class="input" type="url" name="payment_link" placeholder="Payment link (optional)">
           <input class="input" type="number" name="signup_limit" placeholder="Max players">
-          <input class="input" type="date" name="signup_cutoff" placeholder="Signup cutoff date">
           <input class="input" type="time" name="tee_time_start" placeholder="First tee time">
           <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
           <button class="btn btn-primary btn-full" type="submit">Create Event</button>
@@ -2507,8 +2540,13 @@
     document.getElementById('appAdminEventForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const f = this;
+      let courseName = f.course.value;
+      if (courseName === '__new__') {
+        courseName = f.newCourseName.value;
+        if (courseName) await supabase.from('courses').insert({ name: courseName, location: f.location.value });
+      }
       const { error } = await supabase.from('events').insert({
-        title: f.title.value, date: f.date.value, course: f.course.value, location: f.location.value,
+        title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
         format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
         signup_limit: parseInt(f.signup_limit.value)||null, signup_cutoff: f.signup_cutoff.value||null,
         tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null

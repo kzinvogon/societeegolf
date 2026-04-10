@@ -1165,6 +1165,12 @@
         <div id="profileContent"></div>
       </div>
 
+      <!-- TAB: Admin (only for admin role) -->
+      <div id="tabAdmin" class="content-inner tab-content hidden">
+        <h2 class="section-title">Admin</h2>
+        <div id="adminContent"></div>
+      </div>
+
     </div>
   </main>
 
@@ -1190,6 +1196,10 @@
       <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
         <span class="tab-icon">👤</span>
         <span>Me</span>
+      </button>
+      <button class="tab-btn hidden" data-tab="admin" id="adminTabBtn" onclick="switchTab('admin')">
+        <span class="tab-icon">⚙️</span>
+        <span>Admin</span>
       </button>
     </div>
   </nav>
@@ -1521,6 +1531,13 @@
         tabBar.classList.add('visible');
         avatar.classList.remove('hidden');
         avatar.textContent = currentUser.name.charAt(0);
+        // Show admin tab if user is admin
+        const adminBtn = document.getElementById('adminTabBtn');
+        if (currentUser.role === 'admin') {
+          adminBtn.classList.remove('hidden');
+        } else {
+          adminBtn.classList.add('hidden');
+        }
         switchTab(currentTab);
       } else {
         authView.classList.remove('hidden');
@@ -1641,10 +1658,15 @@
       console.log('Join request:', formData);
     }
 
-    // Store locally as backup
-    const existing = JSON.parse(localStorage.getItem('jpgs_join_requests') || '[]');
-    existing.push(formData);
-    localStorage.setItem('jpgs_join_requests', JSON.stringify(existing));
+    // Submit to Supabase
+    if (supabase) {
+      supabase.from('join_requests').insert({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        notify_by: formData.notifyBy
+      });
+    }
 
     // Show success
     setTimeout(() => {
@@ -1666,7 +1688,7 @@
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
 
-    const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', profile: 'tabProfile' };
+    const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', profile: 'tabProfile', admin: 'tabAdmin' };
     document.getElementById(tabMap[tab]).classList.remove('hidden');
 
     // Scroll to top
@@ -1681,6 +1703,7 @@
     else if (tab === 'tee') renderTeeTimes();
     else if (tab === 'messages') renderMessages();
     else if (tab === 'profile') renderProfile();
+    else if (tab === 'admin') renderAdmin();
   }
 
   function goBack() {
@@ -2360,6 +2383,10 @@
       ` : ''}
 
       <div class="mt-16">
+        <button class="btn btn-primary btn-full" onclick="showEditProfile()">Edit Profile</button>
+      </div>
+
+      <div class="mt-16">
         <button class="btn btn-danger btn-full" onclick="logout()">Log Out</button>
       </div>
 
@@ -2370,6 +2397,259 @@
   }
 
   // ===== INIT =====
+  // ===== RENDER: ADMIN TAB =====
+  async function renderAdmin() {
+    if (!currentUser || currentUser.role !== 'admin') return;
+
+    const [eventsRes, membersRes, msgsRes, reqsRes] = await Promise.all([
+      supabase ? supabase.from('events').select('*').order('date', { ascending: false }) : { data: DEMO_EVENTS },
+      supabase ? supabase.from('members').select('*').order('name') : { data: DEMO_MEMBERS_LIST },
+      supabase ? supabase.from('messages').select('*').order('created_at', { ascending: false }) : { data: DEMO_MESSAGES },
+      supabase ? supabase.from('join_requests').select('*').order('created_at', { ascending: false }) : { data: [] }
+    ]);
+
+    const events = eventsRes.data || [];
+    const members = membersRes.data || [];
+    const messages = msgsRes.data || [];
+    const requests = reqsRes.data || [];
+
+    const pending = members.filter(m => m.status === 'applied');
+    const pendingRequests = requests.filter(r => r.status === 'pending');
+
+    document.getElementById('adminContent').innerHTML = `
+      <!-- Quick Stats -->
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
+        <div class="stat-card"><div class="stat-value">${events.length}</div><div class="stat-label">Events</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" style="${pending.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pending.length}</div><div class="stat-label">Pending Approvals</div></div>
+        <div class="stat-card" style="${pendingRequests.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pendingRequests.length}</div><div class="stat-label">Join Requests</div></div>
+      </div>
+
+      <!-- Quick Actions -->
+      <h3 class="section-title">Quick Actions</h3>
+      <div class="card" onclick="showAdminCreateEvent()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#D1FAE5;">📅</div>
+          <div class="list-text"><h4>Create Event</h4><p>Add a new golf event</p></div>
+        </div>
+      </div>
+      <div class="card" onclick="showAdminPostMessage()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#E0E7FF;">💬</div>
+          <div class="list-text"><h4>Post Announcement</h4><p>Send a message to all members</p></div>
+        </div>
+      </div>
+      <div class="card" onclick="showAdminEnterResults()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:var(--gold-light);">🏆</div>
+          <div class="list-text"><h4>Enter Results</h4><p>Record scores for a past event</p></div>
+        </div>
+      </div>
+
+      ${pending.length > 0 ? `
+        <h3 class="section-title mt-16">Pending Approvals</h3>
+        ${pending.map(m => `
+          <div class="card">
+            <div class="flex-between">
+              <div><strong>${m.name}</strong><br><span class="text-sm text-secondary">${m.email||'No email'}</span></div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="adminApproveMember('${m.id}')">Approve</button>
+                <button class="btn btn-sm btn-danger" onclick="adminRejectMember('${m.id}')">Reject</button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      ` : ''}
+    `;
+  }
+
+  // Admin action screens
+  function showAdminCreateEvent() {
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Create Event</h3>
+      <div class="card">
+        <form id="appAdminEventForm">
+          <input class="input" type="text" name="title" placeholder="Event title" required>
+          <input class="input" type="date" name="date" required>
+          <input class="input" type="text" name="course" placeholder="Course name" required>
+          <input class="input" type="text" name="location" placeholder="Location" required>
+          <input class="input" type="text" name="format" placeholder="Format (e.g. Stableford)">
+          <input class="input" type="number" name="cost" placeholder="Cost (€)" required>
+          <input class="input" type="url" name="payment_link" placeholder="Payment link (optional)">
+          <input class="input" type="number" name="signup_limit" placeholder="Max players">
+          <input class="input" type="date" name="signup_cutoff" placeholder="Signup cutoff date">
+          <input class="input" type="time" name="tee_time_start" placeholder="First tee time">
+          <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
+          <button class="btn btn-primary btn-full" type="submit">Create Event</button>
+        </form>
+      </div>
+    `;
+    document.getElementById('appAdminEventForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const f = this;
+      const { error } = await supabase.from('events').insert({
+        title: f.title.value, date: f.date.value, course: f.course.value, location: f.location.value,
+        format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
+        signup_limit: parseInt(f.signup_limit.value)||null, signup_cutoff: f.signup_cutoff.value||null,
+        tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null
+      });
+      if (error) { alert('Error: ' + error.message); return; }
+      alert('Event created!');
+      renderAdmin();
+    });
+  }
+
+  function showAdminPostMessage() {
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Post Announcement</h3>
+      <div class="card">
+        <form id="appAdminMsgForm">
+          <input class="input" type="text" name="title" placeholder="Title" required>
+          <select class="input" name="priority">
+            <option value="normal">Normal</option>
+            <option value="important">Important</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <textarea class="input" name="body" placeholder="Message body" style="min-height:100px;" required></textarea>
+          <button class="btn btn-primary btn-full" type="submit">Post</button>
+        </form>
+      </div>
+    `;
+    document.getElementById('appAdminMsgForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const { error } = await supabase.from('messages').insert({
+        title: this.title.value, body: this.body.value, priority: this.priority.value
+      });
+      if (error) { alert('Error: ' + error.message); return; }
+      alert('Message posted!');
+      renderAdmin();
+    });
+  }
+
+  async function showAdminEnterResults() {
+    const { data: events } = await supabase.from('events').select('*').lt('date', new Date().toISOString().split('T')[0]).order('date', { ascending: false });
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Enter Results</h3>
+      <div class="card">
+        <select class="input" id="adminResultsEvent" onchange="loadResultsForm(this.value)">
+          <option value="">Select event...</option>
+          ${(events||[]).map(e => `<option value="${e.id}">${e.title} — ${new Date(e.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</option>`).join('')}
+        </select>
+        <div id="adminResultsForm"></div>
+      </div>
+    `;
+  }
+
+  async function loadResultsForm(eventId) {
+    if (!eventId) { document.getElementById('adminResultsForm').innerHTML = ''; return; }
+    const { data: signups } = await supabase.from('signups').select('*, members(name, handicap)').eq('event_id', parseInt(eventId));
+    const { data: existing } = await supabase.from('results').select('*').eq('event_id', parseInt(eventId));
+    const rMap = {};
+    (existing||[]).forEach(r => rMap[r.member_id] = r);
+
+    document.getElementById('adminResultsForm').innerHTML = `
+      <form id="adminResultsEntryForm" style="margin-top:12px;">
+        ${(signups||[]).map(s => `
+          <div class="card" style="padding:10px 14px;margin-bottom:8px;">
+            <div class="flex-between">
+              <strong>${s.members?.name||'Unknown'}</strong>
+              <span class="text-sm text-secondary">HCP ${s.handicap_at_signup||'-'}</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <input class="input" type="number" name="score_${s.member_id}" placeholder="Score" value="${rMap[s.member_id]?.score||''}" style="margin:0;flex:1;">
+              <input class="input" type="number" name="points_${s.member_id}" placeholder="Points" value="${rMap[s.member_id]?.points||''}" style="margin:0;flex:1;">
+              <input type="hidden" name="mid_${s.member_id}" value="${s.member_id}">
+            </div>
+          </div>
+        `).join('')}
+        <button class="btn btn-primary btn-full mt-8" type="submit">Save Results</button>
+      </form>
+    `;
+    document.getElementById('adminResultsEntryForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const entries = [];
+      (signups||[]).forEach(s => {
+        const score = parseInt(this.querySelector(`[name="score_${s.member_id}"]`).value);
+        const points = parseInt(this.querySelector(`[name="points_${s.member_id}"]`).value);
+        if (score || points) entries.push({ event_id: parseInt(eventId), member_id: s.member_id, score: score||null, points: points||null });
+      });
+      entries.sort((a,b) => (b.points||0)-(a.points||0));
+      entries.forEach((e,i) => e.position = i+1);
+      for (const entry of entries) {
+        if (rMap[entry.member_id]) {
+          await supabase.from('results').update(entry).eq('id', rMap[entry.member_id].id);
+        } else {
+          await supabase.from('results').insert(entry);
+        }
+      }
+      alert('Results saved!');
+    });
+  }
+
+  async function adminApproveMember(memberId) {
+    await supabase.from('members').update({ status: 'active' }).eq('id', memberId);
+    alert('Member approved!');
+    renderAdmin();
+  }
+
+  async function adminRejectMember(memberId) {
+    if (confirm('Reject this application?')) {
+      await supabase.from('members').delete().eq('id', memberId);
+      renderAdmin();
+    }
+  }
+
+  // ===== PROFILE EDITING =====
+  function showEditProfile() {
+    const u = currentUser;
+    document.getElementById('profileContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderProfile()">← Back</button>
+      <h3 class="section-title">Edit Profile</h3>
+      <div class="card">
+        <form id="editProfileForm">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Name</label>
+          <input class="input" type="text" name="name" value="${u.name}" required>
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Handicap</label>
+          <input class="input" type="number" step="0.1" name="handicap" value="${u.handicap||''}">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Phone / WhatsApp</label>
+          <div style="display:flex;gap:8px;">
+            <select class="input" name="country_code" style="width:110px;flex-shrink:0;">
+              <option value="+34" ${u.country_code==='+34'?'selected':''}>🇪🇸 +34</option>
+              <option value="+44" ${u.country_code==='+44'?'selected':''}>🇬🇧 +44</option>
+              <option value="+353" ${u.country_code==='+353'?'selected':''}>🇮🇪 +353</option>
+              <option value="+31" ${u.country_code==='+31'?'selected':''}>🇳🇱 +31</option>
+              <option value="+49" ${u.country_code==='+49'?'selected':''}>🇩🇪 +49</option>
+              <option value="+33" ${u.country_code==='+33'?'selected':''}>🇫🇷 +33</option>
+              <option value="+1" ${u.country_code==='+1'?'selected':''}>🇺🇸 +1</option>
+            </select>
+            <input class="input" type="tel" name="phone" value="${u.phone||''}" style="flex:1;">
+          </div>
+          <button class="btn btn-primary btn-full" type="submit">Save</button>
+        </form>
+      </div>
+    `;
+    document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const updates = {
+        name: this.name.value,
+        handicap: parseFloat(this.handicap.value) || null,
+        phone: this.phone.value || null,
+        country_code: this.country_code.value
+      };
+      if (supabase) {
+        await supabase.from('members').update(updates).eq('id', currentUser.id);
+      }
+      currentUser = { ...currentUser, ...updates };
+      alert('Profile updated!');
+      renderProfile();
+    });
+  }
+
   async function init() {
     await initSupabase();
     renderVisitorView();

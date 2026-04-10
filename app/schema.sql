@@ -154,3 +154,30 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ===========================
+-- Additional: country code and join requests
+-- ===========================
+
+ALTER TABLE members ADD COLUMN IF NOT EXISTS country_code TEXT DEFAULT '+34';
+
+-- Join requests (visitor sign-up form)
+CREATE TABLE IF NOT EXISTS join_requests (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  notify_by TEXT DEFAULT 'email',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'contacted', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE join_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage join requests" ON join_requests
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM members WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Anyone can submit join request" ON join_requests
+  FOR INSERT WITH CHECK (true);

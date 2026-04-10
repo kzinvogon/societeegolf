@@ -1638,7 +1638,14 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase setup
+        const SUPABASE_URL = 'https://fxpgaiktflyvikxovjxo.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_2YI9M0mJ0jaeBxAurdFtSA_PRP8vmYP';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentAdminUser = null;
+
         // Data initialization
         const COURSES = [
             { id: 1, name: 'Alicante Golf', location: 'Alicante', holes: '18', par: 'Par 72', type: 'championship', jpgs: true, description: 'Designed by Seve Ballesteros, 5 lakes.', website: 'www.alicantegolf.com' },
@@ -1690,63 +1697,7 @@
             { name: 'Rob Jardine', role: 'Committee Member' }
         ];
 
-        // Initialize localStorage if needed
-        function initializeData() {
-            // Members
-            if (!localStorage.getItem('jpgs_members_v1')) {
-                const members = [
-                    { id:'mbr_001', name:'Alan Turpin',        email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_002', name:'Allister Smith',     email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_003', name:'Andrew Jagger',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_004', name:'Ben Van Zutphen',    email:null, phone:'', handicap:null, status:'probationary', joinedDate:'2025-09-01', notes:'New member' },
-                    { id:'mbr_005', name:'Clive Challenor',    email:null, phone:'', handicap:15.9, status:'full_member',  joinedDate:'2022-06-01', notes:'' },
-                    { id:'mbr_006', name:'Darren Graig',       email:null, phone:'', handicap:null, status:'suspended',    joinedDate:'2023-01-01', notes:'Dues outstanding' },
-                    { id:'mbr_007', name:'David Hamilton',     email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_008', name:'Erik Greuter',       email:null, phone:'', handicap:27,   status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_009', name:'Ian Hunt',           email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_010', name:'Jim Conaghan',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2022-01-01', notes:'Event Organiser' },
-                    { id:'mbr_011', name:'John Delaney',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_012', name:'Lawrence Stevenson', email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_013', name:'Martin Leyshon',     email:null, phone:'', handicap:17.1, status:'full_member',  joinedDate:'2022-06-01', notes:'' },
-                    { id:'mbr_014', name:'Max Gatric',         email:null, phone:'', handicap:null, status:'probationary', joinedDate:'2025-10-01', notes:'New member' },
-                    { id:'mbr_015', name:"Paul O'Neill",       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_016', name:'Rob Jardine',        email:null, phone:'', handicap:24,   status:'full_member',  joinedDate:'2022-06-01', notes:'' },
-                    { id:'mbr_017', name:'Robert Ellis',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_018', name:'Robert Giles',       email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_019', name:'Sean Kavanagh',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_020', name:'Stuart Connel',      email:null, phone:'', handicap:null, status:'full_member',  joinedDate:'2023-01-01', notes:'' },
-                    { id:'mbr_021', name:'Tony Dijkers',       email:null, phone:'', handicap:null, status:'suspended',    joinedDate:'2023-01-01', notes:'Dues outstanding' },
-                    { id:'mbr_022', name:'William Marshal',    email:null, phone:'', handicap:19,   status:'full_member',  joinedDate:'2022-06-01', notes:'' }
-                ];
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-            }
-
-            // Events
-            if (!localStorage.getItem('jpgs_events_v1')) {
-                const events = [
-                    { id: 'evt_001', title: 'Poniente Golf', date: '2026-04-12', cutoffDate: '2026-04-10', course: 'Villaitana Poniente', location: 'Benidorm', cost: 60, includes: 'buggy', maxPlayers: 12, teeTime: '10:03', meetAt: 'clubhouse', meetTime: '09:30', transport: '', contact: 'Jim Conaghan', contactEmail: 'jamesconaghan@hotmail.co.uk', notes: '' },
-                    { id: 'evt_002', title: 'Spring Medal — Jávea Golf', date: '2026-05-03', cutoffDate: '2026-05-01', course: 'Jávea Golf Club', location: 'Jávea', cost: 45, includes: '', maxPlayers: 16, teeTime: '09:30', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: 'Stableford format' },
-                    { id: 'evt_003', title: 'La Sella Golf Resort', date: '2026-05-17', cutoffDate: '2026-05-15', course: 'La Sella', location: 'Dénia', cost: 55, includes: 'shared buggy', maxPlayers: 12, teeTime: '10:30', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: '' },
-                    { id: 'evt_past', title: 'Away Days Trophy — Murcia 2026', date: '2026-04-03', cutoffDate: '2026-04-01', course: 'Lo Romero & Serena Golf', location: 'Murcia', cost: 120, includes: '2 nights', maxPlayers: 12, teeTime: '', meetAt: '', meetTime: '', transport: '', contact: '', contactEmail: '', notes: '', status: 'completed' }
-                ];
-                localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
-            }
-
-            // Event signups
-            if (!localStorage.getItem('jpgs_signups_v1')) {
-                const signups = [
-                    { eventId: 'evt_001', memberId: 'mbr_005', memberName: 'Clive Challenor', email: null, handicap: 15.9, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
-                    { eventId: 'evt_001', memberId: 'mbr_008', memberName: 'Erik Greuter', email: null, handicap: 27, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
-                    { eventId: 'evt_001', memberId: 'mbr_013', memberName: 'Martin Leyshon', email: null, handicap: 17.1, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
-                    { eventId: 'evt_001', memberId: 'mbr_015', memberName: "Paul O'Neill", email: null, handicap: null, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
-                    { eventId: 'evt_001', memberId: 'mbr_016', memberName: 'Rob Jardine', email: null, handicap: 24, requirements: '', signedUpDate: '2026-03-01', isDemo: true },
-                    { eventId: 'evt_001', memberId: 'mbr_022', memberName: 'William Marshal', email: null, handicap: 19, requirements: '', signedUpDate: '2026-03-01', isDemo: true }
-                ];
-                localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
-            }
-        }
-
-        initializeData();
+        // No localStorage — all data comes from Supabase
 
         // Modal functions
         function openModal(modalId) {
@@ -1865,20 +1816,45 @@
 
         renderNews();
 
-        // Events handling
-        function getEvents() {
-            return JSON.parse(localStorage.getItem('jpgs_events_v1')) || [];
+        // Events handling — Supabase data layer
+        // Cache for sync access in rendering (refreshed before each render)
+        let _members = [];
+        let _events = [];
+        let _signups = [];
+
+        async function refreshData() {
+            const [m, e, s] = await Promise.all([
+                supabase.from('members').select('*'),
+                supabase.from('events').select('*').order('date', { ascending: true }),
+                supabase.from('signups').select('*, members(name, handicap)')
+            ]);
+            _members = m.data || [];
+            _events = (e.data || []).map(ev => ({
+                ...ev,
+                id: String(ev.id),
+                cutoffDate: ev.signup_cutoff,
+                maxPlayers: ev.signup_limit,
+                teeTime: ev.tee_time_start,
+                includes: ev.notes || ''
+            }));
+            _signups = (s.data || []).map(sg => ({
+                eventId: String(sg.event_id),
+                memberId: sg.member_id,
+                memberName: sg.members?.name || 'Unknown',
+                email: '',
+                handicap: sg.handicap_at_signup,
+                requirements: '',
+                signedUpDate: sg.signed_up_at?.split('T')[0] || '',
+                paid: sg.paid
+            }));
         }
 
-        function getSignups() {
-            return JSON.parse(localStorage.getItem('jpgs_signups_v1')) || [];
-        }
+        function getEvents() { return _events; }
+        function getSignups() { return _signups; }
+        function getMembers() { return _members; }
 
-        function getMembers() {
-            return JSON.parse(localStorage.getItem('jpgs_members_v1')) || [];
-        }
-
-        function renderEvents(tab = 'upcoming') {
+        async function renderEvents(tab = 'upcoming') {
+            await refreshData();
             const grid = document.getElementById('eventsGrid');
             grid.innerHTML = '';
             const events = getEvents();
@@ -1998,9 +1974,10 @@
             openModal('eventDetailModal');
         }
 
-        function openSignUpForm(eventId) {
+        async function openSignUpForm(eventId) {
+            await refreshData();
             const event = getEvents().find(e => e.id === eventId);
-            const members = getMembers().filter(m => m.status === 'full_member' || m.status === 'probationary');
+            const members = getMembers().filter(m => m.status === 'active');
 
             let html = `
                 <div class="modal-header">
@@ -2070,7 +2047,7 @@
             document.getElementById('signupEmail').value = member.email || '';
         }
 
-        function submitSignUp(eventId) {
+        async function submitSignUp(eventId) {
             const memberId = document.getElementById('memberSelect').value;
             const email = document.getElementById('signupEmail').value;
             const requirements = document.getElementById('signupRequirements').value;
@@ -2085,30 +2062,24 @@
 
             // Update member email if new
             if (!member.email) {
-                member.email = email;
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+                await supabase.from('members').update({ email }).eq('id', memberId);
             }
 
             // Add signup
-            const signups = getSignups();
-            const existing = signups.find(s => s.eventId === eventId && s.memberId === memberId);
+            const { error } = await supabase.from('signups').insert({
+                event_id: parseInt(eventId),
+                member_id: memberId,
+                handicap_at_signup: member.handicap
+            });
 
-            if (!existing) {
-                signups.push({
-                    eventId: eventId,
-                    memberId: memberId,
-                    memberName: member.name,
-                    email: email,
-                    handicap: member.handicap,
-                    requirements: requirements,
-                    signedUpDate: new Date().toISOString().split('T')[0],
-                    isDemo: false
-                });
-                localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
+            if (!error) {
                 alert('Successfully signed up for ' + getEvents().find(e => e.id === eventId).title);
                 closeModal('eventDetailModal');
-            } else {
+                await renderEvents();
+            } else if (error.code === '23505') {
                 alert('You are already signed up for this event');
+            } else {
+                alert('Error: ' + error.message);
             }
         }
 
@@ -2148,21 +2119,22 @@
 
             document.getElementById('eventDetailContent').innerHTML = html;
 
-            document.getElementById('withdrawForm').addEventListener('submit', function(e) {
+            document.getElementById('withdrawForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 const memberName = this.querySelector('[name="memberName"]').value;
                 const email = this.querySelector('[name="email"]').value;
 
-                const signups = getSignups();
-                const index = signups.findIndex(s => s.eventId === eventId && s.memberName === memberName && !s.isDemo);
-
-                if (index >= 0 && signups[index].email === email) {
-                    signups.splice(index, 1);
-                    localStorage.setItem('jpgs_signups_v1', JSON.stringify(signups));
+                // Find the signup by member name
+                const signup = _signups.find(s => s.eventId === eventId && s.memberName === memberName);
+                if (signup) {
+                    await supabase.from('signups').delete()
+                        .eq('event_id', parseInt(eventId))
+                        .eq('member_id', signup.memberId);
                     alert('Withdrawal confirmed');
                     closeModal('eventDetailModal');
+                    await renderEvents();
                 } else {
-                    alert('Email does not match');
+                    alert('Signup not found');
                 }
             });
         }
@@ -2322,29 +2294,27 @@
             });
         });
 
-        renderEvents('upcoming');
+        refreshData().then(() => renderEvents('upcoming'));
 
-        // Registration form
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
+        // Registration form — submit to Supabase join_requests
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const fullName = this.querySelector('[name="fullName"]').value;
             const email = this.querySelector('[name="email"]').value;
+            const phone = this.querySelector('[name="whatsapp"]')?.value || '';
 
-            const members = getMembers();
-            const newMember = {
-                id: 'mbr_' + Date.now(),
+            const { error } = await supabase.from('join_requests').insert({
                 name: fullName,
                 email: email,
-                phone: this.querySelector('[name="whatsapp"]').value,
-                handicap: this.querySelector('[name="handicap"]').value || null,
-                status: 'applied',
-                joinedDate: new Date().toISOString().split('T')[0],
-                notes: ''
-            };
+                phone: phone,
+                notify_by: 'email'
+            });
 
-            members.push(newMember);
-            localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
+            if (error) {
+                alert('Error submitting application: ' + error.message);
+                return;
+            }
 
             document.getElementById('registerBody').innerHTML = `
                 <div class="success-message">
@@ -2352,7 +2322,7 @@
                     <p>Thank you for applying to Javea Port Golf Society. Our committee will review your application and you should receive an email within 48 hours confirming your membership status.</p>
                     <p>In the meantime, you can browse our courses and upcoming events.</p>
                 </div>
-                <button class="btn btn-primary" onclick="closeModal('registerModal'); location.reload();">Close</button>
+                <button class="btn btn-primary" onclick="closeModal('registerModal');">Close</button>
             `;
         });
 
@@ -2492,12 +2462,16 @@
             }
         }
 
-        function showAdminPanel() {
+        async function showAdminPanel() {
+            await refreshData();
             const adminContent = document.getElementById('adminContent');
             adminContent.innerHTML = `
                 <div class="events-tabs">
                     <button class="tab-btn active" data-admin-tab="events">Events</button>
                     <button class="tab-btn" data-admin-tab="members">Members</button>
+                    <button class="tab-btn" data-admin-tab="results">Results</button>
+                    <button class="tab-btn" data-admin-tab="messages">Messages</button>
+                    <button class="tab-btn" data-admin-tab="joinrequests">Join Requests</button>
                 </div>
                 <div id="adminTabContent"></div>
             `;
@@ -2514,7 +2488,8 @@
             openModal('adminModal');
         }
 
-        function showAdminTab(tab) {
+        async function showAdminTab(tab) {
+            await refreshData();
             const content = document.getElementById('adminTabContent');
 
             if (tab === 'events') {
@@ -2522,360 +2497,485 @@
                 let html = `
                     <button class="btn btn-primary" onclick="showAddEventForm()" style="margin-bottom: 1.5rem;">+ Add New Event</button>
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Title</th>
-                                <th>Signups</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Date</th><th>Title</th><th>Signups</th><th>Actions</th></tr></thead>
                         <tbody>
                 `;
-
                 events.forEach(event => {
                     const signupCount = getSignups().filter(s => s.eventId === event.id).length;
-                    html += `
-                        <tr>
-                            <td>${new Date(event.date).toLocaleDateString()}</td>
-                            <td>${event.title}</td>
-                            <td>${signupCount}/${event.maxPlayers}</td>
-                            <td>${event.status === 'completed' ? 'Completed' : 'Active'}</td>
-                            <td>
-                                <button onclick="showViewSignups('${event.id}')" style="background: var(--info); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.3rem;">View</button>
-                                <button onclick="deleteEvent('${event.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                    html += `<tr>
+                        <td>${new Date(event.date).toLocaleDateString()}</td>
+                        <td>${event.title}</td>
+                        <td>${signupCount}/${event.maxPlayers || '∞'}</td>
+                        <td>
+                            <button onclick="showViewSignups('${event.id}')" style="background:var(--info);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">View</button>
+                            <button onclick="showEditEventForm('${event.id}')" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
+                            <button onclick="deleteEvent('${event.id}')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>
+                        </td>
+                    </tr>`;
                 });
-
                 html += `</tbody></table>`;
                 content.innerHTML = html;
 
             } else if (tab === 'members') {
                 const members = getMembers();
                 const applications = members.filter(m => m.status === 'applied');
-
-                let html = ``;
+                let html = '';
 
                 if (applications.length > 0) {
-                    html += `
-                        <h4 style="margin-bottom: 1rem; color: var(--danger);">Pending Applications (${applications.length})</h4>
-                        <table style="margin-bottom: 2rem;">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Applied</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-
+                    html += `<h4 style="margin-bottom:1rem;color:var(--danger);">Pending Applications (${applications.length})</h4>
+                    <table style="margin-bottom:2rem;"><thead><tr><th>Name</th><th>Email</th><th>Applied</th><th>Actions</th></tr></thead><tbody>`;
                     applications.forEach(m => {
-                        html += `
-                            <tr>
-                                <td>${m.name}</td>
-                                <td>${m.email}</td>
-                                <td>${m.joinedDate}</td>
-                                <td>
-                                    <button onclick="approveMember('${m.id}')" style="background: var(--success); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.3rem;">Approve</button>
-                                    <button onclick="rejectMember('${m.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">Reject</button>
-                                </td>
-                            </tr>
-                        `;
+                        html += `<tr><td>${m.name}</td><td>${m.email||'-'}</td><td>${m.joined_date||'-'}</td><td>
+                            <button onclick="approveMember('${m.id}')" style="background:var(--success);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Approve</button>
+                            <button onclick="rejectMember('${m.id}')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Reject</button>
+                        </td></tr>`;
                     });
-
                     html += `</tbody></table>`;
                 }
 
-                html += `
-                    <h4 style="margin-bottom: 1rem;">All Members</h4>
-                    <button class="btn btn-primary" onclick="showAddMemberForm()" style="margin-bottom: 1.5rem;">+ Add Member</button>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Status</th>
-                                <th>Email</th>
-                                <th>Handicap</th>
-                                <th>Joined</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
+                html += `<h4 style="margin-bottom:1rem;">All Members</h4>
+                    <button class="btn btn-primary" onclick="showAddMemberForm()" style="margin-bottom:1.5rem;">+ Add Member</button>
+                    <table><thead><tr><th>Name</th><th>Status</th><th>Email</th><th>Handicap</th><th>Phone</th><th>Joined</th><th>Actions</th></tr></thead><tbody>`;
                 members.forEach(m => {
-                    html += `
-                        <tr>
-                            <td>${m.name}</td>
-                            <td><span class="status-badge ${m.status}">${m.status === 'applied' ? 'Applied' : m.status === 'probationary' ? 'Probationary' : m.status === 'full_member' ? 'Full Member' : 'Suspended'}</span></td>
-                            <td>${m.email || '-'}</td>
-                            <td>${m.handicap || '-'}</td>
-                            <td>${m.joinedDate}</td>
-                            <td>
-                                <select onchange="changeMemberStatus('${m.id}', this.value); this.value = '${m.status}'" style="padding: 0.4rem;">
-                                    <option value="applied" ${m.status === 'applied' ? 'selected' : ''}>Applied</option>
-                                    <option value="probationary" ${m.status === 'probationary' ? 'selected' : ''}>Probationary</option>
-                                    <option value="full_member" ${m.status === 'full_member' ? 'selected' : ''}>Full Member</option>
-                                    <option value="suspended" ${m.status === 'suspended' ? 'selected' : ''}>Suspended</option>
-                                </select>
-                                <button onclick="deleteMember('${m.id}')" style="background: var(--danger); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-left: 0.3rem;">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                    const statusMap = {applied:'Applied',active:'Active',suspended:'Suspended'};
+                    html += `<tr>
+                        <td>${m.name}</td>
+                        <td><span class="status-badge ${m.status}">${statusMap[m.status]||m.status}</span></td>
+                        <td>${m.email||'-'}</td>
+                        <td>${m.handicap||'-'}</td>
+                        <td>${m.phone||'-'}</td>
+                        <td>${m.joined_date||'-'}</td>
+                        <td>
+                            <button onclick="showEditMemberForm('${m.id}')" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
+                            <select onchange="changeMemberStatus('${m.id}',this.value)" style="padding:0.4rem;margin:0.2rem;">
+                                <option value="">Change status...</option>
+                                <option value="applied">Applied</option>
+                                <option value="active">Active</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                            <button onclick="deleteMember('${m.id}')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>
+                        </td>
+                    </tr>`;
                 });
-
                 html += `</tbody></table>`;
+                content.innerHTML = html;
+
+            } else if (tab === 'results') {
+                const events = getEvents().filter(e => new Date(e.date) < new Date()).sort((a,b) => b.date.localeCompare(a.date));
+                let html = `<h4 style="margin-bottom:1rem;">Enter Results for Past Events</h4>`;
+                if (events.length === 0) {
+                    html += `<p>No past events to enter results for.</p>`;
+                } else {
+                    html += `<select id="resultsEventSelect" onchange="showResultsEntry(this.value)" style="padding:0.5rem;margin-bottom:1rem;width:100%;">
+                        <option value="">Select an event...</option>`;
+                    events.forEach(e => { html += `<option value="${e.id}">${e.title} — ${new Date(e.date).toLocaleDateString()}</option>`; });
+                    html += `</select><div id="resultsEntryArea"></div>`;
+                }
+                content.innerHTML = html;
+
+            } else if (tab === 'messages') {
+                const { data: messages } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+                let html = `<button class="btn btn-primary" onclick="showAddMessageForm()" style="margin-bottom:1.5rem;">+ Post Announcement</button>`;
+                if (!messages || messages.length === 0) {
+                    html += `<p>No messages yet.</p>`;
+                } else {
+                    html += `<table><thead><tr><th>Date</th><th>Title</th><th>Priority</th><th>Actions</th></tr></thead><tbody>`;
+                    messages.forEach(m => {
+                        html += `<tr>
+                            <td>${new Date(m.created_at).toLocaleDateString()}</td>
+                            <td>${m.title}</td>
+                            <td><span class="status-badge ${m.priority}">${m.priority}</span></td>
+                            <td>
+                                <button onclick="showEditMessageForm(${m.id})" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
+                                <button onclick="deleteMessage(${m.id})" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>
+                            </td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+                content.innerHTML = html;
+
+            } else if (tab === 'joinrequests') {
+                const { data: requests } = await supabase.from('join_requests').select('*').order('created_at', { ascending: false });
+                let html = `<h4 style="margin-bottom:1rem;">Join Requests from Website</h4>`;
+                if (!requests || requests.length === 0) {
+                    html += `<p>No join requests yet.</p>`;
+                } else {
+                    html += `<table><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Notify By</th><th>Status</th><th>Actions</th></tr></thead><tbody>`;
+                    requests.forEach(r => {
+                        html += `<tr>
+                            <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                            <td>${r.name}</td>
+                            <td>${r.email}</td>
+                            <td>${r.phone||'-'}</td>
+                            <td>${r.notify_by}</td>
+                            <td><span class="status-badge ${r.status}">${r.status}</span></td>
+                            <td>
+                                <select onchange="updateJoinRequestStatus(${r.id},this.value)" style="padding:0.4rem;">
+                                    <option value="pending" ${r.status==='pending'?'selected':''}>Pending</option>
+                                    <option value="contacted" ${r.status==='contacted'?'selected':''}>Contacted</option>
+                                    <option value="approved" ${r.status==='approved'?'selected':''}>Approved</option>
+                                    <option value="rejected" ${r.status==='rejected'?'selected':''}>Rejected</option>
+                                </select>
+                            </td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
                 content.innerHTML = html;
             }
         }
 
-        function approveMember(memberId) {
-            const members = getMembers();
-            const member = members.find(m => m.id === memberId);
-            if (member) {
-                member.status = 'probationary';
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-                alert(`Approved ${member.name}. They are now probationary members.`);
+        // ===== ADMIN: Member CRUD =====
+        async function approveMember(memberId) {
+            await supabase.from('members').update({ status: 'active' }).eq('id', memberId);
+            alert('Member approved and set to active.');
+            showAdminTab('members');
+        }
+
+        async function rejectMember(memberId) {
+            if (confirm('Reject and delete this application?')) {
+                await supabase.from('members').delete().eq('id', memberId);
+                alert('Application rejected.');
                 showAdminTab('members');
             }
         }
 
-        function rejectMember(memberId) {
-            const members = getMembers();
-            const index = members.findIndex(m => m.id === memberId);
-            if (index >= 0) {
-                members.splice(index, 1);
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-                alert('Application rejected and member removed.');
-                showAdminTab('members');
-            }
+        async function changeMemberStatus(memberId, newStatus) {
+            if (!newStatus) return;
+            await supabase.from('members').update({ status: newStatus }).eq('id', memberId);
+            alert('Status updated to ' + newStatus);
+            showAdminTab('members');
         }
 
-        function changeMemberStatus(memberId, newStatus) {
-            const members = getMembers();
-            const member = members.find(m => m.id === memberId);
-            if (member) {
-                member.status = newStatus;
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-                alert(`${member.name} status changed to ${newStatus}`);
-            }
-        }
-
-        function deleteMember(memberId) {
+        async function deleteMember(memberId) {
             if (confirm('Are you sure you want to delete this member?')) {
-                const members = getMembers();
-                const index = members.findIndex(m => m.id === memberId);
-                if (index >= 0) {
-                    members.splice(index, 1);
-                    localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-                    showAdminTab('members');
-                }
+                await supabase.from('members').delete().eq('id', memberId);
+                showAdminTab('members');
             }
         }
 
-        function deleteEvent(eventId) {
+        function showEditMemberForm(memberId) {
+            const m = getMembers().find(x => x.id === memberId);
+            if (!m) return;
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Edit Member: ${m.name}</h4>
+                <form id="editMemberForm">
+                    <div class="form-group"><label>Name</label><input type="text" name="name" value="${m.name}" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" name="email" value="${m.email||''}"></div>
+                    <div class="form-group"><label>Phone / WhatsApp</label><input type="tel" name="phone" value="${m.phone||''}"></div>
+                    <div class="form-group"><label>Handicap</label><input type="number" name="handicap" step="0.1" value="${m.handicap||''}"></div>
+                    <div class="form-group"><label>Status</label>
+                        <select name="status">
+                            <option value="applied" ${m.status==='applied'?'selected':''}>Applied</option>
+                            <option value="active" ${m.status==='active'?'selected':''}>Active</option>
+                            <option value="suspended" ${m.status==='suspended'?'selected':''}>Suspended</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Role</label>
+                        <select name="role">
+                            <option value="member" ${m.role==='member'?'selected':''}>Member</option>
+                            <option value="admin" ${m.role==='admin'?'selected':''}>Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('members')" style="margin-left:0.5rem;">Cancel</button>
+                </form>
+            `;
+            document.getElementById('editMemberForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const updates = {
+                    name: this.querySelector('[name="name"]').value,
+                    email: this.querySelector('[name="email"]').value || null,
+                    phone: this.querySelector('[name="phone"]').value || null,
+                    handicap: parseFloat(this.querySelector('[name="handicap"]').value) || null,
+                    status: this.querySelector('[name="status"]').value,
+                    role: this.querySelector('[name="role"]').value
+                };
+                await supabase.from('members').update(updates).eq('id', memberId);
+                alert('Member updated.');
+                showAdminTab('members');
+            });
+        }
+
+        function showAddMemberForm() {
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Add New Member</h4>
+                <form id="addMemberForm">
+                    <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
+                    <div class="form-group"><label>Phone / WhatsApp</label><input type="tel" name="phone"></div>
+                    <div class="form-group"><label>Handicap</label><input type="number" name="handicap" step="0.1"></div>
+                    <div class="form-group"><label>Status</label>
+                        <select name="status">
+                            <option value="active">Active</option>
+                            <option value="applied">Applied</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('members')" style="margin-left:0.5rem;">Cancel</button>
+                </form>
+            `;
+            document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                // Admin-created members need a Supabase auth account — for now insert directly
+                // (they won't be able to login via magic link until they sign up via auth)
+                const { error } = await supabase.from('join_requests').insert({
+                    name: this.querySelector('[name="name"]').value,
+                    email: this.querySelector('[name="email"]').value,
+                    phone: this.querySelector('[name="phone"]').value || null,
+                    status: 'approved',
+                    notify_by: 'email'
+                });
+                if (error) { alert('Error: ' + error.message); return; }
+                alert('Member added to join requests as approved. They will need to login via the Member App to complete their account setup.');
+                showAdminTab('members');
+            });
+        }
+
+        // ===== ADMIN: Event CRUD =====
+        async function deleteEvent(eventId) {
             if (confirm('Delete this event and all signups?')) {
-                const events = getEvents();
-                const signups = getSignups();
-
-                const eventIndex = events.findIndex(e => e.id === eventId);
-                if (eventIndex >= 0) {
-                    events.splice(eventIndex, 1);
-                    localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
-
-                    const newSignups = signups.filter(s => s.eventId !== eventId);
-                    localStorage.setItem('jpgs_signups_v1', JSON.stringify(newSignups));
-
-                    showAdminTab('events');
-                }
+                await supabase.from('events').delete().eq('id', parseInt(eventId));
+                showAdminTab('events');
             }
         }
 
-        function showViewSignups(eventId) {
+        async function showViewSignups(eventId) {
+            await refreshData();
             const event = getEvents().find(e => e.id === eventId);
             const signups = getSignups().filter(s => s.eventId === eventId);
-
-            let html = `<h4 style="margin-bottom: 1rem;">${event.title} - Signups</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Handicap</th>
-                            <th>Requirements</th>
-                            <th>Signed Up</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
+            let html = `<h4 style="margin-bottom:1rem;">${event?.title||'Event'} — Signups (${signups.length})</h4>
+                <button class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-bottom:1rem;">← Back</button>
+                <table><thead><tr><th>Name</th><th>Handicap</th><th>Paid</th><th>Signed Up</th><th>Actions</th></tr></thead><tbody>`;
             signups.forEach(s => {
-                html += `
-                    <tr>
-                        <td>${s.memberName}</td>
-                        <td>${s.email || '-'}</td>
-                        <td>${s.handicap || '-'}</td>
-                        <td>${s.requirements || '-'}</td>
-                        <td>${s.signedUpDate}</td>
-                    </tr>
-                `;
+                html += `<tr>
+                    <td>${s.memberName}</td>
+                    <td>${s.handicap||'-'}</td>
+                    <td>${s.paid ? '✅' : '❌'}</td>
+                    <td>${s.signedUpDate}</td>
+                    <td>
+                        <button onclick="togglePaid('${eventId}','${s.memberId}',${!s.paid})" style="background:var(--info);color:white;border:none;padding:0.3rem 0.6rem;border-radius:4px;cursor:pointer;">
+                            ${s.paid ? 'Mark Unpaid' : 'Mark Paid'}
+                        </button>
+                    </td>
+                </tr>`;
             });
-
             html += `</tbody></table>`;
             document.getElementById('adminTabContent').innerHTML = html;
         }
 
-        function showAddMemberForm() {
-            const html = `
-                <h4 style="margin-bottom: 1rem;">Add New Member</h4>
-                <form id="addMemberForm">
-                    <div class="form-group">
-                        <label>Name</label>
-                        <input type="text" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email">
-                    </div>
-                    <div class="form-group">
-                        <label>Handicap</label>
-                        <input type="number" name="handicap" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="status">
-                            <option value="applied">Applied</option>
-                            <option value="probationary">Probationary</option>
-                            <option value="full_member">Full Member</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Member</button>
+        async function togglePaid(eventId, memberId, paid) {
+            await supabase.from('signups').update({ paid }).eq('event_id', parseInt(eventId)).eq('member_id', memberId);
+            showViewSignups(eventId);
+        }
+
+        function showEditEventForm(eventId) {
+            const ev = _events.find(e => e.id === eventId);
+            if (!ev) return;
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Edit Event: ${ev.title}</h4>
+                <form id="editEventForm">
+                    <div class="form-group"><label>Title</label><input type="text" name="title" value="${ev.title}" required></div>
+                    <div class="form-group"><label>Date</label><input type="date" name="date" value="${ev.date}" required></div>
+                    <div class="form-group"><label>Signup Cutoff</label><input type="date" name="cutoffDate" value="${ev.cutoffDate||''}"></div>
+                    <div class="form-group"><label>Course</label><input type="text" name="course" value="${ev.course}" required></div>
+                    <div class="form-group"><label>Location</label><input type="text" name="location" value="${ev.location||''}"></div>
+                    <div class="form-group"><label>Format</label><input type="text" name="format" value="${ev.format||''}" placeholder="e.g. Stableford, Medal"></div>
+                    <div class="form-group"><label>Cost (€)</label><input type="number" name="cost" value="${ev.cost||''}" required></div>
+                    <div class="form-group"><label>Payment Link</label><input type="url" name="payment_link" value="${ev.payment_link||''}" placeholder="https://revolut.me/..."></div>
+                    <div class="form-group"><label>Max Players</label><input type="number" name="maxPlayers" value="${ev.maxPlayers||''}"></div>
+                    <div class="form-group"><label>Tee Time</label><input type="time" name="teeTime" value="${ev.teeTime||''}"></div>
+                    <div class="form-group"><label>Tee Interval (mins)</label><input type="number" name="teeInterval" value="${ev.tee_interval||10}"></div>
+                    <div class="form-group"><label>Notes</label><textarea name="notes">${ev.notes||''}</textarea></div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
             `;
-
-            document.getElementById('adminTabContent').innerHTML = html;
-
-            document.getElementById('addMemberForm').addEventListener('submit', function(e) {
+            document.getElementById('editEventForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-
-                const members = getMembers();
-                const newMember = {
-                    id: 'mbr_' + Date.now(),
-                    name: this.querySelector('[name="name"]').value,
-                    email: this.querySelector('[name="email"]').value || null,
-                    phone: '',
-                    handicap: this.querySelector('[name="handicap"]').value || null,
-                    status: this.querySelector('[name="status"]').value,
-                    joinedDate: new Date().toISOString().split('T')[0],
-                    notes: ''
+                const updates = {
+                    title: this.querySelector('[name="title"]').value,
+                    date: this.querySelector('[name="date"]').value,
+                    signup_cutoff: this.querySelector('[name="cutoffDate"]').value || null,
+                    course: this.querySelector('[name="course"]').value,
+                    location: this.querySelector('[name="location"]').value,
+                    format: this.querySelector('[name="format"]').value || null,
+                    cost: parseFloat(this.querySelector('[name="cost"]').value),
+                    payment_link: this.querySelector('[name="payment_link"]').value || null,
+                    signup_limit: parseInt(this.querySelector('[name="maxPlayers"]').value) || null,
+                    tee_time_start: this.querySelector('[name="teeTime"]').value || null,
+                    tee_interval: parseInt(this.querySelector('[name="teeInterval"]').value) || 10,
+                    notes: this.querySelector('[name="notes"]').value || null
                 };
-
-                members.push(newMember);
-                localStorage.setItem('jpgs_members_v1', JSON.stringify(members));
-                alert('Member added successfully');
-                showAdminTab('members');
+                await supabase.from('events').update(updates).eq('id', parseInt(eventId));
+                alert('Event updated.');
+                showAdminTab('events');
             });
         }
 
         function showAddEventForm() {
-            const html = `
-                <h4 style="margin-bottom: 1rem;">Add New Event</h4>
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Add New Event</h4>
                 <form id="addEventForm">
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" name="title" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" name="date" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Signup Cutoff Date</label>
-                        <input type="date" name="cutoffDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Course</label>
-                        <input type="text" name="course" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" name="location" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Cost (€)</label>
-                        <input type="number" name="cost" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Includes</label>
-                        <input type="text" name="includes" placeholder="e.g. buggy, shared buggy">
-                    </div>
-                    <div class="form-group">
-                        <label>Max Players</label>
-                        <input type="number" name="maxPlayers" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Tee Time</label>
-                        <input type="time" name="teeTime">
-                    </div>
-                    <div class="form-group">
-                        <label>Meet At</label>
-                        <input type="text" name="meetAt" placeholder="e.g. clubhouse">
-                    </div>
-                    <div class="form-group">
-                        <label>Meeting Time</label>
-                        <input type="time" name="meetTime">
-                    </div>
-                    <div class="form-group">
-                        <label>Contact</label>
-                        <input type="text" name="contact">
-                    </div>
-                    <div class="form-group">
-                        <label>Contact Email</label>
-                        <input type="email" name="contactEmail">
-                    </div>
-                    <div class="form-group">
-                        <label>Notes</label>
-                        <textarea name="notes"></textarea>
-                    </div>
+                    <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+                    <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+                    <div class="form-group"><label>Signup Cutoff</label><input type="date" name="cutoffDate"></div>
+                    <div class="form-group"><label>Course</label><input type="text" name="course" required></div>
+                    <div class="form-group"><label>Location</label><input type="text" name="location" required></div>
+                    <div class="form-group"><label>Format</label><input type="text" name="format" placeholder="e.g. Stableford, Medal"></div>
+                    <div class="form-group"><label>Cost (€)</label><input type="number" name="cost" required></div>
+                    <div class="form-group"><label>Payment Link</label><input type="url" name="payment_link" placeholder="https://revolut.me/..."></div>
+                    <div class="form-group"><label>Max Players</label><input type="number" name="maxPlayers"></div>
+                    <div class="form-group"><label>Tee Time</label><input type="time" name="teeTime"></div>
+                    <div class="form-group"><label>Tee Interval (mins)</label><input type="number" name="teeInterval" value="10"></div>
+                    <div class="form-group"><label>Notes</label><textarea name="notes"></textarea></div>
                     <button type="submit" class="btn btn-primary">Add Event</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
             `;
-
-            document.getElementById('adminTabContent').innerHTML = html;
-
-            document.getElementById('addEventForm').addEventListener('submit', function(e) {
+            document.getElementById('addEventForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-
-                const events = getEvents();
-                const newEvent = {
-                    id: 'evt_' + Date.now(),
+                const { error } = await supabase.from('events').insert({
                     title: this.querySelector('[name="title"]').value,
                     date: this.querySelector('[name="date"]').value,
-                    cutoffDate: this.querySelector('[name="cutoffDate"]').value,
+                    signup_cutoff: this.querySelector('[name="cutoffDate"]').value || null,
                     course: this.querySelector('[name="course"]').value,
                     location: this.querySelector('[name="location"]').value,
-                    cost: parseInt(this.querySelector('[name="cost"]').value),
-                    includes: this.querySelector('[name="includes"]').value,
-                    maxPlayers: parseInt(this.querySelector('[name="maxPlayers"]').value),
-                    teeTime: this.querySelector('[name="teeTime"]').value,
-                    meetAt: this.querySelector('[name="meetAt"]').value,
-                    meetTime: this.querySelector('[name="meetTime"]').value,
-                    transport: '',
-                    contact: this.querySelector('[name="contact"]').value,
-                    contactEmail: this.querySelector('[name="contactEmail"]').value,
-                    notes: this.querySelector('[name="notes"]').value
-                };
-
-                events.push(newEvent);
-                localStorage.setItem('jpgs_events_v1', JSON.stringify(events));
-                alert('Event added successfully');
+                    format: this.querySelector('[name="format"]').value || null,
+                    cost: parseFloat(this.querySelector('[name="cost"]').value),
+                    payment_link: this.querySelector('[name="payment_link"]').value || null,
+                    signup_limit: parseInt(this.querySelector('[name="maxPlayers"]').value) || null,
+                    tee_time_start: this.querySelector('[name="teeTime"]').value || null,
+                    tee_interval: parseInt(this.querySelector('[name="teeInterval"]').value) || 10,
+                    notes: this.querySelector('[name="notes"]').value || null
+                });
+                if (error) { alert('Error: ' + error.message); return; }
+                alert('Event added.');
                 showAdminTab('events');
             });
+        }
+
+        // ===== ADMIN: Results CRUD =====
+        async function showResultsEntry(eventId) {
+            if (!eventId) { document.getElementById('resultsEntryArea').innerHTML = ''; return; }
+            await refreshData();
+            const signups = getSignups().filter(s => s.eventId === eventId);
+            const { data: existingResults } = await supabase.from('results').select('*').eq('event_id', parseInt(eventId));
+            const resultsMap = {};
+            (existingResults||[]).forEach(r => { resultsMap[r.member_id] = r; });
+
+            let html = `<form id="resultsForm"><table><thead><tr><th>Player</th><th>HCP</th><th>Score</th><th>Points</th></tr></thead><tbody>`;
+            signups.forEach(s => {
+                const r = resultsMap[s.memberId] || {};
+                html += `<tr>
+                    <td>${s.memberName}<input type="hidden" name="member_${s.memberId}" value="${s.memberId}"></td>
+                    <td>${s.handicap||'-'}</td>
+                    <td><input type="number" name="score_${s.memberId}" value="${r.score||''}" style="width:60px;padding:0.3rem;"></td>
+                    <td><input type="number" name="points_${s.memberId}" value="${r.points||''}" style="width:60px;padding:0.3rem;"></td>
+                </tr>`;
+            });
+            html += `</tbody></table>
+                <button type="submit" class="btn btn-primary" style="margin-top:1rem;">Save Results</button>
+            </form>`;
+            document.getElementById('resultsEntryArea').innerHTML = html;
+
+            document.getElementById('resultsForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const entries = [];
+                signups.forEach(s => {
+                    const score = parseInt(this.querySelector(`[name="score_${s.memberId}"]`).value);
+                    const points = parseInt(this.querySelector(`[name="points_${s.memberId}"]`).value);
+                    if (score || points) {
+                        entries.push({ event_id: parseInt(eventId), member_id: s.memberId, score: score||null, points: points||null });
+                    }
+                });
+                // Sort by points descending to assign positions
+                entries.sort((a,b) => (b.points||0) - (a.points||0));
+                entries.forEach((e,i) => e.position = i + 1);
+
+                // Upsert results
+                for (const entry of entries) {
+                    const existing = resultsMap[entry.member_id];
+                    if (existing) {
+                        await supabase.from('results').update(entry).eq('id', existing.id);
+                    } else {
+                        await supabase.from('results').insert(entry);
+                    }
+                }
+                alert('Results saved! Positions auto-calculated from points.');
+            });
+        }
+
+        // ===== ADMIN: Messages CRUD =====
+        function showAddMessageForm() {
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Post Announcement</h4>
+                <form id="addMessageForm">
+                    <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+                    <div class="form-group"><label>Priority</label>
+                        <select name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select>
+                    </div>
+                    <div class="form-group"><label>Message</label><textarea name="body" rows="5" required></textarea></div>
+                    <button type="submit" class="btn btn-primary">Post</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('messages')" style="margin-left:0.5rem;">Cancel</button>
+                </form>
+            `;
+            document.getElementById('addMessageForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const { error } = await supabase.from('messages').insert({
+                    title: this.querySelector('[name="title"]').value,
+                    body: this.querySelector('[name="body"]').value,
+                    priority: this.querySelector('[name="priority"]').value
+                });
+                if (error) { alert('Error: ' + error.message); return; }
+                alert('Message posted.');
+                showAdminTab('messages');
+            });
+        }
+
+        async function showEditMessageForm(msgId) {
+            const { data: msg } = await supabase.from('messages').select('*').eq('id', msgId).single();
+            if (!msg) return;
+            document.getElementById('adminTabContent').innerHTML = `
+                <h4 style="margin-bottom:1rem;">Edit Message</h4>
+                <form id="editMessageForm">
+                    <div class="form-group"><label>Title</label><input type="text" name="title" value="${msg.title}" required></div>
+                    <div class="form-group"><label>Priority</label>
+                        <select name="priority">
+                            <option value="normal" ${msg.priority==='normal'?'selected':''}>Normal</option>
+                            <option value="important" ${msg.priority==='important'?'selected':''}>Important</option>
+                            <option value="urgent" ${msg.priority==='urgent'?'selected':''}>Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Message</label><textarea name="body" rows="5" required>${msg.body}</textarea></div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="showAdminTab('messages')" style="margin-left:0.5rem;">Cancel</button>
+                </form>
+            `;
+            document.getElementById('editMessageForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await supabase.from('messages').update({
+                    title: this.querySelector('[name="title"]').value,
+                    body: this.querySelector('[name="body"]').value,
+                    priority: this.querySelector('[name="priority"]').value
+                }).eq('id', msgId);
+                alert('Message updated.');
+                showAdminTab('messages');
+            });
+        }
+
+        async function deleteMessage(msgId) {
+            if (confirm('Delete this message?')) {
+                await supabase.from('messages').delete().eq('id', msgId);
+                showAdminTab('messages');
+            }
+        }
+
+        // ===== ADMIN: Join Requests =====
+        async function updateJoinRequestStatus(requestId, status) {
+            await supabase.from('join_requests').update({ status }).eq('id', requestId);
+            alert('Status updated.');
         }
     </script>
 </body>

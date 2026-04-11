@@ -72,7 +72,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Javea Port Golf Society <onboarding@resend.dev>',
+        from: process.env.RESEND_FROM || 'Javea Port Golf Society <noreply@apoyar.eu>',
         to: [email],
         subject: `Welcome to JPGS, ${name}!`,
         html: emailHtml

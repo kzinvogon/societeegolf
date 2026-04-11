@@ -2607,17 +2607,35 @@
                     html += `</tbody></table>`;
                 }
 
+                const allSignups = getSignups();
+                const allEvents = getEvents();
+                const today = new Date();
+
                 html += `<h4 style="margin-bottom:1rem;">All Members</h4>
                     <button class="btn btn-primary" onclick="showAddMemberForm()" style="margin-bottom:1.5rem;">+ Add Member</button>
-                    <table><thead><tr><th>Name</th><th>Status</th><th>Email</th><th>Handicap</th><th>Phone</th><th>Joined</th><th>Actions</th></tr></thead><tbody>`;
+                    <table><thead><tr><th>Name</th><th>Status</th><th>Handicap</th><th>Played</th><th>Pending</th><th>Last Played</th><th>Joined</th><th>Actions</th></tr></thead><tbody>`;
                 members.forEach(m => {
                     const statusMap = {applied:'Applied',active:'Active',suspended:'Suspended'};
+                    const memberSignups = allSignups.filter(s => s.memberId === m.id);
+                    const played = memberSignups.filter(s => {
+                        const evt = allEvents.find(e => e.id === s.eventId);
+                        return evt && new Date(evt.date + 'T23:59:59') < today;
+                    });
+                    const pending = memberSignups.filter(s => {
+                        const evt = allEvents.find(e => e.id === s.eventId);
+                        return evt && new Date(evt.date + 'T00:00:00') >= today;
+                    });
+                    const lastPlayed = played
+                        .map(s => allEvents.find(e => e.id === s.eventId))
+                        .filter(Boolean)
+                        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
                     html += `<tr>
                         <td>${m.name}</td>
                         <td><span class="status-badge ${m.status}">${statusMap[m.status]||m.status}</span></td>
-                        <td>${m.email||'-'}</td>
                         <td>${m.handicap||'-'}</td>
-                        <td>${m.phone||'-'}</td>
+                        <td>${played.length}</td>
+                        <td>${pending.length}</td>
+                        <td>${lastPlayed ? new Date(lastPlayed.date + 'T12:00:00').toLocaleDateString() : '-'}</td>
                         <td>${m.joined_date||'-'}</td>
                         <td>
                             <button onclick="showEditMemberForm('${m.id}')" style="background:var(--gold);color:var(--primary-navy);border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Edit</button>
@@ -2845,8 +2863,20 @@
             await refreshData();
             const event = getEvents().find(e => e.id === eventId);
             const signups = getSignups().filter(s => s.eventId === eventId);
-            let html = `<h4 style="margin-bottom:1rem;">${event?.title||'Event'} — Signups (${signups.length})</h4>
+            let html = `<h4 style="margin-bottom:0.5rem;">${event?.title||'Event'}</h4>
                 <button class="btn btn-secondary" onclick="showAdminTab('events')" style="margin-bottom:1rem;">← Back</button>
+                <table class="event-details-table" style="margin-bottom:1.5rem;">
+                    <tr><td><strong>Date</strong></td><td>${event?.date ? new Date(event.date + 'T12:00:00').toLocaleDateString() : '-'}</td></tr>
+                    <tr><td><strong>Course</strong></td><td>${event?.course || '-'}</td></tr>
+                    <tr><td><strong>Location</strong></td><td>${event?.location || '-'}</td></tr>
+                    ${event?.format ? `<tr><td><strong>Format</strong></td><td>${event.format}</td></tr>` : ''}
+                    <tr><td><strong>Cost</strong></td><td>€${event?.cost || '0'}</td></tr>
+                    ${event?.teeTime ? `<tr><td><strong>Tee Time</strong></td><td>${event.teeTime}</td></tr>` : ''}
+                    ${event?.maxPlayers ? `<tr><td><strong>Max Players</strong></td><td>${event.maxPlayers}</td></tr>` : ''}
+                    ${event?.cutoffDate ? `<tr><td><strong>Signup Cutoff</strong></td><td>${new Date(event.cutoffDate + 'T12:00:00').toLocaleDateString()}</td></tr>` : ''}
+                    ${event?.includes ? `<tr><td><strong>Notes</strong></td><td>${event.includes}</td></tr>` : ''}
+                </table>
+                <h5 style="margin-bottom:0.5rem;">Signups (${signups.length})</h5>
                 <table><thead><tr><th>Name</th><th>Handicap</th><th>Paid</th><th>Signed Up</th><th>Actions</th></tr></thead><tbody>`;
             signups.forEach(s => {
                 html += `<tr>

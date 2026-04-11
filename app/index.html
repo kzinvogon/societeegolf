@@ -1480,12 +1480,18 @@
       DEMO_SIGNUPS.push({ event_id: eventId, member_id: 'demo-1', handicap_at_signup: DEMO_MEMBER.handicap, paid: false });
       return true;
     }
-    const { error } = await supabase.from('signups').insert({
-      event_id: eventId,
-      member_id: currentUser.id,
-      handicap_at_signup: currentUser.handicap
-    });
-    return !error;
+    try {
+      const { error } = await supabase.from('signups').insert({
+        event_id: eventId,
+        member_id: currentUser.id,
+        handicap_at_signup: currentUser.handicap || 0
+      });
+      if (error) console.error('Signup error:', error);
+      return !error;
+    } catch (e) {
+      console.error('Signup exception:', e);
+      return false;
+    }
   }
 
   async function withdrawFromEvent(eventId) {
@@ -1608,7 +1614,7 @@
     document.getElementById('joinNotifyError').classList.add('hidden');
   }
 
-  function submitJoinForm(e) {
+  async function submitJoinForm(e) {
     e.preventDefault();
 
     const name = document.getElementById('joinName').value.trim();
@@ -1791,9 +1797,17 @@
     return m ? m.name : 'Unknown';
   }
 
+  let _mySignupEventIds = new Set();
+
+  async function refreshMySignups() {
+    if (!supabase || !currentUser) { _mySignupEventIds = new Set(); return; }
+    const signups = await getMySignups();
+    _mySignupEventIds = new Set(signups.map(s => s.event_id));
+  }
+
   function isSignedUp(eventId) {
     if (!supabase) return DEMO_SIGNUPS.some(s => s.event_id === eventId && s.member_id === 'demo-1');
-    return false; // Will be checked via async
+    return _mySignupEventIds.has(eventId);
   }
 
   // ===== RENDER: VISITOR VIEW =====
@@ -1933,6 +1947,7 @@
   // ===== RENDER: DASHBOARD (Home Tab) =====
   async function renderDashboard() {
     if (!currentUser) return;
+    await refreshMySignups();
 
     const events = await getEvents();
     const messages = await getMessages();
@@ -2038,6 +2053,7 @@
   }
 
   async function renderEvents() {
+    await refreshMySignups();
     const events = await getEvents();
     const today = new Date().toISOString().split('T')[0];
     const container = document.getElementById('eventsList');
@@ -2204,10 +2220,16 @@
 
   // ===== SIGNUP / WITHDRAW =====
   async function handleSignup(eventId) {
+    if (!isAuthenticated || !currentUser) {
+      alert('Please log in to sign up for events.');
+      return;
+    }
     const success = await signUpForEvent(eventId);
     if (success) {
       renderEvents();
       renderDashboard();
+    } else {
+      alert('Could not sign up. You may already be signed up, or the event is full.');
     }
   }
 
@@ -2475,6 +2497,26 @@
           <div class="list-text"><h4>Enter Results</h4><p>Record scores for a past event</p></div>
         </div>
       </div>
+
+      <!-- Events List -->
+      <h3 class="section-title mt-16">Events</h3>
+      ${events.length > 0 ? events.map(evt => {
+        const signupCount = 0; // loaded async below
+        return `
+        <div class="card" style="cursor:pointer; margin-bottom:8px;" onclick="openEventDetail(${evt.id})">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div class="event-date-box">
+              <div class="month">${getMonthShort(evt.date)}</div>
+              <div class="day">${getDay(evt.date)}</div>
+            </div>
+            <div style="flex:1;">
+              <h4 style="margin:0; font-size:14px;">${evt.title}</h4>
+              <span class="text-sm text-secondary">${evt.course || ''} · ${evt.location || ''}</span><br>
+              <span class="text-sm text-secondary">${evt.format || ''} · €${evt.cost || '–'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('') : '<p class="text-sm text-secondary">No events yet.</p>'}
 
       ${pending.length > 0 ? `
         <h3 class="section-title mt-16">Pending Approvals</h3>

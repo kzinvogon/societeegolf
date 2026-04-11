@@ -1871,7 +1871,6 @@
 
     container.innerHTML = filtered.map(evt => {
       const isPast = evt.date < today;
-      const signupCount = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length : 0;
       return `
         <div class="card event-card">
           <div class="event-card-top">
@@ -1881,12 +1880,12 @@
             </div>
             <div class="event-info">
               <h3>${evt.title}</h3>
-              <div class="text-sm text-secondary">${evt.course}</div>
+              <div class="text-sm text-secondary">${evt.course || ''}</div>
               <div class="event-meta">
-                <span class="event-meta-item">📍 ${evt.location}</span>
-                <span class="event-meta-item">🏌️ ${evt.format}</span>
+                ${evt.location ? `<span class="event-meta-item">📍 ${evt.location}</span>` : ''}
+                ${evt.format ? `<span class="event-meta-item">🏌️ ${evt.format}</span>` : ''}
                 <span class="event-meta-item">💶 €${evt.cost}</span>
-                ${!isPast ? `<span class="event-meta-item">👥 ${signupCount}/${evt.signup_limit || '∞'}</span>` : ''}
+                ${!isPast && evt.signup_limit ? `<span class="event-meta-item">👥 ${evt.signup_limit} max</span>` : ''}
               </div>
             </div>
           </div>
@@ -2061,13 +2060,14 @@
       return;
     }
 
-    container.innerHTML = filtered.map(evt => {
+    let html = '';
+    for (const evt of filtered) {
       const signed = isSignedUp(evt.id);
       const isPast = evt.date < today;
-      const signupCount = (supabase ? 0 : DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length);
+      const signupCount = supabase ? (await getSignups(evt.id)).length : DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length;
       const cutoffPassed = evt.signup_cutoff && evt.signup_cutoff < today;
 
-      return `
+      html += `
         <div class="card event-card">
           <div class="event-card-top" onclick="openEventDetail(${evt.id})" style="cursor:pointer">
             <div class="event-date-box">
@@ -2079,7 +2079,7 @@
               <div class="text-sm text-secondary">${evt.course}</div>
               <div class="event-meta">
                 <span class="event-meta-item">📍 ${evt.location}</span>
-                <span class="event-meta-item">🏌️ ${evt.format}</span>
+                <span class="event-meta-item">🏌️ ${evt.format || ''}</span>
                 <span class="event-meta-item">💶 €${evt.cost}</span>
                 <span class="event-meta-item">👥 ${signupCount}/${evt.signup_limit || '∞'}</span>
               </div>
@@ -2100,7 +2100,8 @@
           </div>`}
         </div>
       `;
-    }).join('');
+    }
+    container.innerHTML = html;
   }
 
   // ===== EVENT DETAIL MODAL =====

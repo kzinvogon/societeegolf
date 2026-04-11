@@ -2323,6 +2323,17 @@
                 return;
             }
 
+            // Send acknowledgement email
+            try {
+                await fetch('/.netlify/functions/send-welcome-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: fullName, email: email, phone: phone })
+                });
+            } catch (e) {
+                console.warn('Email send failed:', e);
+            }
+
             document.getElementById('registerBody').innerHTML = `
                 <div class="success-message">
                     <h3>Application Submitted!</h3>

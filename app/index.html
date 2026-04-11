@@ -1653,11 +1653,6 @@
     // Submit via Netlify form or store locally
     const formData = { name, email, phone: fullPhone, notifyBy, submitted: new Date().toISOString() };
 
-    if (supabase) {
-      // Could insert into a join_requests table if you add one
-      console.log('Join request:', formData);
-    }
-
     // Submit to Supabase
     if (supabase) {
       supabase.from('join_requests').insert({
@@ -1668,13 +1663,27 @@
       });
     }
 
+    // Send acknowledgement email via Netlify function
+    try {
+      await fetch('/.netlify/functions/send-welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          notifyBy: formData.notifyBy
+        })
+      });
+    } catch (e) {
+      console.warn('Email send failed:', e);
+    }
+
     // Show success
-    setTimeout(() => {
-      document.getElementById('joinForm').classList.add('hidden');
-      document.getElementById('joinSuccess').classList.remove('hidden');
-      btn.disabled = false;
-      btn.textContent = 'Send My Details';
-    }, 600);
+    document.getElementById('joinForm').classList.add('hidden');
+    document.getElementById('joinSuccess').classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Send My Details';
   }
 
   // ===== TAB SWITCHING =====

@@ -2700,19 +2700,25 @@
     `;
     document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      const form = this;
       const updates = {
-        name: this.name.value,
-        grint_id: this.grint_id.value || null,
-        handicap: parseFloat(this.handicap.value) || null,
-        phone: this.phone.value || null,
-        country_code: this.country_code.value
+        name: form.querySelector('[name="name"]').value,
+        grint_id: form.querySelector('[name="grint_id"]').value || null,
+        handicap: parseFloat(form.querySelector('[name="handicap"]').value) || null,
+        phone: form.querySelector('[name="phone"]').value || null,
+        country_code: form.querySelector('[name="country_code"]').value
       };
-      if (supabase) {
-        await supabase.from('members').update(updates).eq('id', currentUser.id);
+      try {
+        if (supabase) {
+          const { error } = await supabase.from('members').update(updates).eq('id', currentUser.id);
+          if (error) { alert('Error saving: ' + error.message); return; }
+        }
+        currentUser = { ...currentUser, ...updates };
+        alert('Profile updated!');
+        renderProfile();
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
-      currentUser = { ...currentUser, ...updates };
-      alert('Profile updated!');
-      renderProfile();
     });
   }
 

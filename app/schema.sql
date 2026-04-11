@@ -7,7 +7,7 @@ CREATE TABLE members (
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   handicap DECIMAL,
-  status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'active', 'suspended')),
+  status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'probation', 'full_member', 'suspended')),
   joined_date DATE DEFAULT CURRENT_DATE,
   phone TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
@@ -79,7 +79,7 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- Members: anyone can read active members, users can update their own profile
 CREATE POLICY "Public can view active members" ON members
-  FOR SELECT USING (status = 'active');
+  FOR SELECT USING (status IN ('probation', 'full_member'));
 
 CREATE POLICY "Users can view own profile" ON members
   FOR SELECT USING (auth.uid() = id);

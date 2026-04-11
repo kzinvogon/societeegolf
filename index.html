@@ -1039,7 +1039,11 @@
             background: var(--warning);
         }
 
-        .status-badge.active {
+        .status-badge.probation {
+            background: var(--info);
+        }
+
+        .status-badge.full_member {
             background: var(--success);
         }
 
@@ -2454,7 +2458,9 @@
             let statusMsg = '';
             if (member.status === 'applied') {
                 statusMsg = 'Your application is being reviewed by the committee.';
-            } else if (member.status === 'active') {
+            } else if (member.status === 'probation') {
+                statusMsg = 'You are a probationary member. Welcome!';
+            } else if (member.status === 'full_member') {
                 statusMsg = 'Your membership is active and up to date.';
             } else if (member.status === 'suspended') {
                 statusMsg = 'Your membership is currently suspended. Annual dues of €150 are outstanding. Please contact jamesconaghan@hotmail.co.uk';
@@ -2468,7 +2474,7 @@
             let html = `
                     <div style="background: var(--light-gray); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
                         <h3>${member.name}</h3>
-                        <p style="margin: 0.5rem 0;"><span class="status-badge ${member.status}">${member.status === 'applied' ? 'Application Pending' : member.status === 'active' ? 'Active Member' : 'Membership Suspended'}</span></p>
+                        <p style="margin: 0.5rem 0;"><span class="status-badge ${member.status}">${member.status === 'applied' ? 'Application Pending' : member.status === 'probation' ? 'Probation' : member.status === 'full_member' ? 'Full Member' : 'Membership Suspended'}</span></p>
                         <p style="margin-top: 0.5rem;">${statusMsg}</p>
                     </div>
             `;
@@ -2609,7 +2615,7 @@
                     <button class="btn btn-primary" onclick="showAddMemberForm()" style="margin-bottom:1.5rem;">+ Add Member</button>
                     <table><thead><tr><th>Name</th><th>Status</th><th>Handicap</th><th>Played</th><th>Pending</th><th>Last Played</th><th>Joined</th><th>Actions</th></tr></thead><tbody>`;
                 members.forEach(m => {
-                    const statusMap = {applied:'Applied',active:'Active',suspended:'Suspended'};
+                    const statusMap = {applied:'Applied',probation:'Probation',full_member:'Full Member',suspended:'Suspended'};
                     const memberSignups = allSignups.filter(s => s.memberId === m.id);
                     const played = memberSignups.filter(s => {
                         const evt = allEvents.find(e => e.id === s.eventId);
@@ -2636,7 +2642,8 @@
                             <select onchange="changeMemberStatus('${m.id}',this.value)" style="padding:0.4rem;margin:0.2rem;">
                                 <option value="">Change status...</option>
                                 <option value="applied">Applied</option>
-                                <option value="active">Active</option>
+                                <option value="probation">Probation</option>
+                                <option value="full_member">Full Member</option>
                                 <option value="suspended">Suspended</option>
                             </select>
                             <button onclick="deleteMember('${m.id}')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;margin:0.2rem;">Delete</button>

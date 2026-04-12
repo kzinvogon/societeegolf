@@ -1604,7 +1604,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>My Account</h2>
-                <button class="close-btn" onclick="closeModal('myAccountModal')">&times;</button>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button onclick="showSiteHelp('myaccount')" style="background:var(--info);color:white;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-weight:700;font-size:0.9rem;">?</button>
+                    <button class="close-btn" onclick="closeModal('myAccountModal')">&times;</button>
+                </div>
             </div>
             <div class="modal-body" id="myAccountContent">
                 <form id="myAccountLoginForm">
@@ -1624,11 +1627,25 @@
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
                 <h2>Admin Panel</h2>
-                <button class="close-btn" onclick="closeModal('adminModal')" title="Exit Admin" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;font-size:0.85rem;">Exit Admin</button>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button onclick="showSiteHelp()" style="background:var(--info);color:white;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-weight:700;font-size:0.9rem;">?</button>
+                    <button class="close-btn" onclick="closeModal('adminModal')" title="Exit Admin" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;font-size:0.85rem;">Exit Admin</button>
+                </div>
             </div>
             <div class="modal-body" id="adminContent">
                 <!-- Content populated by JavaScript -->
             </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="siteHelpTitle">Help</h2>
+                <button class="close-btn" onclick="closeModal('helpModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="siteHelpBody" style="font-size:0.9rem;line-height:1.7;"></div>
         </div>
     </div>
 
@@ -2624,7 +2641,9 @@
             openModal('adminModal');
         }
 
+        let _currentAdminTab = 'events';
         async function showAdminTab(tab) {
+            _currentAdminTab = tab;
             await refreshData();
             const content = document.getElementById('adminTabContent');
 
@@ -3383,6 +3402,86 @@
 
         async function updateJoinRequestMemberStatus(requestId, memberStatus) {
             await sb.from('join_requests').update({ initial_member_status: memberStatus }).eq('id', requestId);
+        }
+
+        // ===== HELP SYSTEM =====
+        const siteHelpContent = {
+            myaccount: {
+                title: 'My Account',
+                body: `<p>View your membership details and upcoming events.</p>
+                    <ul><li>Enter your email to access your account</li>
+                    <li>See your <strong>membership status</strong> and status message</li>
+                    <li><strong>Probation members</strong> — see your 3-game progress and submit payment proof when complete</li>
+                    <li>View your <strong>upcoming event</strong> signups</li></ul>
+                    <h4>Member Statuses</h4>
+                    <ul><li><strong>Applied</strong> — application under review by the committee</li>
+                    <li><strong>Probation</strong> — play 3 events to complete probation, then pay €25 quarterly fee</li>
+                    <li><strong>Full Member</strong> — active member with full access</li>
+                    <li><strong>Suspended</strong> — membership on hold pending payment</li></ul>`
+            },
+            events: {
+                title: 'Admin: Events',
+                body: `<p>Manage golf events and fixtures.</p>
+                    <ul><li><strong>View</strong> — see event details and signups with payment tracking</li>
+                    <li><strong>Edit</strong> — change event details, dates, costs</li>
+                    <li><strong>Delete</strong> — remove an event (signups will also be deleted)</li>
+                    <li><strong>+ Add New Event</strong> — create a new event with course, format, cost, and tee times</li></ul>`
+            },
+            members: {
+                title: 'Admin: Members',
+                body: `<p>Manage all society members.</p>
+                    <ul><li><strong>Payment Reviews</strong> — appears when a probation member submits payment proof. Approve to promote to Full Member, or Reject</li>
+                    <li><strong>Pending Applications</strong> — members with Applied status. Approve sets them to Probation</li>
+                    <li><strong>Played column</strong> — for probation members shows X/3 game progress</li>
+                    <li><strong>Send Payment Link</strong> — appears when a probation member has 3+ games. Sends a message to their notifications</li>
+                    <li><strong>Edit</strong> — change name, email, handicap, status, or role</li>
+                    <li><strong>Change status</strong> — directly set any status via dropdown</li>
+                    <li><strong>Role</strong> — set to Admin via Edit to grant admin access</li></ul>
+                    <h4>Member Lifecycle</h4>
+                    <ol><li><strong>Applied</strong> — new application</li>
+                    <li><strong>Probation</strong> — must play 3 events</li>
+                    <li><strong>Full Member</strong> — active, quarterly fee paid</li>
+                    <li><strong>Suspended</strong> — payment overdue</li></ol>`
+            },
+            courses: {
+                title: 'Admin: Courses',
+                body: `<p>Manage golf courses used in event creation.</p>
+                    <ul><li>Add courses with name, location, holes, par, and type</li>
+                    <li><strong>JPGS</strong> flag marks courses as society-affiliated</li>
+                    <li>Courses appear in the event creation dropdown</li></ul>`
+            },
+            results: {
+                title: 'Admin: Results',
+                body: `<p>Enter scores and points for completed events.</p>
+                    <ul><li>Select a past event from the dropdown</li>
+                    <li>Enter <strong>Score</strong> and <strong>Points</strong> for each player</li>
+                    <li><strong>Positions</strong> are auto-calculated from points (highest first)</li>
+                    <li>Results are visible to members in their profile</li></ul>`
+            },
+            messages: {
+                title: 'Admin: Messages',
+                body: `<p>Post announcements to members.</p>
+                    <ul><li><strong>Send to All</strong> or select specific members</li>
+                    <li>Set priority: Normal, Important, or Urgent</li>
+                    <li>Members see messages in their Messages tab and app dashboard</li>
+                    <li>Payment requests are sent automatically via the member lifecycle flow</li></ul>`
+            },
+            joinrequests: {
+                title: 'Admin: Join Requests',
+                body: `<p>Applications submitted via the website Join Us form.</p>
+                    <ul><li><strong>Initial Member Status</strong> — set the status the member will have when approved (defaults to Applied)</li>
+                    <li><strong>Approve</strong> — creates the member account immediately with the selected status</li>
+                    <li><strong>Reject</strong> — marks the request as rejected</li>
+                    <li>Status flow: Pending → Contacted → Approved/Rejected</li></ul>`
+            }
+        };
+
+        function showSiteHelp(ctx) {
+            const context = ctx || _currentAdminTab || 'events';
+            const help = siteHelpContent[context] || siteHelpContent.events;
+            document.getElementById('siteHelpTitle').textContent = help.title;
+            document.getElementById('siteHelpBody').innerHTML = help.body;
+            openModal('helpModal');
         }
 
         // ===== ADMIN: Courses CRUD =====

@@ -99,6 +99,29 @@
 
     .header-right { display: flex; align-items: center; gap: 12px; }
 
+    .help-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: transparent; border: 2px solid rgba(255,255,255,0.5);
+      color: white; font-size: 14px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0; line-height: 1;
+    }
+    .help-btn:hover { border-color: white; }
+
+    .help-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); z-index: 1000;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 60px;
+    }
+    .help-overlay.hidden { display: none; }
+
+    .help-panel {
+      background: white; border-radius: 12px; padding: 20px;
+      max-width: 380px; width: 90%; max-height: 70vh; overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+
     .header-avatar {
       width: 32px; height: 32px;
       border-radius: 50%;
@@ -855,9 +878,21 @@
         <button class="mode-btn active" data-mode="visitor" onclick="setMode('visitor')">Visitor</button>
         <button class="mode-btn" data-mode="member" onclick="setMode('member')">Member</button>
       </div>
+      <button class="help-btn" onclick="showHelp()">?</button>
       <div class="header-avatar hidden" id="headerAvatar" onclick="switchTab('profile')"></div>
     </div>
   </header>
+
+  <!-- ===== HELP MODAL ===== -->
+  <div class="help-overlay hidden" id="helpOverlay" onclick="closeHelp()">
+    <div class="help-panel" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:16px;" id="helpTitle">Help</h3>
+        <button onclick="closeHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">&times;</button>
+      </div>
+      <div id="helpBody" style="font-size:13px;line-height:1.6;color:var(--text-primary);"></div>
+    </div>
+  </div>
 
   <!-- ===== CONTENT ===== -->
   <main class="content" id="content">
@@ -1409,6 +1444,107 @@
   let isAuthenticated = false;
   let eventTabView = 'upcoming';  // 'upcoming' or 'past'
   let navHistory = [];            // tab navigation history
+  let currentAdminScreen = null;  // tracks admin sub-screens for help
+
+  // ===== HELP SYSTEM =====
+  const helpContent = {
+    visitor: {
+      title: 'Welcome to JPGS',
+      body: `<p>Welcome to the Javea Port Golf Society app. As a visitor you can:</p>
+        <ul><li>Browse upcoming <strong>events</strong> and past results</li><li>View our <strong>courses</strong> on the Costa Blanca</li><li>See <strong>tee times</strong> for upcoming events</li></ul>
+        <p>To become a member, visit the main website and apply via the <strong>Join Us</strong> form.</p>
+        <p>Already a member? Tap <strong>Member</strong> at the top to log in.</p>`
+    },
+    home: {
+      title: 'Dashboard',
+      body: `<p>Your home screen shows:</p>
+        <ul><li><strong>Probation progress</strong> — if you're on probation, your 3-game progress appears here</li>
+        <li><strong>Next event</strong> — countdown and sign-up status</li>
+        <li><strong>Quick actions</strong> — jump to Events or Tee Times</li>
+        <li><strong>Latest message</strong> — from the committee</li>
+        <li><strong>Stats</strong> — tap to navigate to Events or Messages</li></ul>`
+    },
+    events: {
+      title: 'Events',
+      body: `<p>Browse and sign up for golf events.</p>
+        <ul><li>Toggle between <strong>Upcoming</strong> and <strong>Past</strong> events</li>
+        <li>Tap an event to see full details, sign up, or withdraw</li>
+        <li>Events show course, format, cost, and signup count</li>
+        <li>If an event is full or past the cutoff date, sign-ups are closed</li></ul>`
+    },
+    tee: {
+      title: 'Tee Times',
+      body: `<p>View tee times and start sheets for events you're signed up for.</p>
+        <ul><li>Players are grouped by handicap (4 per group)</li>
+        <li>Tee times are calculated from the first tee time with intervals</li>
+        <li>Only upcoming events with signups are shown</li></ul>`
+    },
+    messages: {
+      title: 'Messages',
+      body: `<p>Announcements and notifications from the committee.</p>
+        <ul><li>Tap a message to expand and read the full text</li>
+        <li>Priority levels: <span style="color:#dc2626;font-weight:600;">Urgent</span>, <span style="color:#d97706;font-weight:600;">Important</span>, <span style="color:#16a34a;font-weight:600;">Normal</span></li>
+        <li>Payment requests and membership updates appear here</li></ul>`
+    },
+    profile: {
+      title: 'My Profile',
+      body: `<p>Your member details and event history.</p>
+        <ul><li><strong>Status badge</strong> — shows your current membership status</li>
+        <li><strong>Probation progress</strong> — if on probation, shows games played out of 3</li>
+        <li><strong>Payment proof</strong> — when your 3 games are complete, submit proof of your €25 quarterly payment here</li>
+        <li><strong>Handicap</strong> — linked via TheGrint</li>
+        <li><strong>Edit Profile</strong> — update your name, email, phone, or TheGrint ID</li></ul>`
+    },
+    admin: {
+      title: 'Admin Dashboard',
+      body: `<p>Manage members, events, and the society.</p>
+        <ul><li><strong>Stat cards</strong> — tap to scroll to that section</li>
+        <li><strong>New Applications</strong> — pending join requests and applied members. Set initial status, then Approve or Reject</li>
+        <li><strong>Payment Reviews</strong> — probation members who submitted payment proof. Approve to promote to Full Member</li>
+        <li><strong>Ready for Payment</strong> — probation members with 3+ games. Tap Send to notify them to pay</li>
+        <li><strong>Members list</strong> — tap any member to edit their details, status, or role</li>
+        <li><strong>Quick Actions</strong> — Create Event, Post Announcement, Enter Results</li></ul>
+        <h4 style="margin-top:12px;font-size:13px;">Member Lifecycle</h4>
+        <ol style="padding-left:18px;"><li><strong>Applied</strong> — new application under review</li>
+        <li><strong>Probation</strong> — must play 3 events</li>
+        <li><strong>Full Member</strong> — active, all features</li>
+        <li><strong>Suspended</strong> — on hold pending payment</li></ol>`
+    },
+    'admin:createEvent': {
+      title: 'Create Event',
+      body: `<p>Add a new golf event.</p>
+        <ul><li><strong>Course</strong> — select from existing courses or add a new one</li>
+        <li><strong>Signup cutoff</strong> — auto-set to Friday before the event date</li>
+        <li><strong>Payment link</strong> — optional Revolut or other payment URL</li>
+        <li><strong>Max players</strong> — leave blank for unlimited</li></ul>`
+    },
+    'admin:editMember': {
+      title: 'Edit Member',
+      body: `<p>Update member details.</p>
+        <ul><li><strong>Status</strong> — Applied, Probation, Full Member, or Suspended</li>
+        <li><strong>Role</strong> — set to Admin to grant admin access to this member</li>
+        <li>Changes take effect immediately</li></ul>`
+    }
+  };
+
+  function showHelp() {
+    let ctx;
+    if (currentMode === 'visitor') {
+      ctx = 'visitor';
+    } else if (currentTab === 'admin' && currentAdminScreen) {
+      ctx = 'admin:' + currentAdminScreen;
+    } else {
+      ctx = currentTab;
+    }
+    const help = helpContent[ctx] || helpContent[currentTab] || helpContent.home;
+    document.getElementById('helpTitle').textContent = help.title;
+    document.getElementById('helpBody').innerHTML = help.body;
+    document.getElementById('helpOverlay').classList.remove('hidden');
+  }
+
+  function closeHelp() {
+    document.getElementById('helpOverlay').classList.add('hidden');
+  }
 
   // ===== SUPABASE CLIENT =====
   let supabase = null;
@@ -2540,6 +2676,7 @@
   // ===== INIT =====
   // ===== RENDER: ADMIN TAB =====
   async function renderAdmin() {
+    currentAdminScreen = null;
     if (!currentUser || currentUser.role !== 'admin') return;
 
     const [eventsRes, membersRes, msgsRes, reqsRes] = await Promise.all([
@@ -2720,6 +2857,7 @@
   }
 
   async function showAppEditMember(memberId) {
+    currentAdminScreen = 'editMember';
     const { data: m } = await supabase.from('members').select('*').eq('id', memberId).single();
     if (!m) return;
     document.getElementById('adminContent').innerHTML = `
@@ -2778,6 +2916,7 @@
   }
 
   async function showAdminCreateEvent() {
+    currentAdminScreen = 'createEvent';
     const { data: courses } = await supabase.from('courses').select('*').order('name');
     const courseOpts = (courses||[]).map(c =>
       `<option value="${c.name}" data-loc="${c.location}">${c.name}</option>`

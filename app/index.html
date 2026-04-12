@@ -1434,7 +1434,25 @@
 
   async function loginWithSession(session) {
     if (supabase) {
-      const { data } = await supabase.from('members').select('*').eq('id', session.user.id).single();
+      let { data } = await supabase.from('members').select('*').eq('id', session.user.id).single();
+      if (!data) {
+        // No member record — check if there's an approved join request for this email
+        const email = session.user.email;
+        const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').single();
+        if (req) {
+          // Auto-create member from approved join request
+          const { data: newMember, error } = await supabase.from('members').insert({
+            id: session.user.id,
+            name: req.name,
+            email: req.email,
+            phone: req.phone,
+            status: 'applied'
+          }).select().single();
+          if (!error && newMember) {
+            data = newMember;
+          }
+        }
+      }
       if (data) {
         currentUser = data;
         isAuthenticated = true;

@@ -2986,20 +2986,19 @@
                     <button type="submit" class="btn btn-primary">Add Member</button>
                     <button type="button" class="btn btn-secondary" onclick="showAdminTab('members')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
-                <p style="margin-top:1rem;font-size:0.85rem;color:var(--text-light);">The member will need to log in via the Member App (magic link) to activate their account. Their status will be set to the selection above on first login.</p>
+                <p style="margin-top:1rem;font-size:0.85rem;color:var(--text-light);">The member account will be created immediately with the selected status.</p>
             `;
             document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const { error } = await sb.from('join_requests').insert({
+                const { error } = await sb.from('members').insert({
+                    id: crypto.randomUUID(),
                     name: this.querySelector('[name="name"]').value,
                     email: this.querySelector('[name="email"]').value,
                     phone: this.querySelector('[name="phone"]').value || null,
-                    status: 'approved',
-                    notify_by: 'email',
-                    initial_member_status: this.querySelector('[name="status"]').value
+                    status: this.querySelector('[name="status"]').value
                 });
                 if (error) { alert('Error: ' + error.message); return; }
-                alert('Member added. They will need to log in via the Member App to activate their account.');
+                alert('Member added!');
                 showAdminTab('members');
             });
         }
@@ -3354,7 +3353,27 @@
         async function updateJoinRequestStatus(requestId, status) {
             await sb.from('join_requests').update({ status }).eq('id', requestId);
             if (status === 'approved') {
-                alert('Approved! The applicant needs to log in via the Member App (magic link) to activate their account.');
+                const { data: req } = await sb.from('join_requests').select('*').eq('id', requestId).single();
+                if (req) {
+                    const { data: existing } = await sb.from('members').select('id').eq('email', req.email).single();
+                    if (!existing) {
+                        const memberStatus = req.initial_member_status || 'applied';
+                        const { error } = await sb.from('members').insert({
+                            id: crypto.randomUUID(),
+                            name: req.name,
+                            email: req.email,
+                            phone: req.phone,
+                            status: memberStatus
+                        });
+                        if (error) {
+                            alert('Approved but could not create member: ' + error.message);
+                        } else {
+                            alert('Approved! Member account created with status: ' + memberStatus);
+                        }
+                    } else {
+                        alert('Approved! Member already exists.');
+                    }
+                }
             } else {
                 alert('Status updated.');
             }

@@ -2899,7 +2899,27 @@
   async function adminUpdateJoinRequest(requestId, status) {
     await supabase.from('join_requests').update({ status }).eq('id', requestId);
     if (status === 'approved') {
-      alert('Approved! The applicant needs to sign up in the Member App to create their account.');
+      const { data: req } = await supabase.from('join_requests').select('*').eq('id', requestId).single();
+      if (req) {
+        const { data: existing } = await supabase.from('members').select('id').eq('email', req.email).single();
+        if (!existing) {
+          const memberStatus = req.initial_member_status || 'applied';
+          const { error } = await supabase.from('members').insert({
+            id: crypto.randomUUID(),
+            name: req.name,
+            email: req.email,
+            phone: req.phone,
+            status: memberStatus
+          });
+          if (error) {
+            alert('Approved but could not create member: ' + error.message);
+          } else {
+            alert('Approved! Member created with status: ' + memberStatus);
+          }
+        } else {
+          alert('Approved! Member already exists.');
+        }
+      }
     } else {
       alert('Status updated to ' + status);
     }

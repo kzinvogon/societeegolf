@@ -3,7 +3,7 @@
 
 -- 1. Members table (linked to Supabase Auth)
 CREATE TABLE members (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY, -- FK to auth.users removed so admins can create members directly
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   handicap DECIMAL,

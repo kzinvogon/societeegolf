@@ -2573,11 +2573,10 @@
         <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminEventsList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${events.length}</div><div class="stat-label">Events</div></div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer;${pending.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminPendingApprovals').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pending.length}</div><div class="stat-label">Pending Approvals</div></div>
-        <div class="stat-card" style="cursor:pointer;${pendingRequests.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminJoinRequests').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pendingRequests.length}</div><div class="stat-label">Join Requests</div></div>
+        <div class="stat-card" style="cursor:pointer;${(pending.length + pendingRequests.length) ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('${pendingRequests.length ? 'adminJoinRequests' : 'adminPendingApprovals'}').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pending.length + pendingRequests.length}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card" style="cursor:pointer;${paymentPending.length ? 'border:2px solid var(--green);' : ''}" onclick="document.getElementById('adminPaymentReviews').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer;${paymentPending.length ? 'border:2px solid var(--green);' : ''}" onclick="document.getElementById('adminPaymentReviews').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
         <div class="stat-card" style="cursor:pointer;${readyForPayment.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminReadyPayment').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${readyForPayment.length}</div><div class="stat-label">Ready for Payment</div></div>
       </div>
 

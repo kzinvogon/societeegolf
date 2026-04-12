@@ -1133,6 +1133,7 @@
       <!-- TAB: Home / Dashboard -->
       <div id="tabHome" class="content-inner tab-content">
         <div id="welcomeCard"></div>
+        <div id="probationAlert"></div>
         <div id="nextEventCountdown"></div>
         <div id="quickActions"></div>
         <div id="latestMessage"></div>
@@ -1233,7 +1234,7 @@
     name: 'David Hamilton',
     email: 'david@example.com',
     handicap: 18,
-    status: 'active',
+    status: 'full_member',
     role: 'member',
     joined_date: '2025-01-15'
   };
@@ -1964,6 +1965,24 @@
       </div>
     `;
 
+    // Probation alert
+    if (currentUser.status === 'probation') {
+      const mySignups = await getMySignups();
+      const played = events.filter(e => mySignups.some(s => s.event_id === e.id) && e.date < today).length;
+      const complete = played >= 3;
+      document.getElementById('probationAlert').innerHTML = `
+        <div class="card mt-8" style="background:${complete ? '#d1fae5' : '#fef3c7'};">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Probation: ${played}/3 games played</div>
+          <div style="display:flex;gap:4px;margin-bottom:4px;">
+            ${[1,2,3].map(i => `<div style="flex:1;height:6px;border-radius:3px;background:${i <= Math.min(played,3) ? (complete ? '#16a34a' : '#d97706') : '#e5e7eb'};"></div>`).join('')}
+          </div>
+          <p style="font-size:12px;color:#666;">${complete ? 'Complete! Check your profile to submit payment.' : 'Play ' + (3 - played) + ' more game' + (3 - played !== 1 ? 's' : '') + ' to complete probation.'}</p>
+        </div>
+      `;
+    } else {
+      document.getElementById('probationAlert').innerHTML = '';
+    }
+
     // Next event countdown
     if (nextEvent) {
       const days = daysUntil(nextEvent.date);
@@ -2370,8 +2389,10 @@
 
     const events = await getEvents();
     const today = new Date().toISOString().split('T')[0];
-    const pastEventIds = (!supabase ? DEMO_SIGNUPS.filter(s => s.member_id === 'demo-1') : []).map(s => s.event_id);
+    const mySignups = await getMySignups();
+    const pastEventIds = mySignups.map(s => supabase ? s.event_id : s.event_id);
     const pastEvents = events.filter(e => pastEventIds.includes(e.id) && e.date < today);
+    const gamesPlayed = pastEvents.length;
 
     let resultsHtml = '';
     for (const evt of pastEvents) {
@@ -2398,9 +2419,41 @@
         <div class="profile-name">${currentUser.name}</div>
         <div class="profile-email">${currentUser.email}</div>
         <div class="mt-8">
-          <span class="badge badge-green">${currentUser.status}</span>
+          <span class="badge ${currentUser.status === 'full_member' ? 'badge-green' : currentUser.status === 'probation' ? 'badge-blue' : currentUser.status === 'applied' ? 'badge-yellow' : 'badge-red'}">${currentUser.status === 'applied' ? 'Application Pending' : currentUser.status === 'probation' ? 'Probation' : currentUser.status === 'full_member' ? 'Full Member' : 'Suspended'}</span>
         </div>
       </div>
+
+      ${currentUser.status === 'probation' ? `
+      <div class="card mt-16" style="background:${gamesPlayed >= 3 ? '#d1fae5' : '#fef3c7'};">
+        <div style="padding:1rem;">
+          <h4 style="margin-bottom:0.5rem;">Probation Progress</h4>
+          <div style="display:flex;gap:4px;margin-bottom:0.5rem;">
+            ${[1,2,3].map(i => `<div style="flex:1;height:8px;border-radius:4px;background:${i <= Math.min(gamesPlayed,3) ? (gamesPlayed >= 3 ? 'var(--success,#16a34a)' : '#d97706') : '#e5e7eb'};"></div>`).join('')}
+          </div>
+          <p style="font-size:0.85rem;">${gamesPlayed >= 3 ? 'All 3 games complete! Please submit your membership payment below.' : gamesPlayed + ' of 3 probation games played'}</p>
+        </div>
+      </div>
+      ` : ''}
+
+      ${currentUser.status === 'probation' && (currentUser.payment_due_sent_at || gamesPlayed >= 3) ? (
+        currentUser.payment_proof_submitted_at ? `
+        <div class="card mt-16" style="background:#d1fae5;">
+          <div style="padding:1rem;">
+            <h4 style="margin-bottom:0.5rem;">Payment Proof Submitted</h4>
+            <p style="font-size:0.85rem;">Submitted: ${new Date(currentUser.payment_proof_submitted_at).toLocaleDateString()}</p>
+            <p style="font-size:0.85rem;">Reference: ${currentUser.payment_proof || '-'}</p>
+            <p style="font-size:0.8rem;color:#666;">The committee will review your payment shortly.</p>
+          </div>
+        </div>` : `
+        <div class="card mt-16" style="background:#fef3c7;">
+          <div style="padding:1rem;">
+            <h4 style="margin-bottom:0.5rem;">Membership Payment Required</h4>
+            <p style="font-size:0.85rem;margin-bottom:0.5rem;">Quarterly membership fee: <strong>€25</strong></p>
+            <input type="text" id="appPaymentProofInput" placeholder="Paste payment reference, URL, or description" class="input" style="margin-bottom:0.5rem;">
+            <button class="btn btn-primary btn-full" onclick="appSubmitPaymentProof()">Submit Proof of Payment</button>
+          </div>
+        </div>`
+      ) : ''}
 
       <div class="card">
         <div class="list-item" style="border-bottom: 1px solid var(--border);">
@@ -2465,6 +2518,15 @@
 
     const pending = members.filter(m => m.status === 'applied');
     const pendingRequests = requests.filter(r => r.status === 'pending');
+    const paymentPending = members.filter(m => m.status === 'probation' && m.payment_proof_submitted_at);
+    const signupsRes = supabase ? await supabase.from('signups').select('*') : { data: [] };
+    const allSignups = signupsRes.data || [];
+    const today = new Date().toISOString().split('T')[0];
+    const readyForPayment = members.filter(m => {
+      if (m.status !== 'probation' || m.payment_due_sent_at) return false;
+      const played = allSignups.filter(s => s.member_id === m.id && events.some(e => e.id === s.event_id && e.date < today));
+      return played.length >= 3;
+    });
 
     document.getElementById('adminContent').innerHTML = `
       <!-- Quick Stats -->
@@ -2475,6 +2537,10 @@
       <div class="stats-grid">
         <div class="stat-card" style="${pending.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pending.length}</div><div class="stat-label">Pending Approvals</div></div>
         <div class="stat-card" style="${pendingRequests.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pendingRequests.length}</div><div class="stat-label">Join Requests</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card" style="${paymentPending.length ? 'border:2px solid var(--green);' : ''}"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
+        <div class="stat-card" style="${readyForPayment.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${readyForPayment.length}</div><div class="stat-label">Ready for Payment</div></div>
       </div>
 
       <!-- Quick Actions -->
@@ -2517,6 +2583,33 @@
           </div>
         </div>`;
       }).join('') : '<p class="text-sm text-secondary">No events yet.</p>'}
+
+      ${paymentPending.length > 0 ? `
+        <h3 class="section-title mt-16">Payment Reviews</h3>
+        ${paymentPending.map(m => `
+          <div class="card" style="margin-bottom:8px;">
+            <div><strong>${m.name}</strong></div>
+            <p class="text-sm text-secondary">Proof: ${m.payment_proof || '-'}</p>
+            <p class="text-sm text-secondary">Submitted: ${new Date(m.payment_proof_submitted_at).toLocaleDateString()}</p>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="adminApprovePayment('${m.id}','${m.name.replace(/'/g,"\\'")}')">Approve → Full Member</button>
+              <button class="btn btn-sm btn-danger" onclick="adminRejectPayment('${m.id}')">Reject</button>
+            </div>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${readyForPayment.length > 0 ? `
+        <h3 class="section-title mt-16">Ready for Payment Link</h3>
+        ${readyForPayment.map(m => `
+          <div class="card" style="margin-bottom:8px;">
+            <div class="flex-between">
+              <div><strong>${m.name}</strong><br><span class="text-sm text-secondary">3+ games played — send payment link</span></div>
+              <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="adminSendPaymentLink('${m.id}','${m.name.replace(/'/g,"\\'")}')">Send</button>
+            </div>
+          </div>
+        `).join('')}
+      ` : ''}
 
       ${pending.length > 0 ? `
         <h3 class="section-title mt-16">Pending Approvals</h3>
@@ -2700,8 +2793,8 @@
   }
 
   async function adminApproveMember(memberId) {
-    await supabase.from('members').update({ status: 'active' }).eq('id', memberId);
-    alert('Member approved!');
+    await supabase.from('members').update({ status: 'probation' }).eq('id', memberId);
+    alert('Member approved and set to probation!');
     renderAdmin();
   }
 
@@ -2710,6 +2803,58 @@
       await supabase.from('members').delete().eq('id', memberId);
       renderAdmin();
     }
+  }
+
+  async function adminSendPaymentLink(memberId, memberName) {
+    if (!confirm('Send payment link to ' + memberName + '?')) return;
+    await supabase.from('messages').insert({
+      title: 'Membership Payment Required',
+      body: 'Congratulations on completing your 3 probation games! To become a full member of JPGS, please pay the €25 quarterly membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
+      priority: 'important',
+      recipients: memberId
+    });
+    await supabase.from('members').update({ payment_due_sent_at: new Date().toISOString() }).eq('id', memberId);
+    alert('Payment link sent to ' + memberName);
+    renderAdmin();
+  }
+
+  async function adminApprovePayment(memberId, memberName) {
+    if (!confirm('Promote ' + memberName + ' to Full Member?')) return;
+    await supabase.from('members').update({ status: 'full_member', payment_proof: null, payment_proof_submitted_at: null, payment_due_sent_at: null }).eq('id', memberId);
+    await supabase.from('messages').insert({
+      title: 'Welcome — Full Member!',
+      body: 'Congratulations! Your payment has been confirmed and you are now a full member of Javea Port Golf Society.',
+      priority: 'normal',
+      recipients: memberId
+    });
+    alert(memberName + ' promoted to Full Member!');
+    renderAdmin();
+  }
+
+  async function adminRejectPayment(memberId) {
+    if (!confirm('Reject this payment proof? The member can resubmit.')) return;
+    await supabase.from('members').update({ payment_proof: null, payment_proof_submitted_at: null }).eq('id', memberId);
+    await supabase.from('messages').insert({
+      title: 'Payment Proof Rejected',
+      body: 'Your payment proof could not be verified. Please resubmit your proof of payment in your Profile.',
+      priority: 'important',
+      recipients: memberId
+    });
+    alert('Payment proof rejected. Member notified.');
+    renderAdmin();
+  }
+
+  async function appSubmitPaymentProof() {
+    const proof = document.getElementById('appPaymentProofInput').value.trim();
+    if (!proof) { alert('Please enter a payment reference or URL.'); return; }
+    await supabase.from('members').update({
+      payment_proof: proof,
+      payment_proof_submitted_at: new Date().toISOString()
+    }).eq('id', currentUser.id);
+    currentUser.payment_proof = proof;
+    currentUser.payment_proof_submitted_at = new Date().toISOString();
+    alert('Payment proof submitted! The committee will review it shortly.');
+    renderProfile();
   }
 
   // ===== PROFILE EDITING =====

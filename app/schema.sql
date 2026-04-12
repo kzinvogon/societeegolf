@@ -8,6 +8,10 @@ CREATE TABLE members (
   email TEXT UNIQUE NOT NULL,
   handicap DECIMAL,
   status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'probation', 'full_member', 'suspended')),
+  -- Payment lifecycle columns
+  payment_proof TEXT,                    -- URL, reference, or description from member
+  payment_proof_submitted_at TIMESTAMPTZ, -- when member submitted proof
+  payment_due_sent_at TIMESTAMPTZ,       -- when admin sent payment link
   joined_date DATE DEFAULT CURRENT_DATE,
   phone TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),

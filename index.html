@@ -2896,8 +2896,10 @@
 
         // ===== ADMIN: Member CRUD =====
         async function approveMember(memberId) {
-            await sb.from('members').update({ status: 'probation' }).eq('id', memberId);
-            alert('Member approved and set to probation.');
+            const member = getMembers().find(m => m.id === memberId);
+            const newStatus = member && member.role === 'admin' ? 'full_member' : 'probation';
+            await sb.from('members').update({ status: newStatus }).eq('id', memberId);
+            alert('Member approved and set to ' + newStatus + '.');
             showAdminTab('members');
         }
 

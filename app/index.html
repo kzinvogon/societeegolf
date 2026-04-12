@@ -2531,16 +2531,16 @@
     document.getElementById('adminContent').innerHTML = `
       <!-- Quick Stats -->
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
-        <div class="stat-card"><div class="stat-value">${events.length}</div><div class="stat-label">Events</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminMembersList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminEventsList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${events.length}</div><div class="stat-label">Events</div></div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" style="${pending.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pending.length}</div><div class="stat-label">Pending Approvals</div></div>
-        <div class="stat-card" style="${pendingRequests.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${pendingRequests.length}</div><div class="stat-label">Join Requests</div></div>
+        <div class="stat-card" style="cursor:pointer;${pending.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminPendingApprovals').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pending.length}</div><div class="stat-label">Pending Approvals</div></div>
+        <div class="stat-card" style="cursor:pointer;${pendingRequests.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminJoinRequests').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pendingRequests.length}</div><div class="stat-label">Join Requests</div></div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" style="${paymentPending.length ? 'border:2px solid var(--green);' : ''}"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
-        <div class="stat-card" style="${readyForPayment.length ? 'border:2px solid var(--amber);' : ''}"><div class="stat-value">${readyForPayment.length}</div><div class="stat-label">Ready for Payment</div></div>
+        <div class="stat-card" style="cursor:pointer;${paymentPending.length ? 'border:2px solid var(--green);' : ''}" onclick="document.getElementById('adminPaymentReviews').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
+        <div class="stat-card" style="cursor:pointer;${readyForPayment.length ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('adminReadyPayment').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${readyForPayment.length}</div><div class="stat-label">Ready for Payment</div></div>
       </div>
 
       <!-- Quick Actions -->
@@ -2564,26 +2564,8 @@
         </div>
       </div>
 
-      <!-- Events List -->
-      <h3 class="section-title mt-16">Events</h3>
-      ${events.length > 0 ? events.map(evt => {
-        const signupCount = 0; // loaded async below
-        return `
-        <div class="card" style="cursor:pointer; margin-bottom:8px;" onclick="openEventDetail(${evt.id})">
-          <div style="display:flex; gap:12px; align-items:center;">
-            <div class="event-date-box">
-              <div class="month">${getMonthShort(evt.date)}</div>
-              <div class="day">${getDay(evt.date)}</div>
-            </div>
-            <div style="flex:1;">
-              <h4 style="margin:0; font-size:14px;">${evt.title}</h4>
-              <span class="text-sm text-secondary">${evt.course || ''} · ${evt.location || ''}</span><br>
-              <span class="text-sm text-secondary">${evt.format || ''} · €${evt.cost || '–'}</span>
-            </div>
-          </div>
-        </div>`;
-      }).join('') : '<p class="text-sm text-secondary">No events yet.</p>'}
-
+      <!-- Payment Reviews -->
+      <div id="adminPaymentReviews">
       ${paymentPending.length > 0 ? `
         <h3 class="section-title mt-16">Payment Reviews</h3>
         ${paymentPending.map(m => `
@@ -2598,7 +2580,10 @@
           </div>
         `).join('')}
       ` : ''}
+      </div>
 
+      <!-- Ready for Payment -->
+      <div id="adminReadyPayment">
       ${readyForPayment.length > 0 ? `
         <h3 class="section-title mt-16">Ready for Payment Link</h3>
         ${readyForPayment.map(m => `
@@ -2610,11 +2595,14 @@
           </div>
         `).join('')}
       ` : ''}
+      </div>
 
+      <!-- Pending Approvals -->
+      <div id="adminPendingApprovals">
       ${pending.length > 0 ? `
         <h3 class="section-title mt-16">Pending Approvals</h3>
         ${pending.map(m => `
-          <div class="card">
+          <div class="card" style="margin-bottom:8px;">
             <div class="flex-between">
               <div><strong>${m.name}</strong><br><span class="text-sm text-secondary">${m.email||'No email'}</span></div>
               <div style="display:flex;gap:6px;">
@@ -2625,6 +2613,72 @@
           </div>
         `).join('')}
       ` : ''}
+      </div>
+
+      <!-- Join Requests -->
+      <div id="adminJoinRequests">
+        <h3 class="section-title mt-16">Join Requests</h3>
+        ${requests.length > 0 ? requests.map(r => `
+          <div class="card" style="margin-bottom:8px;">
+            <div class="flex-between">
+              <div>
+                <strong>${r.name}</strong><br>
+                <span class="text-sm text-secondary">${r.email} · ${r.phone||'-'}</span><br>
+                <span class="text-sm text-secondary">${new Date(r.created_at).toLocaleDateString()} · <span class="badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':'amber'}" style="font-size:10px;">${r.status}</span></span>
+              </div>
+              <div>
+                <select class="input" style="font-size:12px;padding:4px 8px;margin:0;" onchange="adminUpdateJoinRequest(${r.id},this.value)">
+                  <option value="pending" ${r.status==='pending'?'selected':''}>Pending</option>
+                  <option value="contacted" ${r.status==='contacted'?'selected':''}>Contacted</option>
+                  <option value="approved" ${r.status==='approved'?'selected':''}>Approved</option>
+                  <option value="rejected" ${r.status==='rejected'?'selected':''}>Rejected</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        `).join('') : '<p class="text-sm text-secondary">No join requests.</p>'}
+      </div>
+
+      <!-- Events List -->
+      <div id="adminEventsList">
+        <h3 class="section-title mt-16">Events</h3>
+        ${events.length > 0 ? events.map(evt => `
+          <div class="card" style="cursor:pointer; margin-bottom:8px;" onclick="openEventDetail(${evt.id})">
+            <div style="display:flex; gap:12px; align-items:center;">
+              <div class="event-date-box">
+                <div class="month">${getMonthShort(evt.date)}</div>
+                <div class="day">${getDay(evt.date)}</div>
+              </div>
+              <div style="flex:1;">
+                <h4 style="margin:0; font-size:14px;">${evt.title}</h4>
+                <span class="text-sm text-secondary">${evt.course || ''} · ${evt.location || ''}</span><br>
+                <span class="text-sm text-secondary">${evt.format || ''} · €${evt.cost || '–'}</span>
+              </div>
+            </div>
+          </div>
+        `).join('') : '<p class="text-sm text-secondary">No events yet.</p>'}
+      </div>
+
+      <!-- Members List -->
+      <div id="adminMembersList">
+        <h3 class="section-title mt-16">Members</h3>
+        ${members.map(m => {
+          const statusColors = {applied:'amber',probation:'blue',full_member:'green',suspended:'red'};
+          const statusLabels = {applied:'Applied',probation:'Probation',full_member:'Full Member',suspended:'Suspended'};
+          const mPlayed = allSignups.filter(s => s.member_id === m.id && events.some(e => e.id === s.event_id && e.date < today)).length;
+          return `
+          <div class="card" style="margin-bottom:8px;">
+            <div class="flex-between">
+              <div>
+                <strong>${m.name}</strong>
+                <span class="badge badge-${statusColors[m.status]||'amber'}" style="font-size:10px;margin-left:6px;">${statusLabels[m.status]||m.status}</span>
+                ${m.status === 'probation' ? `<span class="text-sm" style="margin-left:6px;color:${mPlayed>=3?'#16a34a':'#d97706'};font-weight:600;">${mPlayed}/3</span>` : ''}
+              </div>
+            </div>
+            <p class="text-sm text-secondary">${m.email||'-'} · HCP ${m.handicap||'-'} · Joined ${m.joined_date||'-'}</p>
+          </div>`;
+        }).join('')}
+      </div>
     `;
   }
 
@@ -2795,6 +2849,12 @@
   async function adminApproveMember(memberId) {
     await supabase.from('members').update({ status: 'probation' }).eq('id', memberId);
     alert('Member approved and set to probation!');
+    renderAdmin();
+  }
+
+  async function adminUpdateJoinRequest(requestId, status) {
+    await supabase.from('join_requests').update({ status }).eq('id', requestId);
+    alert('Status updated to ' + status);
     renderAdmin();
   }
 

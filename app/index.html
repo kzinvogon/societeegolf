@@ -2092,11 +2092,11 @@
     // Stats
     document.getElementById('memberStats').innerHTML = `
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="switchTab('events')">
           <div class="stat-value">${upcoming.length}</div>
           <div class="stat-label">Upcoming Events</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" style="cursor:pointer;" onclick="switchTab('messages')">
           <div class="stat-value">${messages.length}</div>
           <div class="stat-label">Messages</div>
         </div>

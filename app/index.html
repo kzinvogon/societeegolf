@@ -2707,11 +2707,12 @@
           const statusLabels = {applied:'Applied',probation:'Probation',full_member:'Full Member',suspended:'Suspended'};
           const mPlayed = allSignups.filter(s => s.member_id === m.id && events.some(e => e.id === s.event_id && e.date < today)).length;
           return `
-          <div class="card" style="margin-bottom:8px;">
+          <div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="showAppEditMember('${m.id}')">
             <div class="flex-between">
               <div>
                 <strong>${m.name}</strong>
                 <span class="badge badge-${statusColors[m.status]||'amber'}" style="font-size:10px;margin-left:6px;">${statusLabels[m.status]||m.status}</span>
+                ${m.role === 'admin' ? '<span class="badge badge-blue" style="font-size:10px;margin-left:4px;">Admin</span>' : ''}
                 ${m.status === 'probation' ? `<span class="text-sm" style="margin-left:6px;color:${mPlayed>=3?'#16a34a':'#d97706'};font-weight:600;">${mPlayed}/3</span>` : ''}
               </div>
             </div>
@@ -2720,6 +2721,54 @@
         }).join('')}
       </div>
     `;
+  }
+
+  async function showAppEditMember(memberId) {
+    const { data: m } = await supabase.from('members').select('*').eq('id', memberId).single();
+    if (!m) return;
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Edit Member</h3>
+      <div class="card">
+        <form id="appEditMemberForm">
+          <label class="text-sm" style="font-weight:600;">Name</label>
+          <input class="input" type="text" name="name" value="${m.name}" required>
+          <label class="text-sm" style="font-weight:600;">Email</label>
+          <input class="input" type="email" name="email" value="${m.email||''}">
+          <label class="text-sm" style="font-weight:600;">Phone / WhatsApp</label>
+          <input class="input" type="tel" name="phone" value="${m.phone||''}">
+          <label class="text-sm" style="font-weight:600;">Handicap</label>
+          <input class="input" type="number" name="handicap" step="0.1" value="${m.handicap||''}">
+          <label class="text-sm" style="font-weight:600;">Status</label>
+          <select class="input" name="status">
+            <option value="applied" ${m.status==='applied'?'selected':''}>Applied</option>
+            <option value="probation" ${m.status==='probation'?'selected':''}>Probation</option>
+            <option value="full_member" ${m.status==='full_member'?'selected':''}>Full Member</option>
+            <option value="suspended" ${m.status==='suspended'?'selected':''}>Suspended</option>
+          </select>
+          <label class="text-sm" style="font-weight:600;">Role</label>
+          <select class="input" name="role">
+            <option value="member" ${m.role==='member'?'selected':''}>Member</option>
+            <option value="admin" ${m.role==='admin'?'selected':''}>Admin</option>
+          </select>
+          <button class="btn btn-primary btn-full mt-8" type="submit">Save Changes</button>
+        </form>
+      </div>
+    `;
+    document.getElementById('appEditMemberForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const { error } = await supabase.from('members').update({
+        name: this.name.value,
+        email: this.email.value || null,
+        phone: this.phone.value || null,
+        handicap: parseFloat(this.handicap.value) || null,
+        status: this.status.value,
+        role: this.role.value
+      }).eq('id', memberId);
+      if (error) { alert('Error: ' + error.message); return; }
+      alert('Member updated!');
+      renderAdmin();
+    });
   }
 
   // Admin action screens

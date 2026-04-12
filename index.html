@@ -2804,15 +2804,21 @@
                 if (!requests || requests.length === 0) {
                     html += `<p>No join requests yet.</p>`;
                 } else {
-                    html += `<table><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Notify By</th><th>Status</th><th>Actions</th></tr></thead><tbody>`;
+                    html += `<table><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Initial Member Status</th><th>Actions</th></tr></thead><tbody>`;
                     requests.forEach(r => {
                         html += `<tr>
                             <td>${new Date(r.created_at).toLocaleDateString()}</td>
                             <td>${r.name}</td>
                             <td>${r.email}</td>
                             <td>${r.phone||'-'}</td>
-                            <td>${r.notify_by}</td>
                             <td><span class="status-badge ${r.status}">${r.status}</span></td>
+                            <td>
+                                <select onchange="updateJoinRequestMemberStatus(${r.id},this.value)" style="padding:0.4rem;font-size:0.85rem;">
+                                    <option value="applied" ${(r.initial_member_status||'applied')==='applied'?'selected':''}>Applied</option>
+                                    <option value="probation" ${r.initial_member_status==='probation'?'selected':''}>Probation</option>
+                                    <option value="full_member" ${r.initial_member_status==='full_member'?'selected':''}>Full Member</option>
+                                </select>
+                            </td>
                             <td>
                                 <select onchange="updateJoinRequestStatus(${r.id},this.value)" style="padding:0.4rem;">
                                     <option value="pending" ${r.status==='pending'?'selected':''}>Pending</option>
@@ -2970,30 +2976,30 @@
                     <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
                     <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
                     <div class="form-group"><label>Phone / WhatsApp</label><input type="tel" name="phone"></div>
-                    <div class="form-group"><label>Handicap</label><input type="number" name="handicap" step="0.1"></div>
-                    <div class="form-group"><label>Status</label>
+                    <div class="form-group"><label>Initial Status <span style="font-weight:normal;color:var(--text-light);font-size:0.8rem;">(when they first log in)</span></label>
                         <select name="status">
-                            <option value="active">Active</option>
                             <option value="applied">Applied</option>
+                            <option value="probation">Probation</option>
+                            <option value="full_member">Full Member</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Member</button>
                     <button type="button" class="btn btn-secondary" onclick="showAdminTab('members')" style="margin-left:0.5rem;">Cancel</button>
                 </form>
+                <p style="margin-top:1rem;font-size:0.85rem;color:var(--text-light);">The member will need to log in via the Member App (magic link) to activate their account. Their status will be set to the selection above on first login.</p>
             `;
             document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                // Admin-created members need a Supabase auth account — for now insert directly
-                // (they won't be able to login via magic link until they sign up via auth)
                 const { error } = await sb.from('join_requests').insert({
                     name: this.querySelector('[name="name"]').value,
                     email: this.querySelector('[name="email"]').value,
                     phone: this.querySelector('[name="phone"]').value || null,
                     status: 'approved',
-                    notify_by: 'email'
+                    notify_by: 'email',
+                    initial_member_status: this.querySelector('[name="status"]').value
                 });
                 if (error) { alert('Error: ' + error.message); return; }
-                alert('Member added to join requests as approved. They will need to login via the Member App to complete their account setup.');
+                alert('Member added. They will need to log in via the Member App to activate their account.');
                 showAdminTab('members');
             });
         }
@@ -3348,11 +3354,15 @@
         async function updateJoinRequestStatus(requestId, status) {
             await sb.from('join_requests').update({ status }).eq('id', requestId);
             if (status === 'approved') {
-                alert('Approved! The applicant needs to sign up in the Member App to create their account.');
+                alert('Approved! The applicant needs to log in via the Member App (magic link) to activate their account.');
             } else {
                 alert('Status updated.');
             }
             showAdminTab('joinrequests');
+        }
+
+        async function updateJoinRequestMemberStatus(requestId, memberStatus) {
+            await sb.from('join_requests').update({ initial_member_status: memberStatus }).eq('id', requestId);
         }
 
         // ===== ADMIN: Courses CRUD =====

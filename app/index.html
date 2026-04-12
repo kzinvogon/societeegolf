@@ -1446,7 +1446,7 @@
             name: req.name,
             email: req.email,
             phone: req.phone,
-            status: 'applied'
+            status: req.initial_member_status || 'applied'
           }).select().single();
           if (!error && newMember) {
             data = newMember;
@@ -2638,20 +2638,19 @@
         <h3 class="section-title mt-16">Join Requests</h3>
         ${pendingRequests.length > 0 ? pendingRequests.map(r => `
           <div class="card" style="margin-bottom:8px;">
-            <div class="flex-between">
-              <div>
-                <strong>${r.name}</strong><br>
-                <span class="text-sm text-secondary">${r.email} · ${r.phone||'-'}</span><br>
-                <span class="text-sm text-secondary">${new Date(r.created_at).toLocaleDateString()} · <span class="badge badge-${r.status==='approved'?'green':r.status==='rejected'?'red':'amber'}" style="font-size:10px;">${r.status}</span></span>
-              </div>
-              <div>
-                <select class="input" style="font-size:12px;padding:4px 8px;margin:0;" onchange="adminUpdateJoinRequest(${r.id},this.value)">
-                  <option value="pending" ${r.status==='pending'?'selected':''}>Pending</option>
-                  <option value="contacted" ${r.status==='contacted'?'selected':''}>Contacted</option>
-                  <option value="approved" ${r.status==='approved'?'selected':''}>Approved</option>
-                  <option value="rejected" ${r.status==='rejected'?'selected':''}>Rejected</option>
-                </select>
-              </div>
+            <div>
+              <strong>${r.name}</strong><br>
+              <span class="text-sm text-secondary">${r.email} · ${r.phone||'-'}</span><br>
+              <span class="text-sm text-secondary">${new Date(r.created_at).toLocaleDateString()} · <span class="badge badge-amber" style="font-size:10px;">${r.status}</span></span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+              <select class="input" style="font-size:12px;padding:4px 8px;margin:0;flex:1;" onchange="adminSetInitialStatus(${r.id},this.value)">
+                <option value="applied" ${(r.initial_member_status||'applied')==='applied'?'selected':''}>→ Applied</option>
+                <option value="probation" ${r.initial_member_status==='probation'?'selected':''}>→ Probation</option>
+                <option value="full_member" ${r.initial_member_status==='full_member'?'selected':''}>→ Full Member</option>
+              </select>
+              <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="adminUpdateJoinRequest(${r.id},'approved')">Approve</button>
+              <button class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;" onclick="adminUpdateJoinRequest(${r.id},'rejected')">Reject</button>
             </div>
           </div>
         `).join('') : '<p class="text-sm text-secondary">No pending join requests.</p>'}
@@ -2868,6 +2867,10 @@
     await supabase.from('members').update({ status: 'probation' }).eq('id', memberId);
     alert('Member approved and set to probation!');
     renderAdmin();
+  }
+
+  async function adminSetInitialStatus(requestId, memberStatus) {
+    await supabase.from('join_requests').update({ initial_member_status: memberStatus }).eq('id', requestId);
   }
 
   async function adminUpdateJoinRequest(requestId, status) {

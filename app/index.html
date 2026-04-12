@@ -2573,7 +2573,7 @@
         <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminEventsList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${events.length}</div><div class="stat-label">Events</div></div>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer;${(pending.length + pendingRequests.length) ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('${pendingRequests.length ? 'adminJoinRequests' : 'adminPendingApprovals'}').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pending.length + pendingRequests.length}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card" style="cursor:pointer;${(pending.length + pendingRequests.length) ? 'border:2px solid var(--amber);' : ''}" onclick="document.getElementById('${pendingRequests.length ? 'adminJoinRequests' : 'adminPendingApprovals'}').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${pending.length + pendingRequests.length}</div><div class="stat-label">New Applications</div></div>
         <div class="stat-card" style="cursor:pointer;${paymentPending.length ? 'border:2px solid var(--green);' : ''}" onclick="document.getElementById('adminPaymentReviews').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${paymentPending.length}</div><div class="stat-label">Payment Reviews</div></div>
       </div>
       <div class="stats-grid">
@@ -2637,7 +2637,7 @@
       <!-- Pending Approvals -->
       <div id="adminPendingApprovals">
       ${pending.length > 0 ? `
-        <h3 class="section-title mt-16">Pending Approvals</h3>
+        <h3 class="section-title mt-16">New Member Applications</h3>
         ${pending.map(m => `
           <div class="card" style="margin-bottom:8px;">
             <div class="flex-between">

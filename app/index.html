@@ -2517,7 +2517,7 @@
     const requests = reqsRes.data || [];
 
     const pending = members.filter(m => m.status === 'applied');
-    const pendingRequests = requests.filter(r => r.status === 'pending');
+    const pendingRequests = requests.filter(r => r.status === 'pending' || r.status === 'contacted');
     const paymentPending = members.filter(m => m.status === 'probation' && m.payment_proof_submitted_at);
     const signupsRes = supabase ? await supabase.from('signups').select('*') : { data: [] };
     const allSignups = signupsRes.data || [];
@@ -2618,7 +2618,7 @@
       <!-- Join Requests -->
       <div id="adminJoinRequests">
         <h3 class="section-title mt-16">Join Requests</h3>
-        ${requests.length > 0 ? requests.map(r => `
+        ${pendingRequests.length > 0 ? pendingRequests.map(r => `
           <div class="card" style="margin-bottom:8px;">
             <div class="flex-between">
               <div>
@@ -2636,7 +2636,7 @@
               </div>
             </div>
           </div>
-        `).join('') : '<p class="text-sm text-secondary">No join requests.</p>'}
+        `).join('') : '<p class="text-sm text-secondary">No pending join requests.</p>'}
       </div>
 
       <!-- Events List -->
@@ -2854,7 +2854,11 @@
 
   async function adminUpdateJoinRequest(requestId, status) {
     await supabase.from('join_requests').update({ status }).eq('id', requestId);
-    alert('Status updated to ' + status);
+    if (status === 'approved') {
+      alert('Approved! The applicant needs to sign up in the Member App to create their account.');
+    } else {
+      alert('Status updated to ' + status);
+    }
     renderAdmin();
   }
 

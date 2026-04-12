@@ -3347,7 +3347,12 @@
         // ===== ADMIN: Join Requests =====
         async function updateJoinRequestStatus(requestId, status) {
             await sb.from('join_requests').update({ status }).eq('id', requestId);
-            alert('Status updated.');
+            if (status === 'approved') {
+                alert('Approved! The applicant needs to sign up in the Member App to create their account.');
+            } else {
+                alert('Status updated.');
+            }
+            showAdminTab('joinrequests');
         }
 
         // ===== ADMIN: Courses CRUD =====

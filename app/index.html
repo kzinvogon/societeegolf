@@ -303,6 +303,8 @@
     .badge-green { background: #D1FAE5; color: #065F46; }
     .badge-amber { background: #FEF3C7; color: #92400E; }
     .badge-red { background: #FEE2E2; color: #991B1B; }
+    .badge-blue { background: #DBEAFE; color: #1E40AF; }
+    .badge-yellow { background: #FEF9C3; color: #854D0E; }
     .badge-navy { background: #E0E7FF; color: var(--navy); }
     .badge-gold { background: var(--gold-light); color: #92400E; }
 
@@ -1500,12 +1502,33 @@
       return true;
     }
     try {
+      // Check capacity
+      const events = await getEvents();
+      const evt = events.find(e => e.id === eventId);
+      if (evt && evt.signup_limit) {
+        const signups = await getSignups(eventId);
+        if (signups.length >= evt.signup_limit) {
+          alert('This event is full (' + evt.signup_limit + '/' + evt.signup_limit + '). No more places available.');
+          return false;
+        }
+      }
+      // Check member status
+      if (currentUser.status === 'suspended' || currentUser.status === 'applied') {
+        alert('Cannot sign up with current membership status.');
+        return false;
+      }
       const { error } = await supabase.from('signups').insert({
         event_id: eventId,
         member_id: currentUser.id,
         handicap_at_signup: currentUser.handicap || 0
       });
-      if (error) console.error('Signup error:', error);
+      if (error) {
+        if (error.code === '23505') {
+          alert('You are already signed up for this event.');
+        } else {
+          console.error('Signup error:', error);
+        }
+      }
       return !error;
     } catch (e) {
       console.error('Signup exception:', e);
@@ -2884,8 +2907,8 @@
   }
 
   async function adminRejectMember(memberId) {
-    if (confirm('Reject this application?')) {
-      await supabase.from('members').delete().eq('id', memberId);
+    if (confirm('Reject this application? The member will be suspended.')) {
+      await supabase.from('members').update({ status: 'suspended' }).eq('id', memberId);
       renderAdmin();
     }
   }

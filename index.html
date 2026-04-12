@@ -2902,9 +2902,9 @@
         }
 
         async function rejectMember(memberId) {
-            if (confirm('Reject and delete this application?')) {
-                await sb.from('members').delete().eq('id', memberId);
-                alert('Application rejected.');
+            if (confirm('Reject this application? The member will be suspended.')) {
+                await sb.from('members').update({ status: 'suspended' }).eq('id', memberId);
+                alert('Application rejected. Member suspended.');
                 showAdminTab('members');
             }
         }

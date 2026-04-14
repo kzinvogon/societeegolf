@@ -1602,10 +1602,23 @@
   // ===== DATA ACCESS LAYER =====
   // Returns demo data or Supabase data depending on mode
 
+  // Short-lived cache (10s) to avoid redundant fetches when switching tabs
+  const _cache = {};
+  const CACHE_TTL = 10000;
+  function _cacheGet(key) {
+    const entry = _cache[key];
+    if (entry && Date.now() - entry.t < CACHE_TTL) return entry.v;
+    return null;
+  }
+  function _cacheSet(key, v) { _cache[key] = { v, t: Date.now() }; return v; }
+  function invalidateCache() { Object.keys(_cache).forEach(k => delete _cache[k]); }
+
   async function getEvents() {
     if (!supabase) return DEMO_EVENTS;
+    const cached = _cacheGet('events');
+    if (cached) return cached;
     const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
-    return data || [];
+    return _cacheSet('events', data || []);
   }
 
   async function getSignups(eventId) {
@@ -1616,8 +1629,10 @@
 
   async function getMySignups() {
     if (!supabase) return DEMO_SIGNUPS.filter(s => s.member_id === 'demo-1');
+    const cached = _cacheGet('mySignups');
+    if (cached) return cached;
     const { data } = await supabase.from('signups').select('*, events(*)').eq('member_id', currentUser.id);
-    return data || [];
+    return _cacheSet('mySignups', data || []);
   }
 
   async function getResults(eventId) {
@@ -1628,8 +1643,10 @@
 
   async function getMessages() {
     if (!supabase) return DEMO_MESSAGES;
+    const cached = _cacheGet('messages');
+    if (cached) return cached;
     const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
-    return data || [];
+    return _cacheSet('messages', data || []);
   }
 
   async function signUpForEvent(eventId) {
@@ -1664,6 +1681,8 @@
         } else {
           console.error('Signup error:', error);
         }
+      } else {
+        invalidateCache();
       }
       return !error;
     } catch (e) {
@@ -1679,6 +1698,7 @@
       return true;
     }
     const { error } = await supabase.from('signups').delete().eq('event_id', eventId).eq('member_id', currentUser.id);
+    if (!error) invalidateCache();
     return !error;
   }
 
@@ -2125,10 +2145,12 @@
   // ===== RENDER: DASHBOARD (Home Tab) =====
   async function renderDashboard() {
     if (!currentUser) return;
-    await refreshMySignups();
 
-    const events = await getEvents();
-    const messages = await getMessages();
+    const [events, messages] = await Promise.all([
+      getEvents(),
+      getMessages(),
+      refreshMySignups()
+    ]);
     const today = new Date().toISOString().split('T')[0];
     const upcoming = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
     const nextEvent = upcoming[0];
@@ -2249,8 +2271,7 @@
   }
 
   async function renderEvents() {
-    await refreshMySignups();
-    const events = await getEvents();
+    const [events] = await Promise.all([getEvents(), refreshMySignups()]);
     const today = new Date().toISOString().split('T')[0];
     const container = document.getElementById('eventsList');
 

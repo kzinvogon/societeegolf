@@ -1999,6 +1999,23 @@
     msg.classList.add('hidden');
 
     if (supabase) {
+      // Check if this email is registered (member or approved join request)
+      const lower = email.toLowerCase();
+      const [memberRes, requestRes] = await Promise.all([
+        supabase.from('members').select('id').ilike('email', lower).maybeSingle(),
+        supabase.from('join_requests').select('id, status').ilike('email', lower).eq('status', 'approved').maybeSingle()
+      ]);
+      if (!memberRes.data && !requestRes.data) {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnSpin.classList.add('hidden');
+        msg.classList.remove('hidden');
+        msg.className = 'auth-message';
+        msg.style.background = '#FEE2E2';
+        msg.style.color = 'var(--red)';
+        msg.innerHTML = 'Email not found. Please <a href="/#join" style="color:var(--navy);text-decoration:underline;font-weight:600;">apply via Join Us</a> first.';
+        return;
+      }
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: window.location.origin + '/app/' }

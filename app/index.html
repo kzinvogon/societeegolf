@@ -861,6 +861,93 @@
     .text-sm { font-size: 13px; }
     .text-secondary { color: var(--text-secondary); }
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+    /* ===== Login polish ===== */
+    .login-icon { font-size: 44px; margin-bottom: 10px; }
+    .login-subtitle { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin-bottom: 18px; }
+    .input-group { position: relative; margin-bottom: 6px; }
+    .email-input { transition: border-color 0.2s; }
+    .email-input.valid { border-color: #10b981; }
+    .email-input.invalid { border-color: #ef4444; }
+    .input-error { color: #ef4444; font-size: 12px; text-align: left; margin: 0 0 10px 2px; }
+
+    #authSubmit { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    #authSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .spinner { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-sent { animation: fadeIn 0.3s ease; text-align: center; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .sent-icon { font-size: 48px; margin-bottom: 12px; }
+    .login-sent h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .sent-hint { color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+    .sent-actions { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+    .btn-open-email {
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: opacity 0.2s;
+    }
+    .btn-open-email.gmail { background: #fce8e6; color: #c5221f; }
+    .btn-open-email.outlook { background: #e8f0fe; color: #1a73e8; }
+    .btn-open-email:hover { opacity: 0.8; }
+    .btn-resend {
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px;
+    }
+    .btn-resend:not(:disabled) { color: var(--navy); }
+    .btn-resend:disabled { cursor: not-allowed; }
+
+    /* ===== Toast ===== */
+    .app-toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--navy); color: white;
+      padding: 10px 22px; border-radius: 100px;
+      font-size: 14px; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 2000; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ===== Bottom nav polish ===== */
+    .tab-btn { position: relative; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+    .tab-btn:active { transform: scale(0.92); }
+    .tab-btn .tab-icon { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .tab-btn.active .tab-icon { transform: translateY(-2px) scale(1.1); }
+    .tab-pip {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--gold); opacity: 0;
+      transition: opacity 0.2s;
+      position: absolute; bottom: 0;
+      left: 50%; transform: translateX(-50%);
+    }
+    .tab-btn.active .tab-pip { opacity: 1; }
+    .tab-badge {
+      position: absolute; top: 0; right: calc(50% - 22px);
+      background: #ef4444; color: white;
+      font-size: 10px; font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; box-sizing: border-box;
+    }
+
+    /* ===== Mode toggle slider ===== */
+    .mode-toggle { position: relative; }
+    .mode-slider {
+      position: absolute;
+      top: 3px; left: 3px;
+      height: calc(100% - 6px);
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .mode-btn { position: relative; z-index: 1; }
+    .mode-btn.active { background: transparent; }
   </style>
 </head>
 <body>
@@ -874,7 +961,8 @@
       <a href="/" class="header-brand" style="text-decoration:none;color:inherit;">J<span>P</span>GS</a>
     </div>
     <div class="header-right">
-      <div class="mode-toggle">
+      <div class="mode-toggle" id="modeToggle">
+        <span class="mode-slider" id="modeSlider"></span>
         <button class="mode-btn active" data-mode="visitor" onclick="setMode('visitor')">Visitor</button>
         <button class="mode-btn" data-mode="member" onclick="setMode('member')">Member</button>
       </div>
@@ -1155,19 +1243,59 @@
     <!-- AUTH SCREEN (shown when member mode selected but not logged in) -->
     <div id="authView" class="hidden">
       <div class="auth-screen">
-        <div style="font-size:48px; margin-bottom:16px;">⛳</div>
+        <div class="login-icon">⛳</div>
         <h2>Member Login</h2>
-        <p>Enter your email to receive a magic login link. No password needed.</p>
-        <div class="auth-form">
-          <input type="email" class="input" id="authEmail" placeholder="your@email.com" autocomplete="email">
-          <button class="btn btn-primary btn-full" id="authSubmit" onclick="sendMagicLink()">Send Login Link</button>
+        <p class="login-subtitle">Enter your email — we'll send you a magic link. No password needed.</p>
+
+        <!-- Login form -->
+        <div class="auth-form" id="authFormView">
+          <div class="input-group">
+            <input
+              type="email"
+              class="input email-input"
+              id="authEmail"
+              placeholder="your@email.com"
+              autocomplete="email"
+              autocapitalize="none"
+              inputmode="email"
+              oninput="validateAuthEmail(this)"
+            >
+          </div>
+          <p class="input-error hidden" id="authEmailError">Please enter a valid email address</p>
+          <button class="btn btn-primary btn-full" id="authSubmit" onclick="sendMagicLink()" disabled>
+            <span class="btn-text">Send my login link</span>
+            <span class="btn-spinner hidden">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/>
+              </svg>
+            </span>
+          </button>
           <div id="authMessage" class="hidden"></div>
         </div>
+
+        <!-- Sent state (shown after magic link sent) -->
+        <div class="login-sent hidden" id="authSentView">
+          <div class="sent-icon">📬</div>
+          <h3>Check your inbox</h3>
+          <p>We sent a login link to <strong id="sentEmail"></strong></p>
+          <p class="sent-hint">Check your spam folder if it doesn't arrive within a minute.</p>
+          <div class="sent-actions">
+            <a href="https://mail.google.com" target="_blank" rel="noopener" class="btn-open-email gmail">Open Gmail</a>
+            <a href="https://outlook.live.com" target="_blank" rel="noopener" class="btn-open-email outlook">Open Outlook</a>
+          </div>
+          <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled>
+            Resend link <span id="resendTimer">(30s)</span>
+          </button>
+        </div>
+
         <div class="mt-16">
-          <button class="btn-ghost" onclick="setMode('visitor')">← Back to visitor view</button>
+          <button class="btn-ghost" onclick="resetAuthForm(); setMode('visitor')">← Back to visitor view</button>
         </div>
       </div>
     </div>
+
+    <!-- Toast notification -->
+    <div id="appToast" class="app-toast"></div>
 
     <!-- MEMBER VIEW TABS -->
     <div id="memberView" class="hidden">
@@ -1223,26 +1351,33 @@
       <button class="tab-btn active" data-tab="home" onclick="switchTab('home')">
         <span class="tab-icon">🏠</span>
         <span>Home</span>
+        <span class="tab-pip"></span>
       </button>
       <button class="tab-btn" data-tab="events" onclick="switchTab('events')">
         <span class="tab-icon">📅</span>
         <span>Events</span>
+        <span class="tab-pip"></span>
       </button>
       <button class="tab-btn" data-tab="tee" onclick="switchTab('tee')">
         <span class="tab-icon">⛳</span>
         <span>Tee Times</span>
+        <span class="tab-pip"></span>
       </button>
       <button class="tab-btn" data-tab="messages" onclick="switchTab('messages')">
         <span class="tab-icon">💬</span>
         <span>Messages</span>
+        <span class="tab-pip"></span>
+        <span class="tab-badge hidden" id="msgBadge">0</span>
       </button>
       <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
         <span class="tab-icon">👤</span>
         <span>Me</span>
+        <span class="tab-pip"></span>
       </button>
       <button class="tab-btn hidden" data-tab="admin" id="adminTabBtn" onclick="switchTab('admin')">
         <span class="tab-icon">⚙️</span>
         <span>Admin</span>
+        <span class="tab-pip"></span>
       </button>
     </div>
   </nav>
@@ -1597,11 +1732,56 @@
         }
       }
       if (data) {
+        const wasAuthenticated = isAuthenticated;
         currentUser = data;
         isAuthenticated = true;
+        // Restore last tab
+        try {
+          const lastTab = localStorage.getItem('jpgs_last_tab');
+          if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
+            if (lastTab !== 'admin' || currentUser.role === 'admin') {
+              currentTab = lastTab;
+            }
+          }
+        } catch(e) {}
         setMode('member');
+        // Welcome toast on first login
+        if (!wasAuthenticated) {
+          try {
+            const welcomedKey = 'jpgs_welcomed_' + currentUser.id;
+            if (!localStorage.getItem(welcomedKey)) {
+              const firstName = (currentUser.name || '').split(' ')[0] || 'there';
+              showToast('Welcome, ' + firstName + ' 👋');
+              localStorage.setItem(welcomedKey, '1');
+            }
+          } catch(e) {}
+        }
+        // Update messages badge
+        updateMessagesBadge();
       }
     }
+  }
+
+  async function updateMessagesBadge() {
+    try {
+      if (!supabase || !currentUser) return;
+      const msgs = await getMessages();
+      const seenAt = localStorage.getItem('jpgs_msg_seen_at');
+      const seenTime = seenAt ? new Date(seenAt).getTime() : 0;
+      const myId = currentUser.id;
+      const unread = msgs.filter(m => {
+        const isForMe = !m.recipients || m.recipients === 'all' || (m.recipients || '').split(',').includes(myId);
+        return isForMe && new Date(m.created_at).getTime() > seenTime;
+      }).length;
+      const badge = document.getElementById('msgBadge');
+      if (!badge) return;
+      if (unread > 0) {
+        badge.textContent = unread > 9 ? '9+' : String(unread);
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    } catch(e) { /* no-op */ }
   }
 
   // ===== DATA ACCESS LAYER =====
@@ -1711,6 +1891,15 @@
   function setMode(mode) {
     currentMode = mode;
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    // Slide the toggle pill to the active button
+    requestAnimationFrame(() => {
+      const slider = document.getElementById('modeSlider');
+      const active = document.querySelector('.mode-btn.active');
+      if (slider && active) {
+        slider.style.width = active.offsetWidth + 'px';
+        slider.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+      }
+    });
 
     const visitorView = document.getElementById('visitorView');
     const authView = document.getElementById('authView');
@@ -1754,19 +1943,60 @@
         tabBar.classList.remove('visible');
         avatar.classList.add('hidden');
         updateBackButton();
+        setTimeout(() => document.getElementById('authEmail')?.focus(), 200);
       }
     }
   }
 
   // ===== AUTH =====
+  function validateAuthEmail(input) {
+    const email = input.value.trim();
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const btn = document.getElementById('authSubmit');
+    const error = document.getElementById('authEmailError');
+    if (email.length === 0) {
+      input.classList.remove('valid', 'invalid');
+      btn.disabled = true;
+      error.classList.add('hidden');
+    } else if (isValid) {
+      input.classList.add('valid'); input.classList.remove('invalid');
+      btn.disabled = false;
+      error.classList.add('hidden');
+    } else {
+      input.classList.add('invalid'); input.classList.remove('valid');
+      btn.disabled = true;
+      error.classList.remove('hidden');
+    }
+  }
+
+  function resetAuthForm() {
+    document.getElementById('authFormView').classList.remove('hidden');
+    document.getElementById('authSentView').classList.add('hidden');
+    const input = document.getElementById('authEmail');
+    input.value = '';
+    input.classList.remove('valid', 'invalid');
+    document.getElementById('authSubmit').disabled = true;
+    document.getElementById('authMessage').classList.add('hidden');
+    document.getElementById('authEmailError').classList.add('hidden');
+    const btnText = document.querySelector('#authSubmit .btn-text');
+    const btnSpin = document.querySelector('#authSubmit .btn-spinner');
+    if (btnText) btnText.classList.remove('hidden');
+    if (btnSpin) btnSpin.classList.add('hidden');
+  }
+
   async function sendMagicLink() {
     const email = document.getElementById('authEmail').value.trim();
     if (!email) return;
 
     const btn = document.getElementById('authSubmit');
+    const btnText = btn.querySelector('.btn-text');
+    const btnSpin = btn.querySelector('.btn-spinner');
     const msg = document.getElementById('authMessage');
+
     btn.disabled = true;
-    btn.textContent = 'Sending...';
+    btnText.classList.add('hidden');
+    btnSpin.classList.remove('hidden');
+    msg.classList.add('hidden');
 
     if (supabase) {
       const { error } = await supabase.auth.signInWithOtp({
@@ -1774,18 +2004,20 @@
         options: { emailRedirectTo: window.location.origin + '/app/' }
       });
       btn.disabled = false;
-      btn.textContent = 'Send Login Link';
-      msg.classList.remove('hidden');
+      btnText.classList.remove('hidden');
+      btnSpin.classList.add('hidden');
       if (error) {
+        msg.classList.remove('hidden');
         msg.className = 'auth-message';
         msg.style.background = '#FEE2E2';
         msg.style.color = 'var(--red)';
         msg.textContent = 'Error: ' + error.message;
       } else {
-        msg.className = 'auth-message';
-        msg.style.background = '#EFF6FF';
-        msg.style.color = 'var(--navy)';
-        msg.innerHTML = '✉️ Check your inbox!<br><span style="font-size:12px">Click the link in the email we sent to <strong>' + email + '</strong></span>';
+        // Swap to sent view
+        document.getElementById('authFormView').classList.add('hidden');
+        document.getElementById('authSentView').classList.remove('hidden');
+        document.getElementById('sentEmail').textContent = email;
+        startResendCooldown();
       }
     } else {
       // Demo mode: simulate login
@@ -1793,10 +2025,50 @@
         currentUser = DEMO_MEMBER;
         isAuthenticated = true;
         btn.disabled = false;
-        btn.textContent = 'Send Login Link';
+        btnText.classList.remove('hidden');
+        btnSpin.classList.add('hidden');
         setMode('member');
       }, 800);
     }
+  }
+
+  async function resendMagicLink() {
+    const email = document.getElementById('sentEmail').textContent;
+    if (!email || !supabase) return;
+    await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + '/app/' }
+    });
+    startResendCooldown();
+  }
+
+  function startResendCooldown() {
+    const btn = document.getElementById('resendBtn');
+    const timer = document.getElementById('resendTimer');
+    let seconds = 30;
+    btn.disabled = true;
+    timer.textContent = '(' + seconds + 's)';
+    const interval = setInterval(() => {
+      seconds--;
+      if (seconds <= 0) {
+        clearInterval(interval);
+        btn.disabled = false;
+        timer.textContent = '';
+      } else {
+        timer.textContent = '(' + seconds + 's)';
+      }
+    }, 1000);
+  }
+
+  // Toast notification
+  function showToast(message, duration) {
+    duration = duration || 3000;
+    const toast = document.getElementById('appToast');
+    if (!toast) return;
+    toast.textContent = message;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => toast.classList.remove('show'), duration);
   }
 
   function logout() {
@@ -1903,11 +2175,19 @@
     }
 
     currentTab = tab;
+    try { localStorage.setItem('jpgs_last_tab', tab); } catch(e) {}
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
 
     const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', profile: 'tabProfile', admin: 'tabAdmin' };
     document.getElementById(tabMap[tab]).classList.remove('hidden');
+
+    // Clear messages badge when visiting messages
+    if (tab === 'messages') {
+      try { localStorage.setItem('jpgs_msg_seen_at', new Date().toISOString()); } catch(e) {}
+      const badge = document.getElementById('msgBadge');
+      if (badge) badge.classList.add('hidden');
+    }
 
     // Scroll to top
     document.getElementById('content').scrollTop = 0;

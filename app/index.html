@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#152847">
-  <title>JPGS — Javea Port Golf Society</title>
+  <title>SocieteeGolf — Costa Blanca Golf Society</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="supabase-config.js"></script>
@@ -958,7 +958,7 @@
   <header class="header">
     <div style="display:flex; align-items:center; gap:8px;">
       <button class="header-back hidden" id="headerBack" onclick="goBack()">←</button>
-      <a href="/" class="header-brand" style="text-decoration:none;color:inherit;">J<span>P</span>GS</a>
+      <a href="https://societeegolf.app" class="header-brand" style="text-decoration:none;color:inherit;">Societee<span>Golf</span></a>
     </div>
     <div class="header-right">
       <div class="mode-toggle" id="modeToggle">
@@ -1187,7 +1187,7 @@
           <div class="list-item" style="border-bottom:none; padding-top:4px;">
             <div class="list-icon" style="background:var(--gold-light);">📧</div>
             <div class="list-text">
-              <h4>javeaportgolfsociety@gmail.com</h4>
+              <h4>info@societeegolf.app</h4>
               <p>We usually reply within 24 hours</p>
             </div>
           </div>
@@ -1589,8 +1589,8 @@
   // ===== HELP SYSTEM =====
   const helpContent = {
     visitor: {
-      title: 'Welcome to JPGS',
-      body: `<p>Welcome to the Javea Port Golf Society app. As a visitor you can:</p>
+      title: 'Welcome to SocieteeGolf',
+      body: `<p>Welcome to the SocieteeGolf app. As a visitor you can:</p>
         <ul><li>Browse upcoming <strong>events</strong> and past results</li><li>View our <strong>courses</strong> on the Costa Blanca</li><li>See <strong>tee times</strong> for upcoming events</li></ul>
         <p>To become a member, visit the main website and apply via the <strong>Join Us</strong> form.</p>
         <p>Already a member? Tap <strong>Member</strong> at the top to log in.</p>`
@@ -2430,7 +2430,7 @@
             <span>${c.holes||'-'} holes</span>
             <span>${c.par||'-'}</span>
             <span>${c.type||'-'}</span>
-            ${c.jpgs ? '<span style="background:#D1FAE5; color:#065F46;">JPGS Played</span>' : ''}
+            ${c.jpgs ? '<span style="background:#D1FAE5; color:#065F46;">Society Played</span>' : ''}
           </div>
           <p style="margin-top:6px; font-size:12px; color:var(--text-secondary);">${c.description||''}</p>
           ${c.website ? `<a href="${websiteUrl}" target="_blank" rel="noopener" style="display:inline-block; margin-top:6px; font-size:12px; color:var(--gold); font-weight:600; text-decoration:none;">${websiteDisplay} →</a>` : ''}
@@ -3444,7 +3444,7 @@
     if (!confirm('Send payment link to ' + memberName + '?')) return;
     await supabase.from('messages').insert({
       title: 'Membership Payment Required',
-      body: 'Congratulations on completing your 3 probation games! To become a full member of JPGS, please pay the €25 quarterly membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
+      body: 'Congratulations on completing your 3 probation games! To become a full member of SocieteeGolf, please pay the €25 quarterly membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
       priority: 'important',
       recipients: memberId
     });
@@ -3458,7 +3458,7 @@
     await supabase.from('members').update({ status: 'full_member', payment_proof: null, payment_proof_submitted_at: null, payment_due_sent_at: null }).eq('id', memberId);
     await supabase.from('messages').insert({
       title: 'Welcome — Full Member!',
-      body: 'Congratulations! Your payment has been confirmed and you are now a full member of Javea Port Golf Society.',
+      body: 'Congratulations! Your payment has been confirmed and you are now a full member of SocieteeGolf.',
       priority: 'normal',
       recipients: memberId
     });

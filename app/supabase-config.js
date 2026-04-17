@@ -1,4 +1,4 @@
-// JPGS Supabase Configuration
+// SocieteeGolf Supabase Configuration
 // ============================
 // 1. Go to https://supabase.com and create a free project
 // 2. Go to Settings → API and copy your Project URL and anon/public key

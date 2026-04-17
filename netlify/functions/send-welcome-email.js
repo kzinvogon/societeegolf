@@ -28,7 +28,7 @@ exports.handler = async (event) => {
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #152847 0%, #1B4D3E 100%); border-radius: 12px; padding: 28px; text-align: center; margin-bottom: 24px;">
         <h1 style="color: #C9A84C; margin: 0; font-size: 24px; letter-spacing: 1px;">SocieteeGolf</h1>
-        <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0; font-size: 14px;">Costa Blanca Golf Society</p>
+        <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0; font-size: 14px;">Golf Society Management</p>
       </div>
 
       <h2 style="color: #152847; font-size: 20px; margin-bottom: 8px;">Thank you, ${name}!</h2>
@@ -41,12 +41,12 @@ exports.handler = async (event) => {
         <h3 style="color: #152847; font-size: 15px; margin: 0 0 10px;">How it works:</h3>
         <ol style="color: #555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
           <li>Play 3 rounds with us — a chance for you and us to decide if it's a good fit</li>
-          <li>Once approved, sign up for any event and play the best courses on the Costa Blanca</li>
+          <li>Once approved, sign up for any event and play the best courses</li>
         </ol>
       </div>
 
       <p style="color: #333; font-size: 15px; line-height: 1.6;">
-        We play courses across the northern Costa Blanca — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. All abilities and nationalities welcome.
+        We play courses across the region — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. All abilities and nationalities welcome.
       </p>
 
       <div style="text-align: center; margin: 24px 0;">
@@ -57,7 +57,7 @@ exports.handler = async (event) => {
 
       <p style="color: #999; font-size: 12px; text-align: center; line-height: 1.5;">
         SocieteeGolf<br>
-        Costa Blanca, Spain<br>
+        societeegolf.app<br>
         <a href="mailto:info@societeegolf.app" style="color: #C9A84C;">info@societeegolf.app</a>
       </p>
     </div>

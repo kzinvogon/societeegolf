@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#152847">
-  <title>SocieteeGolf — Costa Blanca Golf Society</title>
+  <title>SocieteeGolf — Golf Society Management</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="supabase-config.js"></script>
@@ -990,15 +990,15 @@
 
       <!-- Hero -->
       <div class="hero-card">
-        <h1>Costa Blanca Golf.<br>No Fees. No Fuss.</h1>
-        <p>A friendly golf society based in Javea, playing the best courses on the Costa Blanca. All abilities welcome.</p>
+        <h1>Great Golf.<br>No Fees. No Fuss.</h1>
+        <p>A friendly golf society playing the best courses in the region. All abilities welcome.</p>
         <button class="btn btn-primary" onclick="setMode('member')">Member Login</button>
       </div>
 
       <!-- What We're About — compact pitch -->
       <div class="card">
         <h3 class="card-title">Golf Without the Club Fees</h3>
-        <p class="card-body mt-8">We rotate across the best courses on the northern Costa Blanca — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. Just great golf and good company.</p>
+        <p class="card-body mt-8">We rotate across the best courses in the area — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. Just great golf and good company.</p>
       </div>
 
       <!-- Key selling points — feature tiles -->
@@ -1084,7 +1084,7 @@
       <!-- Member Quotes — social proof -->
       <h2 class="section-title">What Members Say</h2>
       <div class="card msg-card priority-normal" style="cursor:default;">
-        <p class="card-body" style="font-style:italic; color:var(--text);">"I joined not knowing many people in Javea and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."</p>
+        <p class="card-body" style="font-style:italic; color:var(--text);">"I joined not knowing many people and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."</p>
         <p class="msg-time mt-8">— Society Member</p>
       </div>
       <div class="card msg-card priority-normal" style="cursor:default;">
@@ -1541,7 +1541,7 @@
     {
       id: 2,
       title: 'New Member Welcome',
-      body: 'Welcome to Peter Wilson who joined us last week. Peter plays off 20 and is based in Javea town. Say hello at the next event!',
+      body: 'Welcome to Peter Wilson who joined us last week. Peter plays off 20. Say hello at the next event!',
       priority: 'normal',
       created_at: '2026-04-05T14:30:00Z'
     },
@@ -1562,19 +1562,9 @@
   ];
 
   const COURSES = [
-    { name: 'Alicante Golf', location: 'Alicante', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: 'Designed by Seve Ballesteros, 5 lakes.', website: 'https://www.alicantegolf.com' },
-    { name: 'Bonalba Golf & Spa', location: 'Mutxamel', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: '5 lakes, 96 bunkers.', website: 'https://www.golfbonalba.com' },
-    { name: 'El Plantío Golf', location: 'Alicante', holes: '18+9', par: 'Par 72', type: 'Championship', jpgs: false, description: 'Close to airport.', website: 'https://www.elplantio.com' },
-    { name: 'Ifach San Jaime', location: 'Benissa/Moraira', holes: '9', par: 'Par 60', type: '9-Hole', jpgs: false, description: 'Views of Peñon de Ifach.', website: 'https://www.golfifach.com' },
-    { name: 'Jávea Golf Club', location: 'Jávea', holes: '9/18', par: 'All Levels', type: '9-Hole', jpgs: true, description: 'Our local course, opened 1981, 34 bunkers.', website: 'https://www.clubdegolfjavea.com' },
-    { name: 'La Sella Golf Resort', location: 'Jesús Pobre, Dénia', holes: '27', par: 'Championship', type: 'Championship', jpgs: false, description: 'Designed by Olazábal.', website: 'https://www.lasellagolf.com' },
-    { name: 'Las Rejas Golf', location: 'Benidorm', holes: '9', par: 'Par 3', type: 'Pitch & Putt', jpgs: false, description: 'Pay and play near Poniente beach.', website: 'https://www.benidorm.lasrejasopenclub.com' },
-    { name: 'Sierra Altea Golf', location: 'Altea Hills', holes: '9/18', par: 'Par 72', type: '9-Hole', jpgs: true, description: 'Oldest on Costa Blanca (1974).', website: 'https://www.alteaclubdegolf.com' },
-    { name: 'Sierra Cortina Golf', location: 'Finestrat/Benidorm', holes: '18', par: 'Par 3', type: 'Pitch & Putt', jpgs: false, description: 'Panoramic views, 2 hours to play.', website: 'https://www.golfparatodos.es' },
-    { name: 'Villaitana Golf', location: 'Benidorm', holes: '36', par: 'Championship', type: 'Championship', jpgs: true, description: '5-star resort, 2 courses.', website: 'https://www.meliavillaitanagolf.com' },
-    { name: 'El Saler', location: 'El Saler Natural Park, Valencia', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: 'PGA Championship course.', website: 'https://paradores.es/en/golf' },
-    { name: 'Foressos', location: 'Picassent, Valencia', holes: '18', par: 'Par 72', type: 'Championship', jpgs: false, description: '18-hole championship course off the A7/N340.', website: 'https://foressosclubgolf.com' },
-    { name: 'Puig Campana', location: 'Finestrat', holes: '9 (x2)', par: 'Par 72', type: '9-Hole', jpgs: false, description: '9 holes played twice for a full 18-hole round.', website: 'https://puigcampanagolf.es' }
+    // Demo data — real courses are loaded from Supabase
+    { name: 'Sample Championship Course', location: 'Region', holes: '18', par: 'Par 72', type: 'Championship', jpgs: true, description: 'Championship layout.', website: '' },
+    { name: 'Sample 9-Hole Course', location: 'Region', holes: '9', par: 'Par 36', type: '9-Hole', jpgs: true, description: 'Quick 9-hole round.', website: '' },
   ];
 
   // ===== STATE =====
@@ -1591,7 +1581,7 @@
     visitor: {
       title: 'Welcome to SocieteeGolf',
       body: `<p>Welcome to the SocieteeGolf app. As a visitor you can:</p>
-        <ul><li>Browse upcoming <strong>events</strong> and past results</li><li>View our <strong>courses</strong> on the Costa Blanca</li><li>See <strong>tee times</strong> for upcoming events</li></ul>
+        <ul><li>Browse upcoming <strong>events</strong> and past results</li><li>View our <strong>courses</strong></li><li>See <strong>tee times</strong> for upcoming events</li></ul>
         <p>To become a member, visit the main website and apply via the <strong>Join Us</strong> form.</p>
         <p>Already a member? Tap <strong>Member</strong> at the top to log in.</p>`
     },
@@ -2018,7 +2008,7 @@
       }
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin + '/app/' }
+        options: { emailRedirectTo: window.location.origin + '/' }
       });
       btn.disabled = false;
       btnText.classList.remove('hidden');
@@ -2054,7 +2044,7 @@
     if (!email || !supabase) return;
     await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + '/app/' }
+      options: { emailRedirectTo: window.location.origin + '/' }
     });
     startResendCooldown();
   }

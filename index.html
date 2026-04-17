@@ -1448,7 +1448,7 @@
                 <h3>Get in Touch</h3>
                 <div class="contact-item">
                     <div class="contact-item-label">Email</div>
-                    <div><a href="mailto:jamesconaghan@hotmail.co.uk" style="color: var(--primary-green);">jamesconaghan@hotmail.co.uk</a></div>
+                    <div><a href="mailto:david@davidh.com" style="color: var(--primary-green);">david@davidh.com</a></div>
                 </div>
                 <div class="contact-item">
                     <div class="contact-item-label">Location</div>
@@ -1697,7 +1697,7 @@
         ];
 
         const COMMITTEE = [
-            { name: 'Jim Conaghan', role: 'Event Organiser', email: 'jamesconaghan@hotmail.co.uk' },
+            { name: 'Jim Conaghan', role: 'Event Organiser', email: 'david@davidh.com' },
             { name: 'Martin Leyshon', role: 'Committee Member' },
             { name: 'Clive Challenor', role: 'Committee Member' },
             { name: 'Rob Jardine', role: 'Committee Member' }
@@ -2061,7 +2061,7 @@
             }
 
             if (member.status === 'suspended') {
-                messageDiv.innerHTML = '<div class="error-message">Your membership is suspended due to unpaid dues. Contact jamesconaghan@hotmail.co.uk</div>';
+                messageDiv.innerHTML = '<div class="error-message">Your membership is suspended due to unpaid dues. Contact david@davidh.com</div>';
                 document.getElementById('signupEmail').disabled = true;
             } else if (member.status === 'applied') {
                 messageDiv.innerHTML = '<div class="info-message">Your application is pending approval.</div>';
@@ -2403,7 +2403,7 @@
                 msg.style.display = 'block';
                 msg.style.background = 'rgba(180,50,50,0.12)';
                 msg.style.color = '#7a2020';
-                msg.textContent = 'Something went wrong — please email us directly at jamesconaghan@hotmail.co.uk';
+                msg.textContent = 'Something went wrong — please email us directly at david@davidh.com';
                 btn.disabled = false;
                 btn.textContent = 'Send Message';
             });
@@ -2461,7 +2461,7 @@
             } else if (member.status === 'full_member') {
                 statusMsg = 'Your membership is active and up to date.';
             } else if (member.status === 'suspended') {
-                statusMsg = 'Your membership is currently suspended. Quarterly fee of €25 is outstanding. Please contact jamesconaghan@hotmail.co.uk';
+                statusMsg = 'Your membership is currently suspended. Quarterly fee of €25 is outstanding. Please contact david@davidh.com';
             }
 
             const upcomingSignups = getSignups().filter(s => {
@@ -2885,7 +2885,7 @@
             await sb.from('members').update({ payment_proof: null, payment_proof_submitted_at: null }).eq('id', memberId);
             await sb.from('messages').insert({
                 title: 'Payment Proof Rejected',
-                body: 'Your payment proof could not be verified. Please resubmit your proof of payment in your profile. If you have questions, contact jamesconaghan@hotmail.co.uk.',
+                body: 'Your payment proof could not be verified. Please resubmit your proof of payment in your profile. If you have questions, contact david@davidh.com.',
                 priority: 'important',
                 recipients: memberId
             });

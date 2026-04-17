@@ -2008,7 +2008,7 @@
       }
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin + '/' }
+        options: { emailRedirectTo: 'https://app.societeegolf.app/' }
       });
       btn.disabled = false;
       btnText.classList.remove('hidden');
@@ -2044,7 +2044,7 @@
     if (!email || !supabase) return;
     await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + '/' }
+      options: { emailRedirectTo: 'https://app.societeegolf.app/' }
     });
     startResendCooldown();
   }

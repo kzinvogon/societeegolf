@@ -1541,7 +1541,10 @@
     if (!supabase) return DEMO_EVENTS;
     const cached = _cacheGet('events');
     if (cached) return cached;
-    const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
+    const sid = SOCIETY_CONFIG._societyId;
+    let q = supabase.from('events').select('*').order('date', { ascending: true });
+    if (sid) q = q.eq('society_id', sid);
+    const { data } = await q;
     return _cacheSet('events', data || []);
   }
 
@@ -1569,7 +1572,10 @@
     if (!supabase) return DEMO_MESSAGES;
     const cached = _cacheGet('messages');
     if (cached) return cached;
-    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+    const sid = SOCIETY_CONFIG._societyId;
+    let q = supabase.from('messages').select('*').order('created_at', { ascending: false });
+    if (sid) q = q.eq('society_id', sid);
+    const { data } = await q;
     return _cacheSet('messages', data || []);
   }
 
@@ -3411,6 +3417,9 @@
   }
 
   async function init() {
+    // Load society config from DB (subdomain routing)
+    await loadSocietyConfig();
+
     // Apply society config to static elements
     document.title = SOCIETY_CONFIG.name;
     document.querySelector('.header-brand').innerHTML = SOCIETY_CONFIG.brandHtml;

@@ -1,7 +1,13 @@
 // SocieteeGolf — Society Configuration
-// All society-specific content in one place. Edit this file to rebrand for any society.
+// Default config used as fallback for localhost / unknown subdomains.
+// In production, loadSocietyConfig() queries the societies table and
+// deep-merges the society's config JSONB over these defaults.
 
 const SOCIETY_CONFIG = {
+  // Set by loadSocietyConfig()
+  _loaded: false,
+  _societyId: null,
+
   // Branding
   name: 'SocieteeGolf',
   brandHtml: 'Societee<span>Golf</span>',
@@ -102,10 +108,118 @@ const SOCIETY_CONFIG = {
     period: 'quarterly',
     proofPlaceholder: 'Paste payment reference, URL, or description',
     requestTitle: 'Membership Payment Required',
-    requestBody: 'Congratulations on completing your 3 probation games! To become a full member of SocieteeGolf, please pay the €25 quarterly membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
+    requestBody: 'Congratulations on completing your 3 probation games! To become a full member, please pay the membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
     approvedTitle: 'Welcome — Full Member!',
-    approvedBody: 'Congratulations! Your payment has been confirmed and you are now a full member of SocieteeGolf.',
+    approvedBody: 'Congratulations! Your payment has been confirmed and you are now a full member.',
     rejectedTitle: 'Payment Proof Rejected',
     rejectedBody: 'Your payment proof could not be verified. Please resubmit your proof of payment in your Profile.',
   },
 };
+
+// ===== Subdomain routing & config loading =====
+
+const PLATFORM_DOMAIN = 'societeegolf.app';
+const PLATFORM_URL = 'https://societeegolf.app';
+const DEFAULT_SOCIETY_ID = '00000000-0000-0000-0000-000000000001';
+
+/**
+ * Extract subdomain from hostname.
+ * Examples:
+ *   "mygolf.societeegolf.app"  → "mygolf"
+ *   "app.societeegolf.app"     → "app"
+ *   "societeegolf.app"         → null
+ *   "localhost"                → null
+ */
+function getSubdomain() {
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return null;
+  if (!host.endsWith('.' + PLATFORM_DOMAIN)) return null;
+  const sub = host.replace('.' + PLATFORM_DOMAIN, '');
+  return sub || null;
+}
+
+/**
+ * Deep merge source into target. Arrays are replaced, not merged.
+ * Functions in target are kept if source doesn't override them.
+ */
+function deepMerge(target, source) {
+  if (!source || typeof source !== 'object') return;
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      deepMerge(target[key], source[key]);
+    } else if (source[key] !== undefined && source[key] !== null) {
+      target[key] = source[key];
+    }
+  }
+}
+
+/**
+ * Load society config from Supabase via REST API.
+ * - On subdomain (e.g. mygolf.societeegolf.app): queries by subdomain
+ * - On app.societeegolf.app: uses the default society
+ * - On localhost: uses static SOCIETY_CONFIG as-is
+ * - Unknown subdomain: redirects to societeegolf.app
+ */
+async function loadSocietyConfig() {
+  const subdomain = getSubdomain();
+
+  // Localhost / direct IP — use static defaults
+  if (subdomain === null) {
+    SOCIETY_CONFIG._loaded = true;
+    SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+    return;
+  }
+
+  // "app" subdomain is the default society
+  const lookupSubdomain = subdomain === 'app' ? 'default' : subdomain;
+
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/societies?subdomain=eq.' + encodeURIComponent(lookupSubdomain) + '&select=id,name,subdomain,config',
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        }
+      }
+    );
+
+    if (!res.ok) {
+      console.warn('Failed to load society config:', res.status);
+      SOCIETY_CONFIG._loaded = true;
+      SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data || data.length === 0) {
+      // Unknown subdomain — redirect to main site
+      console.warn('Unknown subdomain:', subdomain);
+      window.location.href = PLATFORM_URL;
+      return;
+    }
+
+    const society = data[0];
+    SOCIETY_CONFIG._societyId = society.id;
+    SOCIETY_CONFIG._loaded = true;
+
+    // Deep merge the society's config JSONB over the defaults
+    if (society.config && typeof society.config === 'object') {
+      deepMerge(SOCIETY_CONFIG, society.config);
+    }
+
+    // If the society has a name but no brandHtml, auto-generate it
+    if (society.config?.name && !society.config?.brandHtml) {
+      SOCIETY_CONFIG.name = society.config.name;
+      SOCIETY_CONFIG.brandHtml = society.config.name;
+    }
+
+    console.log('Society loaded:', society.name, '(id:', society.id + ')');
+
+  } catch (err) {
+    console.warn('Error loading society config:', err);
+    SOCIETY_CONFIG._loaded = true;
+    SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+  }
+}

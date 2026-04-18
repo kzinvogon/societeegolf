@@ -124,16 +124,26 @@ const DEFAULT_SOCIETY_ID = '00000000-0000-0000-0000-000000000001';
 
 /**
  * Extract society slug from URL path.
- * Pattern: /s/{slug}/...
+ * Friendly URLs: /{slug}
  * Examples:
- *   "/s/mygolf/"         → "mygolf"
- *   "/s/mygolf/events"   → "mygolf"
- *   "/"                  → null (default society)
- *   "/events"            → null (default society)
+ *   "/testgolf"       → "testgolf"
+ *   "/testgolf/"      → "testgolf"
+ *   "/"               → null (default society)
+ *
+ * Reserved paths (not treated as slugs):
+ *   Static files (.js, .css, .html, .json, .png, etc.)
  */
+const RESERVED_EXTENSIONS = /\.\w+$/;
+
 function getSocietySlug() {
-  const match = window.location.pathname.match(/^\/s\/([^/]+)/);
-  return match ? match[1] : null;
+  const path = window.location.pathname;
+  if (path === '/' || path === '') return null;
+  // Don't treat static file requests as slugs
+  if (RESERVED_EXTENSIONS.test(path)) return null;
+  // Extract first path segment
+  const match = path.match(/^\/([^/]+)/);
+  if (!match) return null;
+  return match[1];
 }
 
 /**

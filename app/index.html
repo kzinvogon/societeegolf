@@ -6,10 +6,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#152847">
-  <title>SocieteeGolf — Golf Society Management</title>
+  <title>SocieteeGolf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="supabase-config.js"></script>
+  <script src="society-config.js"></script>
   <style>
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -985,260 +986,8 @@
   <!-- ===== CONTENT ===== -->
   <main class="content" id="content">
 
-    <!-- VISITOR VIEW -->
-    <div id="visitorView" class="content-inner">
-
-      <!-- Hero -->
-      <div class="hero-card">
-        <h1>Great Golf.<br>No Fees. No Fuss.</h1>
-        <p>A friendly golf society playing the best courses in the region. All abilities welcome.</p>
-        <button class="btn btn-primary" onclick="setMode('member')">Member Login</button>
-      </div>
-
-      <!-- What We're About — compact pitch -->
-      <div class="card">
-        <h3 class="card-title">Golf Without the Club Fees</h3>
-        <p class="card-body mt-8">We rotate across the best courses in the area — from championship layouts to shorter 9-hole challenges. No joining fees, no share schemes. Just great golf and good company.</p>
-      </div>
-
-      <!-- Key selling points — feature tiles -->
-      <div class="stats-grid">
-        <div class="stat-card" style="cursor:pointer" onclick="showCoursesView()">
-          <div style="font-size:22px; margin-bottom:4px;">⛳</div>
-          <div class="stat-value">13</div>
-          <div class="stat-label">Courses</div>
-        </div>
-        <div class="stat-card">
-          <div style="font-size:22px; margin-bottom:4px;">🌍</div>
-          <div class="stat-value">All</div>
-          <div class="stat-label">Abilities Welcome</div>
-        </div>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div style="font-size:22px; margin-bottom:4px;">💶</div>
-          <div class="stat-value" style="font-size:16px;">Green Fees</div>
-          <div class="stat-label">+ €5/game for prizes</div>
-        </div>
-        <div class="stat-card">
-          <div style="font-size:22px; margin-bottom:4px;">🤝</div>
-          <div class="stat-value">€0</div>
-          <div class="stat-label">Joining Fee</div>
-        </div>
-      </div>
-
-      <!-- Why Join — feature list -->
-      <h2 class="section-title">Why Join Us?</h2>
-      <div class="card">
-        <div class="list-item">
-          <div class="list-icon" style="background: #D1FAE5;">💰</div>
-          <div class="list-text">
-            <h4>Simple & Affordable</h4>
-            <p>No joining fee, no share scheme. Green fees at discounted society rates.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #E0E7FF;">🏌️</div>
-          <div class="list-text">
-            <h4>Great Courses</h4>
-            <p>Rotate across 13 courses — Seve-designed championship layouts, coastal gems, and mountain backdrops.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: var(--gold-light);">🏆</div>
-          <div class="list-text">
-            <h4>Competitions & Trophies</h4>
-            <p>Stableford, Medal, Texas Scramble, Better Ball — varied formats plus four prestigious annual trophies.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #DBEAFE;">✈️</div>
-          <div class="list-text">
-            <h4>Away Trips</h4>
-            <p>Bi-annual trips to premier golf courses and stay at all-inclusive hotels. Lots of fun and top class golf.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #FEE2E2;">🍻</div>
-          <div class="list-text">
-            <h4>More Than Golf</h4>
-            <p>Friendships, banter, away days, and social events. A community, not just a club.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Next Event Preview -->
-      <div id="visitorNextEvent"></div>
-
-      <!-- Events -->
-      <h2 class="section-title">Events</h2>
-      <div class="toggle-tabs" id="visitorEventTabs">
-        <button class="toggle-tab active" onclick="showVisitorEvents('upcoming')">Upcoming</button>
-        <button class="toggle-tab" onclick="showVisitorEvents('past')">Past</button>
-      </div>
-      <div id="visitorEventsList"></div>
-
-      <div class="mt-16"></div>
-
-      <!-- Member Quotes — social proof -->
-      <h2 class="section-title">What Members Say</h2>
-      <div class="card msg-card priority-normal" style="cursor:default;">
-        <p class="card-body" style="font-style:italic; color:var(--text);">"I joined not knowing many people and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."</p>
-        <p class="msg-time mt-8">— Society Member</p>
-      </div>
-      <div class="card msg-card priority-normal" style="cursor:default;">
-        <p class="card-body" style="font-style:italic; color:var(--text);">"Everything a golf society should be — competitive enough to keep you sharp, friendly enough to keep you coming back."</p>
-        <p class="msg-time mt-8">— Society Member</p>
-      </div>
-      <div class="card msg-card priority-normal" style="cursor:default;">
-        <p class="card-body" style="font-style:italic; color:var(--text);">"What I really like is the variety — Texas Scramble, Better Ball, Reverse Waltz, Individual Stableford. The organisers really mix things up."</p>
-        <p class="msg-time mt-8">— Society Member</p>
-      </div>
-
-      <div class="mt-16"></div>
-
-      <!-- Trophy Calendar — prestige -->
-      <h2 class="section-title">Trophy Calendar</h2>
-      <div class="card">
-        <div class="list-item">
-          <div class="list-icon" style="background: var(--gold-light); font-size:20px;">🏆</div>
-          <div class="list-text">
-            <h4>Francis McNeil Memorial</h4>
-            <p>Our most cherished competition — a tribute to a much-missed member.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #E0E7FF; font-size:20px;">✈️</div>
-          <div class="list-text">
-            <h4>Away Days Trophies</h4>
-            <p>Twice a year the society hits the road — two trophies across the best regional courses.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #D1FAE5; font-size:20px;">🥇</div>
-          <div class="list-text">
-            <h4>Captain's Trophy</h4>
-            <p>One of the most prestigious events in the society year. Every member wants this one.</p>
-          </div>
-        </div>
-        <div class="list-item">
-          <div class="list-icon" style="background: #FEF3C7; font-size:20px;">🏅</div>
-          <div class="list-text">
-            <h4>Society Trophy <span class="badge badge-gold" style="margin-left:6px;">New 2026</span></h4>
-            <p>Brand new — who will be the inaugural winner?</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-16"></div>
-
-      <!-- What It Costs — clear pricing -->
-      <h2 class="section-title">What It Costs</h2>
-      <div class="card" style="text-align:center;">
-        <div style="font-size:36px; font-weight:700; color:var(--navy);">€25</div>
-        <div class="text-sm text-secondary">per quarter — covers prizes & pre-pays booking fees</div>
-        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
-        <div style="font-size:20px; font-weight:700; color:var(--navy);">+ €5</div>
-        <div class="text-sm text-secondary">comp prizes contribution (on trophy events only)</div>
-        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
-        <div class="text-sm text-secondary">+ green fee at <strong>discounted society rates</strong></div>
-        <div style="margin-top:12px;">
-          <span class="badge badge-green">No joining fee. No share scheme. Ever.</span>
-        </div>
-      </div>
-
-      <div class="mt-16"></div>
-
-      <!-- How to Join -->
-      <h2 class="section-title">How to Join</h2>
-      <div class="card">
-        <div class="steps-list">
-          <div class="step-item">
-            <div class="step-num">1</div>
-            <div class="step-text">
-              <h4>Register Your Interest</h4>
-              <p>Contact us via email or the main website form.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-num">2</div>
-            <div class="step-text">
-              <h4>Play 3 Rounds</h4>
-              <p>Join us for 3 games — a chance for you and us to decide if it's a good fit.</p>
-            </div>
-          </div>
-          <div class="step-item">
-            <div class="step-num">3</div>
-            <div class="step-text">
-              <h4>Play & Pay</h4>
-              <p>€25 quarterly membership + €5 comp prizes contribution. That's it.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-16"></div>
-
-      <!-- Contact -->
-      <div class="card">
-        <h3 class="card-title">Get in Touch</h3>
-        <div class="card-body mt-8">
-          <div class="list-item" style="border-bottom:none; padding-top:4px;">
-            <div class="list-icon" style="background:var(--gold-light);">📧</div>
-            <div class="list-text">
-              <h4>info@societeegolf.app</h4>
-              <p>We usually reply within 24 hours</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-16"></div>
-
-      <!-- Join Us Form -->
-      <h2 class="section-title">Join Us</h2>
-      <div class="card">
-        <p class="card-body mb-16">Interested in joining? Fill in your details and we'll be in touch within 24 hours.</p>
-        <form id="joinForm" onsubmit="submitJoinForm(event)" novalidate>
-          <input type="text" class="input" id="joinName" placeholder="Your full name" required>
-          <input type="email" class="input" id="joinEmail" placeholder="Email address" required>
-          <div style="display:flex; gap:8px;">
-            <select class="input" id="joinCountryCode" style="width:110px; flex-shrink:0;">
-              <option value="+34">🇪🇸 +34</option>
-              <option value="+44">🇬🇧 +44</option>
-              <option value="+353">🇮🇪 +353</option>
-              <option value="+31">🇳🇱 +31</option>
-              <option value="+49">🇩🇪 +49</option>
-              <option value="+33">🇫🇷 +33</option>
-              <option value="+46">🇸🇪 +46</option>
-              <option value="+47">🇳🇴 +47</option>
-              <option value="+45">🇩🇰 +45</option>
-              <option value="+32">🇧🇪 +32</option>
-              <option value="+1">🇺🇸 +1</option>
-            </select>
-            <input type="tel" class="input" id="joinPhone" placeholder="WhatsApp number" style="flex:1;" required>
-          </div>
-          <div id="joinPhoneError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;"></div>
-          <label style="font-size:13px; font-weight:600; color:var(--text); display:block; margin-bottom:8px;">Notify me by</label>
-          <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyEmailLabel">
-              <input type="checkbox" id="notifyEmail" value="email" checked onchange="updateNotifyStyle()"> 📧 Email
-            </label>
-            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyWhatsappLabel">
-              <input type="checkbox" id="notifyWhatsapp" value="whatsapp" checked onchange="updateNotifyStyle()"> 💬 WhatsApp
-            </label>
-          </div>
-          <div id="joinNotifyError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;">Please select at least one option</div>
-          <button type="submit" class="btn btn-primary btn-full" id="joinSubmitBtn">Send My Details</button>
-        </form>
-        <div id="joinSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">
-          ✅ Thanks! We'll be in touch soon.
-        </div>
-      </div>
-
-      <div class="mt-16"></div>
-    </div>
+    <!-- VISITOR VIEW — rendered dynamically from SOCIETY_CONFIG -->
+    <div id="visitorView" class="content-inner"></div>
 
     <!-- AUTH SCREEN (shown when member mode selected but not logged in) -->
     <div id="authView" class="hidden">
@@ -1321,7 +1070,7 @@
 
       <!-- TAB: Tee Times -->
       <div id="tabTee" class="content-inner tab-content hidden">
-        <h2 class="section-title">Your Tee Times</h2>
+        <h2 class="section-title tab-heading-tee">Your Tee Times</h2>
         <div id="teeTimesList"></div>
       </div>
 
@@ -1360,7 +1109,7 @@
       </button>
       <button class="tab-btn" data-tab="tee" onclick="switchTab('tee')">
         <span class="tab-icon">⛳</span>
-        <span>Tee Times</span>
+        <span class="tab-label-tee">Tee Times</span>
         <span class="tab-pip"></span>
       </button>
       <button class="tab-btn" data-tab="messages" onclick="switchTab('messages')">
@@ -2302,6 +2051,123 @@
 
   // ===== RENDER: VISITOR VIEW =====
   function renderVisitorView() {
+    const C = SOCIETY_CONFIG;
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="hero-card">
+        <h1>${C.tagline.replace(/\.\s/, '.<br>')}</h1>
+        <p>${C.description}</p>
+        <button class="btn btn-primary" onclick="setMode('member')">Member Login</button>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">${C.aboutCard.title}</h3>
+        <p class="card-body mt-8">${C.aboutCard.body}</p>
+      </div>
+
+      ${C.heroStats.map((row, ri) => '<div class="stats-grid">' + row.map((s, ci) =>
+        '<div class="stat-card"' + (ri === 0 && ci === 0 ? ' style="cursor:pointer" onclick="showCoursesView()"' : '') + '>' +
+        '<div class="stat-value"' + (s.valueStyle ? ' style="' + s.valueStyle + '"' : '') + '>' + s.value + '</div>' +
+        '<div class="stat-label">' + s.label + '</div></div>'
+      ).join('') + '</div>').join('')}
+
+      <h2 class="section-title">Why Join Us?</h2>
+      <div class="card">
+        ${C.features.map(f =>
+          '<div class="list-item"><div class="list-icon" style="background:' + f.bg + ';">' + f.icon + '</div>' +
+          '<div class="list-text"><h4>' + f.title + '</h4><p>' + f.description + '</p></div></div>'
+        ).join('')}
+      </div>
+
+      <div id="visitorNextEvent"></div>
+
+      <h2 class="section-title">${C.terms.events}</h2>
+      <div class="toggle-tabs" id="visitorEventTabs">
+        <button class="toggle-tab active" onclick="showVisitorEvents('upcoming')">Upcoming</button>
+        <button class="toggle-tab" onclick="showVisitorEvents('past')">Past</button>
+      </div>
+      <div id="visitorEventsList"></div>
+      <div class="mt-16"></div>
+
+      <h2 class="section-title">What Members Say</h2>
+      ${C.testimonials.map(t =>
+        '<div class="card msg-card priority-normal" style="cursor:default;"><p class="card-body" style="font-style:italic; color:var(--text);">"' + t + '"</p><p class="msg-time mt-8">— Society Member</p></div>'
+      ).join('')}
+      <div class="mt-16"></div>
+
+      <h2 class="section-title">Trophy Calendar</h2>
+      <div class="card">
+        ${C.competitions.map(c =>
+          '<div class="list-item"><div class="list-icon" style="background:var(--gold-light); font-size:20px;">' + c.icon + '</div>' +
+          '<div class="list-text"><h4>' + c.title + '</h4><p>' + c.description + '</p></div></div>'
+        ).join('')}
+      </div>
+      <div class="mt-16"></div>
+
+      <h2 class="section-title">What It Costs</h2>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:36px; font-weight:700; color:var(--navy);">${C.pricing.quarterly}</div>
+        <div class="text-sm text-secondary">${C.pricing.quarterlyLabel}</div>
+        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
+        <div style="font-size:20px; font-weight:700; color:var(--navy);">${C.pricing.comp}</div>
+        <div class="text-sm text-secondary">${C.pricing.compLabel}</div>
+        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
+        <div class="text-sm text-secondary">${C.pricing.greenFee}</div>
+        <div style="margin-top:12px;"><span class="badge badge-green">${C.pricing.tagline}</span></div>
+      </div>
+      <div class="mt-16"></div>
+
+      <h2 class="section-title">How to Join</h2>
+      <div class="card"><div class="steps-list">
+        ${C.joinSteps.map(s =>
+          '<div class="step-item"><div class="step-num">' + s.num + '</div><div class="step-text"><h4>' + s.title + '</h4><p>' + s.description + '</p></div></div>'
+        ).join('')}
+      </div></div>
+      <div class="mt-16"></div>
+
+      <div class="card">
+        <h3 class="card-title">Get in Touch</h3>
+        <div class="card-body mt-8">
+          <div class="list-item" style="border-bottom:none; padding-top:4px;">
+            <div class="list-icon" style="background:var(--gold-light);">📧</div>
+            <div class="list-text"><h4>${C.contactEmail}</h4><p>${C.contactReply}</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-16"></div>
+
+      <h2 class="section-title">Join Us</h2>
+      <div class="card">
+        <p class="card-body mb-16">Interested in joining? Fill in your details and we'll be in touch.</p>
+        <form id="joinForm" onsubmit="submitJoinForm(event)" novalidate>
+          <input type="text" class="input" id="joinName" placeholder="Your full name" required>
+          <input type="email" class="input" id="joinEmail" placeholder="Email address" required>
+          <div style="display:flex; gap:8px;">
+            <select class="input" id="joinCountryCode" style="width:110px; flex-shrink:0;">
+              <option value="+34">+34</option><option value="+44">+44</option><option value="+353">+353</option>
+              <option value="+31">+31</option><option value="+49">+49</option><option value="+33">+33</option>
+              <option value="+1">+1</option>
+            </select>
+            <input type="tel" class="input" id="joinPhone" placeholder="WhatsApp number" style="flex:1;" required>
+          </div>
+          <div id="joinPhoneError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;"></div>
+          <label style="font-size:13px; font-weight:600; color:var(--text); display:block; margin-bottom:8px;">Notify me by</label>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyEmailLabel">
+              <input type="checkbox" id="notifyEmail" value="email" checked onchange="updateNotifyStyle()"> Email
+            </label>
+            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyWhatsappLabel">
+              <input type="checkbox" id="notifyWhatsapp" value="whatsapp" checked onchange="updateNotifyStyle()"> WhatsApp
+            </label>
+          </div>
+          <div id="joinNotifyError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;">Please select at least one option</div>
+          <button type="submit" class="btn btn-primary btn-full" id="joinSubmitBtn">Send My Details</button>
+        </form>
+        <div id="joinSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">Thanks! We'll be in touch soon.</div>
+      </div>
+      <div class="mt-16"></div>
+    `;
+
     renderVisitorNextEvent();
     renderVisitorEvents();
   }
@@ -2516,7 +2382,7 @@
         </div>
         <div class="stat-card" style="cursor:pointer" onclick="switchTab('tee')">
           <div style="font-size:24px; margin-bottom:4px;">⛳</div>
-          <div class="stat-label">Tee Times</div>
+          <div class="stat-label">${SOCIETY_CONFIG.terms.bookings}</div>
         </div>
       </div>
     `;
@@ -3545,6 +3411,15 @@
   }
 
   async function init() {
+    // Apply society config to static elements
+    document.title = SOCIETY_CONFIG.name;
+    document.querySelector('.header-brand').innerHTML = SOCIETY_CONFIG.brandHtml;
+    document.querySelector('.header-brand').href = SOCIETY_CONFIG.websiteUrl;
+    const teeLabel = document.querySelector('.tab-label-tee');
+    if (teeLabel) teeLabel.textContent = SOCIETY_CONFIG.terms.bookings;
+    const teeHeading = document.querySelector('.tab-heading-tee');
+    if (teeHeading) teeHeading.textContent = 'Your ' + SOCIETY_CONFIG.terms.bookings;
+
     await initSupabase();
     renderVisitorView();
     updateNotifyStyle();

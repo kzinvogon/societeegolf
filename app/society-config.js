@@ -123,27 +123,24 @@ const PLATFORM_URL = 'https://societeegolf.app';
 const DEFAULT_SOCIETY_ID = '00000000-0000-0000-0000-000000000001';
 
 /**
- * Extract society slug from URL path.
- * Friendly URLs: /{slug}
+ * Extract society slug from subdomain.
+ * Pattern: {slug}.societeegolf.app
  * Examples:
- *   "/testgolf"       → "testgolf"
- *   "/testgolf/"      → "testgolf"
- *   "/"               → null (default society)
- *
- * Reserved paths (not treated as slugs):
- *   Static files (.js, .css, .html, .json, .png, etc.)
+ *   "testgolf.societeegolf.app"   → "testgolf"
+ *   "societeegolf.app"            → null (marketing site)
+ *   "www.societeegolf.app"        → null (marketing site)
+ *   "localhost"                   → null (dev fallback)
  */
-const RESERVED_EXTENSIONS = /\.\w+$/;
-
 function getSocietySlug() {
-  const path = window.location.pathname;
-  if (path === '/' || path === '') return null;
-  // Don't treat static file requests as slugs
-  if (RESERVED_EXTENSIONS.test(path)) return null;
-  // Extract first path segment
-  const match = path.match(/^\/([^/]+)/);
-  if (!match) return null;
-  return match[1];
+  const host = window.location.hostname;
+  // Localhost / dev — use default
+  if (host === 'localhost' || host === '127.0.0.1') return null;
+  // Must be under the platform domain
+  if (!host.endsWith('.' + PLATFORM_DOMAIN)) return null;
+  const sub = host.replace('.' + PLATFORM_DOMAIN, '');
+  // www and empty are not society slugs
+  if (!sub || sub === 'www' || sub === 'app') return null;
+  return sub;
 }
 
 /**

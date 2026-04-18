@@ -123,19 +123,17 @@ const PLATFORM_URL = 'https://societeegolf.app';
 const DEFAULT_SOCIETY_ID = '00000000-0000-0000-0000-000000000001';
 
 /**
- * Extract subdomain from hostname.
+ * Extract society slug from URL path.
+ * Pattern: /s/{slug}/...
  * Examples:
- *   "mygolf.societeegolf.app"  → "mygolf"
- *   "app.societeegolf.app"     → "app"
- *   "societeegolf.app"         → null
- *   "localhost"                → null
+ *   "/s/mygolf/"         → "mygolf"
+ *   "/s/mygolf/events"   → "mygolf"
+ *   "/"                  → null (default society)
+ *   "/events"            → null (default society)
  */
-function getSubdomain() {
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') return null;
-  if (!host.endsWith('.' + PLATFORM_DOMAIN)) return null;
-  const sub = host.replace('.' + PLATFORM_DOMAIN, '');
-  return sub || null;
+function getSocietySlug() {
+  const match = window.location.pathname.match(/^\/s\/([^/]+)/);
+  return match ? match[1] : null;
 }
 
 /**
@@ -155,27 +153,28 @@ function deepMerge(target, source) {
 
 /**
  * Load society config from Supabase via REST API.
- * - On subdomain (e.g. mygolf.societeegolf.app): queries by subdomain
- * - On app.societeegolf.app: uses the default society
- * - On localhost: uses static SOCIETY_CONFIG as-is
- * - Unknown subdomain: redirects to societeegolf.app
+ * Uses path-based routing: /s/{slug}/...
+ *
+ * URL examples:
+ *   app.societeegolf.app/              → default society
+ *   app.societeegolf.app/s/mygolf/     → society with subdomain "mygolf"
+ *   app.societeegolf.app/s/unknown/    → redirect to societeegolf.app
+ *   localhost:8080/                     → default society (static fallback)
  */
 async function loadSocietyConfig() {
-  const subdomain = getSubdomain();
+  const slug = getSocietySlug();
 
-  // Localhost / direct IP — use static defaults
-  if (subdomain === null) {
+  // No slug — use default society
+  if (!slug) {
     SOCIETY_CONFIG._loaded = true;
     SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+    SOCIETY_CONFIG._slug = null;
     return;
   }
 
-  // "app" subdomain is the default society
-  const lookupSubdomain = subdomain === 'app' ? 'default' : subdomain;
-
   try {
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/societies?subdomain=eq.' + encodeURIComponent(lookupSubdomain) + '&select=id,name,subdomain,config',
+      SUPABASE_URL + '/rest/v1/societies?subdomain=eq.' + encodeURIComponent(slug) + '&select=id,name,subdomain,config',
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -188,14 +187,15 @@ async function loadSocietyConfig() {
       console.warn('Failed to load society config:', res.status);
       SOCIETY_CONFIG._loaded = true;
       SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+      SOCIETY_CONFIG._slug = null;
       return;
     }
 
     const data = await res.json();
 
     if (!data || data.length === 0) {
-      // Unknown subdomain — redirect to main site
-      console.warn('Unknown subdomain:', subdomain);
+      // Unknown slug — redirect to main site
+      console.warn('Unknown society slug:', slug);
       window.location.href = PLATFORM_URL;
       return;
     }
@@ -203,6 +203,7 @@ async function loadSocietyConfig() {
     const society = data[0];
     SOCIETY_CONFIG._societyId = society.id;
     SOCIETY_CONFIG._loaded = true;
+    SOCIETY_CONFIG._slug = slug;
 
     // Deep merge the society's config JSONB over the defaults
     if (society.config && typeof society.config === 'object') {
@@ -215,11 +216,12 @@ async function loadSocietyConfig() {
       SOCIETY_CONFIG.brandHtml = society.config.name;
     }
 
-    console.log('Society loaded:', society.name, '(id:', society.id + ')');
+    console.log('Society loaded:', society.name, '(id:', society.id, ', slug:', slug + ')');
 
   } catch (err) {
     console.warn('Error loading society config:', err);
     SOCIETY_CONFIG._loaded = true;
     SOCIETY_CONFIG._societyId = DEFAULT_SOCIETY_ID;
+    SOCIETY_CONFIG._slug = null;
   }
 }

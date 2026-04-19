@@ -109,3 +109,73 @@ const SOCIETY_CONFIG = {
     rejectedBody: 'Your payment proof could not be verified. Please resubmit your proof of payment in your Profile.',
   },
 };
+
+// ===== Society hydration =====
+
+const ACTIVE_SOCIETY_KEY = 'sg_active_society_id';
+
+/**
+ * Deep merge source into target. Arrays are replaced, not merged.
+ * Functions in target are kept if source doesn't override them.
+ */
+function deepMerge(target, source) {
+  if (!source || typeof source !== 'object') return;
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      deepMerge(target[key], source[key]);
+    } else if (source[key] !== undefined && source[key] !== null) {
+      target[key] = source[key];
+    }
+  }
+}
+
+/**
+ * Hydrate SOCIETY_CONFIG from a society row's config JSONB.
+ * Stores the active society_id for data scoping.
+ */
+function hydrateSocietyConfig(society) {
+  SOCIETY_CONFIG._societyId = society.id;
+  SOCIETY_CONFIG._societyName = society.name;
+  if (society.config && typeof society.config === 'object') {
+    deepMerge(SOCIETY_CONFIG, society.config);
+  }
+  // Auto-generate brandHtml from name if not set in config
+  if (society.config?.name && !society.config?.brandHtml) {
+    SOCIETY_CONFIG.name = society.config.name;
+    SOCIETY_CONFIG.brandHtml = society.config.name;
+  }
+  // Persist selection
+  try { localStorage.setItem(ACTIVE_SOCIETY_KEY, society.id); } catch(e) {}
+}
+
+/**
+ * Get the persisted active society_id from localStorage.
+ */
+function getActiveSocietyId() {
+  try { return localStorage.getItem(ACTIVE_SOCIETY_KEY); } catch(e) { return null; }
+}
+
+/**
+ * Clear the persisted active society on logout.
+ */
+function clearActiveSociety() {
+  try { localStorage.removeItem(ACTIVE_SOCIETY_KEY); } catch(e) {}
+  SOCIETY_CONFIG._societyId = null;
+  SOCIETY_CONFIG._societyName = null;
+}
+
+/**
+ * Apply the current SOCIETY_CONFIG to DOM elements.
+ */
+function applySocietyConfigToDOM() {
+  document.title = SOCIETY_CONFIG.name;
+  const brand = document.querySelector('.header-brand');
+  if (brand) {
+    brand.innerHTML = SOCIETY_CONFIG.brandHtml;
+    brand.href = SOCIETY_CONFIG.websiteUrl;
+  }
+  const teeLabel = document.querySelector('.tab-label-tee');
+  if (teeLabel) teeLabel.textContent = SOCIETY_CONFIG.terms.bookings;
+  const teeHeading = document.querySelector('.tab-heading-tee');
+  if (teeHeading) teeHeading.textContent = 'Your ' + SOCIETY_CONFIG.terms.bookings;
+}

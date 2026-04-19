@@ -1450,55 +1450,124 @@
   }
 
   async function loginWithSession(session) {
-    if (supabase) {
-      let { data } = await supabase.from('members').select('*').eq('id', session.user.id).single();
-      if (!data) {
-        // No member record — check if there's an approved join request for this email
-        const email = session.user.email;
-        const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').single();
-        if (req) {
-          // Auto-create member from approved join request
-          const { data: newMember, error } = await supabase.from('members').insert({
-            id: session.user.id,
-            name: req.name,
-            email: req.email,
-            phone: req.phone,
-            status: req.initial_member_status || 'applied'
-          }).select().single();
-          if (!error && newMember) {
-            data = newMember;
-          }
+    if (!supabase) return;
+
+    // Find all memberships for this user across societies
+    const { data: memberships } = await supabase.from('members').select('*, societies(id, name, subdomain, config)').eq('id', session.user.id);
+
+    // If no memberships, check for approved join request and auto-create
+    if (!memberships || memberships.length === 0) {
+      const email = session.user.email;
+      const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').single();
+      if (req) {
+        const { data: newMember, error } = await supabase.from('members').insert({
+          id: session.user.id,
+          name: req.name,
+          email: req.email,
+          phone: req.phone,
+          status: req.initial_member_status || 'applied',
+          society_id: req.society_id
+        }).select('*, societies(id, name, subdomain, config)').single();
+        if (!error && newMember) {
+          await selectSocietyAndLogin(newMember, true);
         }
       }
-      if (data) {
-        const wasAuthenticated = isAuthenticated;
-        currentUser = data;
-        isAuthenticated = true;
-        // Restore last tab
-        try {
-          const lastTab = localStorage.getItem('jpgs_last_tab');
-          if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
-            if (lastTab !== 'admin' || currentUser.role === 'admin') {
-              currentTab = lastTab;
-            }
-          }
-        } catch(e) {}
-        setMode('member');
-        // Welcome toast on first login
-        if (!wasAuthenticated) {
-          try {
-            const welcomedKey = 'jpgs_welcomed_' + currentUser.id;
-            if (!localStorage.getItem(welcomedKey)) {
-              const firstName = (currentUser.name || '').split(' ')[0] || 'there';
-              showToast('Welcome, ' + firstName + ' 👋');
-              localStorage.setItem(welcomedKey, '1');
-            }
-          } catch(e) {}
-        }
-        // Update messages badge
-        updateMessagesBadge();
-      }
+      return;
     }
+
+    // Check if we have a persisted society selection
+    const savedSocietyId = getActiveSocietyId();
+    const savedMembership = savedSocietyId ? memberships.find(m => m.society_id === savedSocietyId) : null;
+
+    if (memberships.length === 1) {
+      // Single society — auto-select
+      await selectSocietyAndLogin(memberships[0], true);
+    } else if (savedMembership) {
+      // Multiple societies but we have a saved selection
+      await selectSocietyAndLogin(savedMembership, false);
+    } else {
+      // Multiple societies — show picker
+      showSocietyPicker(memberships);
+    }
+  }
+
+  async function selectSocietyAndLogin(membership, showWelcome) {
+    // Hydrate config from society
+    if (membership.societies) {
+      hydrateSocietyConfig(membership.societies);
+    }
+    applySocietyConfigToDOM();
+    invalidateCache();
+
+    const wasAuthenticated = isAuthenticated;
+    currentUser = membership;
+    // Remove the nested societies object from currentUser (not needed)
+    delete currentUser.societies;
+    isAuthenticated = true;
+
+    // Restore last tab
+    try {
+      const lastTab = localStorage.getItem('jpgs_last_tab');
+      if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
+        if (lastTab !== 'admin' || currentUser.role === 'admin') {
+          currentTab = lastTab;
+        }
+      }
+    } catch(e) {}
+
+    setMode('member');
+    renderVisitorView(); // re-render with hydrated config
+
+    // Welcome toast on first login
+    if (showWelcome && !wasAuthenticated) {
+      try {
+        const welcomedKey = 'sg_welcomed_' + currentUser.id;
+        if (!localStorage.getItem(welcomedKey)) {
+          const firstName = (currentUser.name || '').split(' ')[0] || 'there';
+          showToast('Welcome, ' + firstName + ' 👋');
+          localStorage.setItem(welcomedKey, '1');
+        }
+      } catch(e) {}
+    }
+
+    updateMessagesBadge();
+  }
+
+  function showSocietyPicker(memberships) {
+    const container = document.getElementById('authView');
+    container.classList.remove('hidden');
+    document.getElementById('visitorView').classList.add('hidden');
+    document.getElementById('memberView').classList.add('hidden');
+
+    const inner = container.querySelector('.auth-screen');
+    inner.innerHTML = `
+      <div class="login-icon">⛳</div>
+      <h2>Choose Your Society</h2>
+      <p class="login-subtitle">You're a member of multiple societies. Which one would you like to open?</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+        ${memberships.map(m => `
+          <button class="btn btn-primary btn-full" onclick="pickSociety('${m.society_id}')" style="text-align:left;padding:14px 16px;">
+            <strong>${m.societies?.name || 'Society'}</strong><br>
+            <span style="font-size:12px;opacity:0.8;">${m.status === 'full_member' ? 'Full Member' : m.status === 'probation' ? 'Probation' : m.status}</span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="mt-16">
+        <button class="btn-ghost" onclick="logout()">Log Out</button>
+      </div>
+    `;
+
+    // Store memberships for pickSociety to use
+    window._pendingMemberships = memberships;
+  }
+
+  async function pickSociety(societyId) {
+    const memberships = window._pendingMemberships || [];
+    const membership = memberships.find(m => m.society_id === societyId);
+    if (membership) {
+      await selectSocietyAndLogin(membership, true);
+    }
+    delete window._pendingMemberships;
   }
 
   async function updateMessagesBadge() {
@@ -1541,7 +1610,9 @@
     if (!supabase) return DEMO_EVENTS;
     const cached = _cacheGet('events');
     if (cached) return cached;
-    const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
+    let q = supabase.from('events').select('*').order('date', { ascending: true });
+    if (SOCIETY_CONFIG._societyId) q = q.eq('society_id', SOCIETY_CONFIG._societyId);
+    const { data } = await q;
     return _cacheSet('events', data || []);
   }
 
@@ -1569,7 +1640,9 @@
     if (!supabase) return DEMO_MESSAGES;
     const cached = _cacheGet('messages');
     if (cached) return cached;
-    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+    let q = supabase.from('messages').select('*').order('created_at', { ascending: false });
+    if (SOCIETY_CONFIG._societyId) q = q.eq('society_id', SOCIETY_CONFIG._societyId);
+    const { data } = await q;
     return _cacheSet('messages', data || []);
   }
 
@@ -1831,6 +1904,8 @@
     if (supabase) supabase.auth.signOut();
     currentUser = null;
     isAuthenticated = false;
+    clearActiveSociety();
+    invalidateCache();
     setMode('visitor');
   }
 
@@ -3411,14 +3486,8 @@
   }
 
   async function init() {
-    // Apply society config to static elements
-    document.title = SOCIETY_CONFIG.name;
-    document.querySelector('.header-brand').innerHTML = SOCIETY_CONFIG.brandHtml;
-    document.querySelector('.header-brand').href = SOCIETY_CONFIG.websiteUrl;
-    const teeLabel = document.querySelector('.tab-label-tee');
-    if (teeLabel) teeLabel.textContent = SOCIETY_CONFIG.terms.bookings;
-    const teeHeading = document.querySelector('.tab-heading-tee');
-    if (teeHeading) teeHeading.textContent = 'Your ' + SOCIETY_CONFIG.terms.bookings;
+    // Apply society config to DOM
+    applySocietyConfigToDOM();
 
     await initSupabase();
     renderVisitorView();

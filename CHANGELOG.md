@@ -1,5 +1,30 @@
 # SocieteeGolf — Changelog
 
+## Phase 4: Society Selection on Login (2026-04-19)
+
+### Society Selector
+- After magic link login, app queries all societies the user belongs to
+- Single society: auto-selects and proceeds to member view
+- Multiple societies: shows a picker screen with society name and membership status
+- Selected society persisted in localStorage (`sg_active_society_id`), restored on next visit
+- Cleared on logout
+
+### Config Hydration
+- `hydrateSocietyConfig(society)` deep-merges the society's `config` JSONB over defaults
+- `applySocietyConfigToDOM()` updates title, header brand, tab labels from config
+- `selectSocietyAndLogin()` handles the full flow: hydrate → set user → render
+- Cache invalidated on society switch to ensure fresh data
+
+### Society-Scoped Data
+- `getEvents()` and `getMessages()` filter by `SOCIETY_CONFIG._societyId`
+- Ensures members only see data for their active society
+
+### Auth
+- Magic link redirects to `https://app.societeegolf.app/` (single domain, no wildcards)
+- No subdomain routing needed — society resolved after login from DB
+
+---
+
 ## Phase 3: Tenant Routing — REVERTED (2026-04-19)
 
 Subdomain and path-based routing were implemented but reverted.

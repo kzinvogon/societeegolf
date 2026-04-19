@@ -1432,7 +1432,19 @@
     if (typeof DEMO_MODE !== 'undefined' && DEMO_MODE) return;
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { detectSessionInUrl: true, flowType: 'pkce' }
+      });
+
+      // Handle magic link callback (PKCE code exchange)
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('code')) {
+        const { error } = await supabase.auth.exchangeCodeForSession(params.get('code'));
+        if (error) console.warn('Code exchange error:', error.message);
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await loginWithSession(session);

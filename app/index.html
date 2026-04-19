@@ -1813,11 +1813,16 @@
     if (supabase) {
       // Check if this email is registered (member or approved join request)
       const lower = email.toLowerCase();
+      // Sign out any stale session before checking (ensures anon role)
+      await supabase.auth.signOut();
       const [memberRes, requestRes] = await Promise.all([
         supabase.from('members').select('id').ilike('email', lower),
         supabase.from('join_requests').select('id, status').ilike('email', lower).eq('status', 'approved')
       ]);
-      if ((!memberRes.data || memberRes.data.length === 0) && (!requestRes.data || requestRes.data.length === 0)) {
+      // If there's an error (e.g. RLS issue), skip the check and send the link anyway
+      if (memberRes.error || requestRes.error) {
+        console.warn('Email check error, proceeding:', memberRes.error?.message, requestRes.error?.message);
+      } else if ((!memberRes.data || memberRes.data.length === 0) && (!requestRes.data || requestRes.data.length === 0)) {
         btn.disabled = false;
         btnText.classList.remove('hidden');
         btnSpin.classList.add('hidden');

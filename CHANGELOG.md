@@ -23,6 +23,11 @@
 - Magic link redirects to `https://app.societeegolf.app/` (single domain, no wildcards)
 - No subdomain routing needed — society resolved after login from DB
 
+### RLS Fix
+- Fixed infinite recursion in members policies (self-referencing subqueries)
+- Rebuilt all members policies: anon select (for email check), auth select (society-scoped via SECURITY DEFINER function), admin all, update own, insert open
+- `get_society_id()` function recreated as SECURITY DEFINER to bypass RLS safely
+
 ---
 
 ## Phase 3: Tenant Routing — REVERTED (2026-04-19)

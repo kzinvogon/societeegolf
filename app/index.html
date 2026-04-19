@@ -1814,10 +1814,10 @@
       // Check if this email is registered (member or approved join request)
       const lower = email.toLowerCase();
       const [memberRes, requestRes] = await Promise.all([
-        supabase.from('members').select('id').ilike('email', lower).maybeSingle(),
-        supabase.from('join_requests').select('id, status').ilike('email', lower).eq('status', 'approved').maybeSingle()
+        supabase.from('members').select('id').ilike('email', lower),
+        supabase.from('join_requests').select('id, status').ilike('email', lower).eq('status', 'approved')
       ]);
-      if (!memberRes.data && !requestRes.data) {
+      if ((!memberRes.data || memberRes.data.length === 0) && (!requestRes.data || requestRes.data.length === 0)) {
         btn.disabled = false;
         btnText.classList.remove('hidden');
         btnSpin.classList.add('hidden');

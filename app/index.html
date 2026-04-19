@@ -9,8 +9,8 @@
   <title>SocieteeGolf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="/supabase-config.js"></script>
-  <script src="/society-config.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="society-config.js"></script>
   <style>
     /* ===== RESET & BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1541,10 +1541,7 @@
     if (!supabase) return DEMO_EVENTS;
     const cached = _cacheGet('events');
     if (cached) return cached;
-    const sid = SOCIETY_CONFIG._societyId;
-    let q = supabase.from('events').select('*').order('date', { ascending: true });
-    if (sid) q = q.eq('society_id', sid);
-    const { data } = await q;
+    const { data } = await supabase.from('events').select('*').order('date', { ascending: true });
     return _cacheSet('events', data || []);
   }
 
@@ -1572,10 +1569,7 @@
     if (!supabase) return DEMO_MESSAGES;
     const cached = _cacheGet('messages');
     if (cached) return cached;
-    const sid = SOCIETY_CONFIG._societyId;
-    let q = supabase.from('messages').select('*').order('created_at', { ascending: false });
-    if (sid) q = q.eq('society_id', sid);
-    const { data } = await q;
+    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
     return _cacheSet('messages', data || []);
   }
 
@@ -1763,7 +1757,7 @@
       }
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin + '/' }
+        options: { emailRedirectTo: 'https://app.societeegolf.app/' }
       });
       btn.disabled = false;
       btnText.classList.remove('hidden');
@@ -1799,7 +1793,7 @@
     if (!email || !supabase) return;
     await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + '/' }
+      options: { emailRedirectTo: 'https://app.societeegolf.app/' }
     });
     startResendCooldown();
   }
@@ -3417,9 +3411,6 @@
   }
 
   async function init() {
-    // Load society config from DB (subdomain routing)
-    await loadSocietyConfig();
-
     // Apply society config to static elements
     document.title = SOCIETY_CONFIG.name;
     document.querySelector('.header-brand').innerHTML = SOCIETY_CONFIG.brandHtml;

@@ -1,21 +1,12 @@
 # SocieteeGolf — Changelog
 
-## Phase 3: Subdomain Routing (2026-04-18)
+## Phase 3: Tenant Routing — REVERTED (2026-04-19)
 
-### Dynamic Society Config Loading
-- `society-config.js` now includes `loadSocietyConfig()` — extracts subdomain from hostname, queries Supabase `societies` table via REST API, deep-merges the society's `config` JSONB over static defaults
-- `getSubdomain()` parses hostname for `*.societeegolf.app` pattern
-- Unknown subdomains redirect to `societeegolf.app`
-- Localhost uses static defaults as fallback
-- `init()` calls `loadSocietyConfig()` before rendering
+Subdomain and path-based routing were implemented but reverted.
+Subdomain approach requires wildcard DNS (Netlify free tier doesn't support it).
+New approach TBD — considering Vercel migration or alternative routing.
 
-### Society-Scoped Data Access
-- `getEvents()` and `getMessages()` now filter by `society_id` for proper multi-tenant data isolation
-- Default society config JSONB seeded in database
-
-### Wildcard DNS
-- `*.societeegolf.app` CNAME → `sociteegolfapp.netlify.app`
-- Any subdomain resolves to the app, config loaded dynamically per society
+Phase 2 multitenancy DB (societies table, society_id, RLS) remains in place.
 
 ---
 

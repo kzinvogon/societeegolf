@@ -1433,19 +1433,19 @@
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { detectSessionInUrl: true, flowType: 'pkce' }
+        auth: { detectSessionInUrl: true, flowType: 'pkce', persistSession: true, autoRefreshToken: true }
       });
 
-      // Handle magic link callback (PKCE code exchange)
-      const params = new URLSearchParams(window.location.search);
-      if (params.has('code')) {
-        const { error } = await supabase.auth.exchangeCodeForSession(params.get('code'));
-        if (error) console.warn('Code exchange error:', error.message);
-        // Clean URL
+      // detectSessionInUrl handles the ?code= exchange automatically.
+      // getSession() awaits the client's internal initialize, so by this point
+      // the code has been exchanged (or has failed) and the session is persisted.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) console.warn('getSession error:', sessionError.message);
+
+      // If we arrived with ?code= (or an error), clean the URL now that init is done.
+      if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
         window.history.replaceState({}, '', window.location.pathname);
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await loginWithSession(session);
       }

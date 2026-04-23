@@ -994,7 +994,7 @@
       <div class="auth-screen">
         <div class="login-icon">⛳</div>
         <h2>Member Login</h2>
-        <p class="login-subtitle">Enter your email — we'll send you a magic link. No password needed.</p>
+        <p class="login-subtitle">Enter your email — we'll send you a 6-digit code. No password needed.</p>
 
         <!-- Login form -->
         <div class="auth-form" id="authFormView">
@@ -1012,7 +1012,7 @@
           </div>
           <p class="input-error hidden" id="authEmailError">Please enter a valid email address</p>
           <button class="btn btn-primary btn-full" id="authSubmit" onclick="sendMagicLink()" disabled>
-            <span class="btn-text">Send my login link</span>
+            <span class="btn-text">Send my login code</span>
             <span class="btn-spinner hidden">
               <svg class="spinner" viewBox="0 0 24 24" fill="none" width="20" height="20">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/>
@@ -1022,18 +1022,39 @@
           <div id="authMessage" class="hidden"></div>
         </div>
 
-        <!-- Sent state (shown after magic link sent) -->
+        <!-- Sent state (shown after login code sent) -->
         <div class="login-sent hidden" id="authSentView">
           <div class="sent-icon">📬</div>
           <h3>Check your inbox</h3>
-          <p>We sent a login link to <strong id="sentEmail"></strong></p>
+          <p>We sent a 6-digit code to <strong id="sentEmail"></strong></p>
           <p class="sent-hint">Check your spam folder if it doesn't arrive within a minute.</p>
-          <div class="sent-actions">
-            <a href="https://mail.google.com" target="_blank" rel="noopener" class="btn-open-email gmail">Open Gmail</a>
-            <a href="https://outlook.live.com" target="_blank" rel="noopener" class="btn-open-email outlook">Open Outlook</a>
+
+          <div class="input-group" style="margin-top: 16px;">
+            <input
+              type="text"
+              class="input"
+              id="authOtpCode"
+              placeholder="123456"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="6"
+              style="font-size: 20px; letter-spacing: 8px; text-align: center;"
+              oninput="validateOtpCode(this)"
+            >
           </div>
-          <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled>
-            Resend link <span id="resendTimer">(30s)</span>
+          <button class="btn btn-primary btn-full" id="authOtpSubmit" onclick="verifyOtpCode()" disabled>
+            <span class="btn-text">Verify code</span>
+            <span class="btn-spinner hidden">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/>
+              </svg>
+            </span>
+          </button>
+          <div id="authOtpMessage" class="hidden"></div>
+
+          <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled style="margin-top: 16px;">
+            Resend code <span id="resendTimer">(30s)</span>
           </button>
         </div>
 
@@ -1820,6 +1841,10 @@
     document.getElementById('authSubmit').disabled = true;
     document.getElementById('authMessage').classList.add('hidden');
     document.getElementById('authEmailError').classList.add('hidden');
+    const otpInput = document.getElementById('authOtpCode');
+    if (otpInput) otpInput.value = '';
+    document.getElementById('authOtpSubmit').disabled = true;
+    document.getElementById('authOtpMessage').classList.add('hidden');
     const btnText = document.querySelector('#authSubmit .btn-text');
     const btnSpin = document.querySelector('#authSubmit .btn-spinner');
     if (btnText) btnText.classList.remove('hidden');
@@ -1859,6 +1884,8 @@
         document.getElementById('authFormView').classList.add('hidden');
         document.getElementById('authSentView').classList.remove('hidden');
         document.getElementById('sentEmail').textContent = email;
+        window._otpEmail = email;
+        setTimeout(() => document.getElementById('authOtpCode')?.focus(), 100);
         startResendCooldown();
       }
     } else {
@@ -1882,6 +1909,45 @@
       options: { emailRedirectTo: 'https://app.societeegolf.app/' }
     });
     startResendCooldown();
+  }
+
+  function validateOtpCode(input) {
+    const code = input.value.replace(/\D/g, '').slice(0, 6);
+    input.value = code;
+    document.getElementById('authOtpSubmit').disabled = code.length !== 6;
+  }
+
+  async function verifyOtpCode() {
+    const email = window._otpEmail || document.getElementById('sentEmail').textContent;
+    const code = document.getElementById('authOtpCode').value.trim();
+    if (!email || !code || !supabase) return;
+
+    const btn = document.getElementById('authOtpSubmit');
+    const btnText = btn.querySelector('.btn-text');
+    const btnSpin = btn.querySelector('.btn-spinner');
+    const msg = document.getElementById('authOtpMessage');
+
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnSpin.classList.remove('hidden');
+    msg.classList.add('hidden');
+
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+
+    btn.disabled = false;
+    btnText.classList.remove('hidden');
+    btnSpin.classList.add('hidden');
+
+    if (error) {
+      msg.classList.remove('hidden');
+      msg.className = 'auth-message';
+      msg.style.background = '#FEE2E2';
+      msg.style.color = 'var(--red)';
+      msg.textContent = error.message.includes('expired')
+        ? 'That code has expired. Tap Resend code to get a new one.'
+        : 'Invalid code. Double-check the email and try again.';
+    }
+    // On success, onAuthStateChange fires SIGNED_IN and loginWithSession takes over.
   }
 
   function startResendCooldown() {

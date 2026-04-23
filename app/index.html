@@ -994,7 +994,7 @@
       <div class="auth-screen">
         <div class="login-icon">⛳</div>
         <h2>Member Login</h2>
-        <p class="login-subtitle">Enter your email — we'll send you a 6-digit code. No password needed.</p>
+        <p class="login-subtitle">Enter your email — we'll send you a login code. No password needed.</p>
 
         <!-- Login form -->
         <div class="auth-form" id="authFormView">
@@ -1026,7 +1026,7 @@
         <div class="login-sent hidden" id="authSentView">
           <div class="sent-icon">📬</div>
           <h3>Check your inbox</h3>
-          <p>We sent a 6-digit code to <strong id="sentEmail"></strong></p>
+          <p>We sent a login code to <strong id="sentEmail"></strong></p>
           <p class="sent-hint">Check your spam folder if it doesn't arrive within a minute.</p>
 
           <div class="input-group" style="margin-top: 16px;">
@@ -1034,12 +1034,12 @@
               type="text"
               class="input"
               id="authOtpCode"
-              placeholder="123456"
+              placeholder="Enter code"
               autocomplete="one-time-code"
               inputmode="numeric"
               pattern="[0-9]*"
-              maxlength="6"
-              style="font-size: 20px; letter-spacing: 8px; text-align: center;"
+              maxlength="10"
+              style="font-size: 20px; letter-spacing: 6px; text-align: center;"
               oninput="validateOtpCode(this)"
             >
           </div>
@@ -1912,9 +1912,9 @@
   }
 
   function validateOtpCode(input) {
-    const code = input.value.replace(/\D/g, '').slice(0, 6);
+    const code = input.value.replace(/\D/g, '').slice(0, 10);
     input.value = code;
-    document.getElementById('authOtpSubmit').disabled = code.length !== 6;
+    document.getElementById('authOtpSubmit').disabled = code.length < 6;
   }
 
   async function verifyOtpCode() {

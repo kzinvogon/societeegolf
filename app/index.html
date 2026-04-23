@@ -1433,7 +1433,7 @@
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { detectSessionInUrl: true, flowType: 'pkce', persistSession: true, autoRefreshToken: true }
+        auth: { detectSessionInUrl: true, flowType: 'implicit', persistSession: true, autoRefreshToken: true }
       });
 
       // detectSessionInUrl handles the ?code= exchange automatically.
@@ -1442,8 +1442,9 @@
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) console.warn('getSession error:', sessionError.message);
 
-      // If we arrived with ?code= (or an error), clean the URL now that init is done.
-      if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
+      // Implicit flow puts tokens in the URL hash (#access_token=…); detectSessionInUrl
+      // consumes them during init. Clean either hash or ?error= from the address bar.
+      if (window.location.hash.includes('access_token') || window.location.search.includes('error=')) {
         window.history.replaceState({}, '', window.location.pathname);
       }
       if (session) {

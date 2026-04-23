@@ -1442,9 +1442,26 @@
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) console.warn('getSession error:', sessionError.message);
 
+      // Surface Supabase auth errors passed back in the URL hash
+      // (e.g. #error=access_denied&error_code=otp_expired after an expired or
+      // already-consumed magic link — commonly caused by email scanners that
+      // pre-fetch the link and burn the single-use token).
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const authError = hashParams.get('error_description') || hashParams.get('error');
+      if (authError) {
+        const msg = document.getElementById('authMessage');
+        if (msg) {
+          msg.classList.remove('hidden');
+          msg.className = 'auth-message';
+          msg.style.background = '#FEE2E2';
+          msg.style.color = 'var(--red)';
+          msg.textContent = decodeURIComponent(authError).replace(/\+/g, ' ') + ' — please request a new magic link and click it immediately.';
+        }
+      }
+
       // Implicit flow puts tokens in the URL hash (#access_token=…); detectSessionInUrl
-      // consumes them during init. Clean either hash or ?error= from the address bar.
-      if (window.location.hash.includes('access_token') || window.location.search.includes('error=')) {
+      // consumes them during init. Clean tokens or errors from the address bar.
+      if (window.location.hash.includes('access_token') || window.location.hash.includes('error=') || window.location.search.includes('error=')) {
         window.history.replaceState({}, '', window.location.pathname);
       }
       if (session) {

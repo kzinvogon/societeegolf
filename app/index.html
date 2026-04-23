@@ -1932,22 +1932,49 @@
     btnSpin.classList.remove('hidden');
     msg.classList.add('hidden');
 
-    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
-
-    btn.disabled = false;
-    btnText.classList.remove('hidden');
-    btnSpin.classList.add('hidden');
-
-    if (error) {
+    const showError = (text) => {
       msg.classList.remove('hidden');
       msg.className = 'auth-message';
       msg.style.background = '#FEE2E2';
       msg.style.color = 'var(--red)';
-      msg.textContent = error.message.includes('expired')
-        ? 'That code has expired. Tap Resend code to get a new one.'
-        : 'Invalid code. Double-check the email and try again.';
+      msg.textContent = text;
+    };
+
+    try {
+      console.log('[auth] verifyOtp start', { email, codeLen: code.length });
+      const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+      console.log('[auth] verifyOtp result', { hasSession: !!data?.session, hasUser: !!data?.user, error: error?.message });
+
+      btn.disabled = false;
+      btnText.classList.remove('hidden');
+      btnSpin.classList.add('hidden');
+
+      if (error) {
+        showError(error.message.includes('expired') || error.message.includes('invalid')
+          ? 'Invalid or expired code. Tap Resend code to get a new one.'
+          : 'Error: ' + error.message);
+        return;
+      }
+
+      // verifyOtp succeeded. onAuthStateChange SIGNED_IN should fire and call loginWithSession,
+      // but fall back to driving the login manually if the session is already on the response.
+      if (data?.session) {
+        await loginWithSession(data.session);
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await loginWithSession(session);
+        } else {
+          showError('Code accepted but no session returned. Check browser console and try again.');
+        }
+      }
+    } catch (e) {
+      console.error('[auth] verifyOtp exception', e);
+      btn.disabled = false;
+      btnText.classList.remove('hidden');
+      btnSpin.classList.add('hidden');
+      showError('Network or server error: ' + (e.message || e));
     }
-    // On success, onAuthStateChange fires SIGNED_IN and loginWithSession takes over.
   }
 
   function startResendCooldown() {

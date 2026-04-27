@@ -1908,6 +1908,13 @@
       email,
       options: { emailRedirectTo: 'https://app.societeegolf.app/' }
     });
+    // Clear the input so an old code from a previous email can't be re-submitted
+    const otpInput = document.getElementById('authOtpCode');
+    if (otpInput) {
+      otpInput.value = '';
+      document.getElementById('authOtpSubmit').disabled = true;
+    }
+    document.getElementById('authOtpMessage')?.classList.add('hidden');
     startResendCooldown();
   }
 
@@ -1917,10 +1924,14 @@
     document.getElementById('authOtpSubmit').disabled = code.length < 6;
   }
 
+  let _otpVerifyInFlight = false;
   async function verifyOtpCode() {
+    if (_otpVerifyInFlight) return;
     const email = window._otpEmail || document.getElementById('sentEmail').textContent;
     const code = document.getElementById('authOtpCode').value.trim();
     if (!email || !code || !supabase) return;
+    if (code.length < 6) return;
+    _otpVerifyInFlight = true;
 
     const btn = document.getElementById('authOtpSubmit');
     const btnText = btn.querySelector('.btn-text');
@@ -1974,6 +1985,8 @@
       btnText.classList.remove('hidden');
       btnSpin.classList.add('hidden');
       showError('Network or server error: ' + (e.message || e));
+    } finally {
+      _otpVerifyInFlight = false;
     }
   }
 

@@ -1473,6 +1473,10 @@
           // onAuthStateChange that fires after init (e.g. token refresh) is not a fresh login.
           await loginWithSession(session, false);
         } else if (event === 'SIGNED_OUT') {
+          // logout() is idempotent and short-circuits when local state is
+          // already cleared, so the SIGNED_OUT echo from our own signOut()
+          // call doesn't loop. Still call it to handle external sign-outs
+          // (token expiry, signOut from another tab).
           logout();
         }
       });
@@ -1544,11 +1548,12 @@
           return;
         }
       }
-      // No society for this email. Sign out so we don't leave a stranded
-      // session, then bounce to the visitor chooser with a friendly message.
-      try { await supabase.auth.signOut(); } catch (e) {}
+      // No society for this email. Tear down local state FIRST so the
+      // SIGNED_OUT event from signOut() below doesn't recurse via the
+      // onAuthStateChange handler. signOut is fire-and-forget.
       isAuthenticated = false;
       currentUser = null;
+      if (supabase) supabase.auth.signOut().catch(() => {});
       setMode('visitor');
       const container = document.getElementById('visitorView');
       if (container) {
@@ -2000,14 +2005,22 @@
   }
 
   function logout() {
-    if (supabase) supabase.auth.signOut();
-    currentUser = null;
+    // Clear local auth state FIRST (synchronously) so the SIGNED_OUT
+    // event that supabase.auth.signOut() emits a moment later is a no-op
+    // in onAuthStateChange — otherwise the handler re-enters logout()
+    // and Safari hangs on an unbounded signOut loop.
+    if (!isAuthenticated && !currentUser) return;
     isAuthenticated = false;
+    currentUser = null;
     currentTab = 'home';
     try { localStorage.removeItem('jpgs_last_tab'); } catch(e) {}
     clearActiveSociety();
     invalidateCache();
     setMode('visitor');
+    if (supabase) {
+      // Fire-and-forget; we've already torn down local state.
+      supabase.auth.signOut().catch(() => {});
+    }
   }
 
   // ===== JOIN FORM =====

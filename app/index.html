@@ -1523,10 +1523,13 @@
     // Find all memberships for this user across societies
     const { data: memberships } = await supabase.from('members').select('*, societies(id, name, subdomain, config)').eq('id', session.user.id);
 
-    // If no memberships, check for approved join request and auto-create
+    // If no memberships, check for an approved join request and auto-create.
+    // Otherwise: this email isn't tied to any society — sign them out and
+    // surface the chooser so they can join an existing society or register
+    // a new one.
     if (!memberships || memberships.length === 0) {
       const email = session.user.email;
-      const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').single();
+      const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').maybeSingle();
       if (req) {
         const { data: newMember, error } = await supabase.from('members').insert({
           id: session.user.id,
@@ -1538,7 +1541,35 @@
         }).select('*, societies(id, name, subdomain, config)').single();
         if (!error && newMember) {
           await selectSocietyAndLogin(newMember, true, isFreshLogin);
+          return;
         }
+      }
+      // No society for this email. Sign out so we don't leave a stranded
+      // session, then bounce to the visitor chooser with a friendly message.
+      try { await supabase.auth.signOut(); } catch (e) {}
+      isAuthenticated = false;
+      currentUser = null;
+      setMode('visitor');
+      const container = document.getElementById('visitorView');
+      if (container) {
+        container.innerHTML = `
+          <div class="content-inner">
+            <div class="auth-message" style="background:#FEF3C7;color:#92400E;margin-top:16px;">
+              We don't have an account for <strong>${email}</strong> yet. Pick how you'd like to get started:
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="showJoinSocietyView()">
+              <h3 class="card-title">⛳ Join my society</h3>
+              <p class="card-body mt-8">Find your society and request to join.</p>
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="showRegisterSocietyView()">
+              <h3 class="card-title">🏁 Register a new society</h3>
+              <p class="card-body mt-8">Set up your society and become its admin.</p>
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="renderVisitorView()">
+              <h3 class="card-title">← Back</h3>
+            </div>
+          </div>
+        `;
       }
       return;
     }
@@ -2195,126 +2226,307 @@
   }
 
   // ===== RENDER: VISITOR VIEW =====
+  // ===== VISITOR VIEW — three-action chooser =====
+  // Replaces the long per-society marketing page. The visitor lands on a
+  // small intent picker: Join an existing society, register a new one,
+  // or take a guided demo. Per-society marketing copy now lives behind
+  // the join/demo flows once a society is chosen, not in this entry view.
   function renderVisitorView() {
-    const C = SOCIETY_CONFIG;
     const container = document.getElementById('visitorView');
     container.innerHTML = `
-      <div class="hero-card">
-        <h1>${C.tagline.replace(/\.\s/, '.<br>')}</h1>
-        <p>${C.description}</p>
-        <button class="btn btn-primary" onclick="setMode('member')">Member Login</button>
+      <div class="content-inner">
+        <div class="hero-card" style="margin-top: 16px;">
+          <h1>Welcome to SocieteeGolf</h1>
+          <p>The platform for golf societies. Find yours, start one, or take a look around.</p>
+        </div>
+
+        <div class="card" style="cursor:pointer;" onclick="showJoinSocietyView()">
+          <h3 class="card-title">⛳ Join my society</h3>
+          <p class="card-body mt-8">Find your society and request to join.</p>
+        </div>
+
+        <div class="card" style="cursor:pointer;" onclick="showRegisterSocietyView()">
+          <h3 class="card-title">🏁 Register a new society</h3>
+          <p class="card-body mt-8">Set up your society and become its admin.</p>
+        </div>
+
+        <div class="card" style="cursor:pointer;" onclick="enterDemoSociety()">
+          <h3 class="card-title">👀 Try the demo</h3>
+          <p class="card-body mt-8">Browse a sample society — no signup needed.</p>
+        </div>
+
+        <div class="card" style="text-align:center; margin-top:24px;">
+          <p class="card-body" style="margin-bottom:12px;">Already a member?</p>
+          <button class="btn btn-primary" onclick="setMode('member')">Log in</button>
+        </div>
       </div>
+    `;
+  }
 
-      <div class="card">
-        <h3 class="card-title">${C.aboutCard.title}</h3>
-        <p class="card-body mt-8">${C.aboutCard.body}</p>
-      </div>
+  // ===== JOIN MY SOCIETY =====
+  // Search the public society directory, pick one, submit a join request.
+  let _societyDirectoryCache = null;
 
-      ${C.heroStats.map((row, ri) => '<div class="stats-grid">' + row.map((s, ci) =>
-        '<div class="stat-card"' + (ri === 0 && ci === 0 ? ' style="cursor:pointer" onclick="showCoursesView()"' : '') + '>' +
-        '<div class="stat-value"' + (s.valueStyle ? ' style="' + s.valueStyle + '"' : '') + '>' + s.value + '</div>' +
-        '<div class="stat-label">' + s.label + '</div></div>'
-      ).join('') + '</div>').join('')}
-
-      <h2 class="section-title">Why Join Us?</h2>
-      <div class="card">
-        ${C.features.map(f =>
-          '<div class="list-item"><div class="list-icon" style="background:' + f.bg + ';">' + f.icon + '</div>' +
-          '<div class="list-text"><h4>' + f.title + '</h4><p>' + f.description + '</p></div></div>'
-        ).join('')}
-      </div>
-
-      <div id="visitorNextEvent"></div>
-
-      <h2 class="section-title">${C.terms.events}</h2>
-      <div class="toggle-tabs" id="visitorEventTabs">
-        <button class="toggle-tab active" onclick="showVisitorEvents('upcoming')">Upcoming</button>
-        <button class="toggle-tab" onclick="showVisitorEvents('past')">Past</button>
-      </div>
-      <div id="visitorEventsList"></div>
-      <div class="mt-16"></div>
-
-      <h2 class="section-title">What Members Say</h2>
-      ${C.testimonials.map(t =>
-        '<div class="card msg-card priority-normal" style="cursor:default;"><p class="card-body" style="font-style:italic; color:var(--text);">"' + t + '"</p><p class="msg-time mt-8">— Society Member</p></div>'
-      ).join('')}
-      <div class="mt-16"></div>
-
-      <h2 class="section-title">Trophy Calendar</h2>
-      <div class="card">
-        ${C.competitions.map(c =>
-          '<div class="list-item"><div class="list-icon" style="background:var(--gold-light); font-size:20px;">' + c.icon + '</div>' +
-          '<div class="list-text"><h4>' + c.title + '</h4><p>' + c.description + '</p></div></div>'
-        ).join('')}
-      </div>
-      <div class="mt-16"></div>
-
-      <h2 class="section-title">What It Costs</h2>
-      <div class="card" style="text-align:center;">
-        <div style="font-size:36px; font-weight:700; color:var(--navy);">${C.pricing.quarterly}</div>
-        <div class="text-sm text-secondary">${C.pricing.quarterlyLabel}</div>
-        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
-        <div style="font-size:20px; font-weight:700; color:var(--navy);">${C.pricing.comp}</div>
-        <div class="text-sm text-secondary">${C.pricing.compLabel}</div>
-        <div style="margin:12px 0; border-top:1px solid var(--border);"></div>
-        <div class="text-sm text-secondary">${C.pricing.greenFee}</div>
-        <div style="margin-top:12px;"><span class="badge badge-green">${C.pricing.tagline}</span></div>
-      </div>
-      <div class="mt-16"></div>
-
-      <h2 class="section-title">How to Join</h2>
-      <div class="card"><div class="steps-list">
-        ${C.joinSteps.map(s =>
-          '<div class="step-item"><div class="step-num">' + s.num + '</div><div class="step-text"><h4>' + s.title + '</h4><p>' + s.description + '</p></div></div>'
-        ).join('')}
-      </div></div>
-      <div class="mt-16"></div>
-
-      <div class="card">
-        <h3 class="card-title">Get in Touch</h3>
-        <div class="card-body mt-8">
-          <div class="list-item" style="border-bottom:none; padding-top:4px;">
-            <div class="list-icon" style="background:var(--gold-light);">📧</div>
-            <div class="list-text"><h4>${C.contactEmail}</h4><p>${C.contactReply}</p></div>
+  async function showJoinSocietyView() {
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="content-inner">
+        <button class="btn-ghost" onclick="renderVisitorView()" style="margin-bottom:12px;">← Back</button>
+        <h2 class="section-title" style="margin-top:0;">Find your society</h2>
+        <div class="card">
+          <input type="search" class="input" id="societySearch" placeholder="Search by name or code…" oninput="filterSocietyDirectory(this.value)" autocomplete="off">
+          <div id="societyDirectoryList" style="margin-top:12px;">
+            <div class="text-sm text-secondary" style="text-align:center;padding:16px;">Loading societies…</div>
           </div>
         </div>
       </div>
-      <div class="mt-16"></div>
-
-      <h2 class="section-title">Join Us</h2>
-      <div class="card">
-        <p class="card-body mb-16">Interested in joining? Fill in your details and we'll be in touch.</p>
-        <form id="joinForm" onsubmit="submitJoinForm(event)" novalidate>
-          <input type="text" class="input" id="joinName" placeholder="Your full name" required>
-          <input type="email" class="input" id="joinEmail" placeholder="Email address" required>
-          <div style="display:flex; gap:8px;">
-            <select class="input" id="joinCountryCode" style="width:110px; flex-shrink:0;">
-              <option value="+34">+34</option><option value="+44">+44</option><option value="+353">+353</option>
-              <option value="+31">+31</option><option value="+49">+49</option><option value="+33">+33</option>
-              <option value="+1">+1</option>
-            </select>
-            <input type="tel" class="input" id="joinPhone" placeholder="WhatsApp number" style="flex:1;" required>
-          </div>
-          <div id="joinPhoneError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;"></div>
-          <label style="font-size:13px; font-weight:600; color:var(--text); display:block; margin-bottom:8px;">Notify me by</label>
-          <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyEmailLabel">
-              <input type="checkbox" id="notifyEmail" value="email" checked onchange="updateNotifyStyle()"> Email
-            </label>
-            <label style="flex:1; display:flex; align-items:center; gap:6px; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; cursor:pointer;" id="notifyWhatsappLabel">
-              <input type="checkbox" id="notifyWhatsapp" value="whatsapp" checked onchange="updateNotifyStyle()"> WhatsApp
-            </label>
-          </div>
-          <div id="joinNotifyError" class="hidden" style="color:var(--red); font-size:12px; margin:-8px 0 12px 0;">Please select at least one option</div>
-          <button type="submit" class="btn btn-primary btn-full" id="joinSubmitBtn">Send My Details</button>
-        </form>
-        <div id="joinSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">Thanks! We'll be in touch soon.</div>
-      </div>
-      <div class="mt-16"></div>
     `;
 
-    renderVisitorNextEvent();
+    if (!supabase) {
+      document.getElementById('societyDirectoryList').innerHTML = '<p class="text-sm text-secondary">Demo mode — directory unavailable.</p>';
+      return;
+    }
+    try {
+      const { data, error } = await supabase.rpc('society_directory');
+      if (error) throw error;
+      _societyDirectoryCache = data || [];
+      renderSocietyDirectoryList(_societyDirectoryCache);
+    } catch (e) {
+      console.warn('[directory] load failed', e);
+      document.getElementById('societyDirectoryList').innerHTML = '<p class="text-sm" style="color:var(--red);">Couldn\'t load societies — try again.</p>';
+    }
+  }
+
+  function renderSocietyDirectoryList(list) {
+    const el = document.getElementById('societyDirectoryList');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = '<p class="text-sm text-secondary" style="text-align:center;padding:16px;">No societies match.</p>';
+      return;
+    }
+    el.innerHTML = list.map(s => `
+      <div class="list-item" style="cursor:pointer;" onclick="showJoinSocietyForm('${s.subdomain.replace(/'/g,"\\'")}', '${s.name.replace(/'/g,"\\'")}')">
+        <div class="list-icon" style="background:var(--gold-light);">⛳</div>
+        <div class="list-text"><h4>${s.name}</h4><p>${s.subdomain}</p></div>
+      </div>
+    `).join('');
+  }
+
+  function filterSocietyDirectory(q) {
+    if (!_societyDirectoryCache) return;
+    const needle = (q || '').trim().toLowerCase();
+    const filtered = !needle ? _societyDirectoryCache : _societyDirectoryCache.filter(s =>
+      s.name.toLowerCase().includes(needle) || s.subdomain.toLowerCase().includes(needle)
+    );
+    renderSocietyDirectoryList(filtered);
+  }
+
+  function showJoinSocietyForm(slug, name) {
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="content-inner">
+        <button class="btn-ghost" onclick="showJoinSocietyView()" style="margin-bottom:12px;">← Back</button>
+        <h2 class="section-title" style="margin-top:0;">Join ${name}</h2>
+        <div class="card">
+          <p class="card-body mb-16">Tell us a little about yourself and the captain will be in touch.</p>
+          <form id="joinSocietyForm" onsubmit="submitJoinSocietyForm(event, '${slug.replace(/'/g,"\\'")}')" novalidate>
+            <input type="text" class="input" id="jsName" placeholder="Your full name" required>
+            <input type="email" class="input" id="jsEmail" placeholder="Email address" required>
+            <input type="tel" class="input" id="jsPhone" placeholder="Phone (optional)">
+            <button type="submit" class="btn btn-primary btn-full" id="jsSubmitBtn">Request to join</button>
+          </form>
+          <div id="jsSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">
+            Thanks — your request is on its way. You'll get an email once an admin approves you.
+          </div>
+          <div id="jsError" class="hidden auth-message" style="margin-top:12px; background:#FEE2E2; color:var(--red);"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function submitJoinSocietyForm(e, slug) {
+    e.preventDefault();
+    const name = document.getElementById('jsName').value.trim();
+    const email = document.getElementById('jsEmail').value.trim().toLowerCase();
+    const phone = document.getElementById('jsPhone').value.trim();
+    const btn = document.getElementById('jsSubmitBtn');
+    const errEl = document.getElementById('jsError');
+    if (!name || !email) return;
+
+    btn.disabled = true; btn.textContent = 'Sending…'; errEl.classList.add('hidden');
+
+    try {
+      // Resolve the society id from the slug (anon-callable RPC).
+      const { data: societyRows, error: sErr } = await supabase.rpc('society_for_slug', { slug });
+      if (sErr) throw sErr;
+      const society = Array.isArray(societyRows) ? societyRows[0] : societyRows;
+      if (!society) throw new Error('Society not found');
+
+      const { error } = await supabase.from('join_requests').insert({
+        name, email, phone: phone || null,
+        society_id: society.id,
+        status: 'pending'
+      });
+      if (error) throw error;
+
+      document.getElementById('joinSocietyForm').classList.add('hidden');
+      document.getElementById('jsSuccess').classList.remove('hidden');
+    } catch (err) {
+      console.warn('[join] submit failed', err);
+      errEl.textContent = 'Could not submit your request — please try again.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Request to join';
+    }
+  }
+
+  // ===== REGISTER A NEW SOCIETY =====
+  function showRegisterSocietyView() {
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="content-inner">
+        <button class="btn-ghost" onclick="renderVisitorView()" style="margin-bottom:12px;">← Back</button>
+        <h2 class="section-title" style="margin-top:0;">Register a new society</h2>
+        <div class="card">
+          <p class="card-body mb-16">Set your society up in a minute. You'll be the first admin and can invite members from inside the app.</p>
+          <form id="registerSocietyForm" onsubmit="submitRegisterSocietyForm(event)" novalidate>
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Society name</label>
+            <input type="text" class="input" id="rsName" placeholder="e.g. Coastal Golf Society" required>
+
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Society code</label>
+            <input type="text" class="input" id="rsCode" placeholder="e.g. coastal" pattern="[a-z0-9-]{2,32}" required>
+            <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">Lowercase letters, numbers, hyphens. 2–32 characters.</p>
+
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Your name</label>
+            <input type="text" class="input" id="rsAdminName" placeholder="Your full name" required>
+
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Your email</label>
+            <input type="email" class="input" id="rsAdminEmail" placeholder="you@example.com" required>
+
+            <button type="submit" class="btn btn-primary btn-full" id="rsSubmitBtn">Create society & send login link</button>
+          </form>
+          <div id="rsSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;"></div>
+          <div id="rsError" class="hidden auth-message" style="margin-top:12px; background:#FEE2E2; color:var(--red);"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function submitRegisterSocietyForm(e) {
+    e.preventDefault();
+    const name = document.getElementById('rsName').value.trim();
+    const code = document.getElementById('rsCode').value.trim().toLowerCase();
+    const adminName = document.getElementById('rsAdminName').value.trim();
+    const adminEmail = document.getElementById('rsAdminEmail').value.trim().toLowerCase();
+    const btn = document.getElementById('rsSubmitBtn');
+    const errEl = document.getElementById('rsError');
+    const okEl = document.getElementById('rsSuccess');
+    okEl.classList.add('hidden'); errEl.classList.add('hidden');
+    btn.disabled = true; btn.textContent = 'Creating…';
+
+    if (!supabase) {
+      errEl.textContent = 'Demo mode — registration disabled.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Create society & send login link';
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('register_society', {
+        p_society_name: name,
+        p_society_code: code,
+        p_admin_name: adminName,
+        p_admin_email: adminEmail,
+      });
+      if (error) throw error;
+      if (!data || !data.success) {
+        const map = {
+          code_taken: 'That society code is already taken — try another.',
+          invalid_code: 'Code must be 2–32 lowercase letters, numbers, or hyphens.',
+          reserved_code: 'That code is reserved — pick another.',
+          invalid_society_name: 'Please enter your society\'s name.',
+          invalid_email: 'That email doesn\'t look right.',
+        };
+        throw new Error(map[data?.error] || 'Could not create society.');
+      }
+
+      // Society + admin member row exist. Send the magic link so the
+      // admin verifies their email and the trigger re-keys the member
+      // row to their auth.users.id on first login.
+      const { error: linkErr } = await supabase.auth.signInWithOtp({
+        email: adminEmail,
+        options: { emailRedirectTo: window.location.origin + '/' }
+      });
+      if (linkErr) throw linkErr;
+
+      okEl.innerHTML = `
+        <strong>${name}</strong> is set up. We've sent a login link to <strong>${adminEmail}</strong> —
+        click it to sign in as the admin and start adding members.
+      `;
+      okEl.classList.remove('hidden');
+      document.getElementById('registerSocietyForm').classList.add('hidden');
+    } catch (err) {
+      console.warn('[register] failed', err);
+      errEl.textContent = err.message || 'Could not create society — please try again.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Create society & send login link';
+    }
+  }
+
+  // ===== TRY THE DEMO =====
+  // Hydrates SOCIETY_CONFIG from the seeded 'demo' society and shows
+  // the events list of that society without requiring auth.
+  async function enterDemoSociety() {
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="content-inner">
+        <div class="text-sm text-secondary" style="text-align:center;padding:24px;">Loading demo…</div>
+      </div>
+    `;
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.rpc('society_for_slug', { slug: 'demo' });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('Demo society not found');
+      hydrateSocietyConfig(row);
+      applySocietyConfigToDOM();
+      renderDemoSocietyView();
+    } catch (e) {
+      console.warn('[demo] load failed', e);
+      container.innerHTML = `
+        <div class="content-inner">
+          <p style="color:var(--red);">Demo unavailable — please try again.</p>
+          <button class="btn btn-primary" onclick="renderVisitorView()">Back</button>
+        </div>
+      `;
+    }
+  }
+
+  function renderDemoSocietyView() {
+    const C = SOCIETY_CONFIG;
+    const container = document.getElementById('visitorView');
+    container.innerHTML = `
+      <div class="content-inner">
+        <button class="btn-ghost" onclick="(function(){ clearActiveSociety(); renderVisitorView(); })()" style="margin-bottom:12px;">← Back to home</button>
+        <div class="auth-message" style="background:#FEF3C7;color:#92400E;margin-bottom:12px;">
+          You're viewing the demo society. <a href="#" onclick="clearActiveSociety(); showRegisterSocietyView(); return false;" style="color:inherit;text-decoration:underline;font-weight:600;">Register your own</a> when you're ready.
+        </div>
+        <div class="hero-card">
+          <h1>${C._societyName || 'Demo Golf Society'}</h1>
+          <p>${C.description || ''}</p>
+        </div>
+        <h2 class="section-title">${C.terms.events}</h2>
+        <div class="toggle-tabs" id="visitorEventTabs">
+          <button class="toggle-tab active" onclick="showVisitorEvents('upcoming')">Upcoming</button>
+          <button class="toggle-tab" onclick="showVisitorEvents('past')">Past</button>
+        </div>
+        <div id="visitorEventsList"></div>
+        <div id="visitorNextEvent"></div>
+      </div>
+    `;
+    invalidateCache();
     renderVisitorEvents();
+    renderVisitorNextEvent();
   }
 
   async function renderVisitorNextEvent() {

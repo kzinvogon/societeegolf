@@ -1460,16 +1460,19 @@
       }
 
       // Implicit flow puts tokens in the URL hash (#access_token=…); detectSessionInUrl
-      // consumes them during init. Clean tokens or errors from the address bar.
-      if (window.location.hash.includes('access_token') || window.location.hash.includes('error=') || window.location.search.includes('error=')) {
+      // consumes them during init. Capture whether this load came in with fresh tokens
+      // (= just clicked the magic link), then clean tokens or errors from the address bar.
+      const isFreshLogin = window.location.hash.includes('access_token');
+      if (isFreshLogin || window.location.hash.includes('error=') || window.location.search.includes('error=')) {
         window.history.replaceState({}, '', window.location.pathname);
       }
       if (session) {
-        await loginWithSession(session);
+        await loginWithSession(session, isFreshLogin);
       }
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          await loginWithSession(session);
+          // onAuthStateChange that fires after init (e.g. token refresh) is not a fresh login.
+          await loginWithSession(session, false);
         } else if (event === 'SIGNED_OUT') {
           logout();
         }
@@ -1479,7 +1482,7 @@
     }
   }
 
-  async function loginWithSession(session) {
+  async function loginWithSession(session, isFreshLogin = false) {
     if (!supabase) return;
 
     // Find all memberships for this user across societies
@@ -1499,7 +1502,7 @@
           society_id: req.society_id
         }).select('*, societies(id, name, subdomain, config)').single();
         if (!error && newMember) {
-          await selectSocietyAndLogin(newMember, true);
+          await selectSocietyAndLogin(newMember, true, isFreshLogin);
         }
       }
       return;
@@ -1511,17 +1514,17 @@
 
     if (memberships.length === 1) {
       // Single society — auto-select
-      await selectSocietyAndLogin(memberships[0], true);
+      await selectSocietyAndLogin(memberships[0], true, isFreshLogin);
     } else if (savedMembership) {
       // Multiple societies but we have a saved selection
-      await selectSocietyAndLogin(savedMembership, false);
+      await selectSocietyAndLogin(savedMembership, false, isFreshLogin);
     } else {
       // Multiple societies — show picker
       showSocietyPicker(memberships);
     }
   }
 
-  async function selectSocietyAndLogin(membership, showWelcome) {
+  async function selectSocietyAndLogin(membership, showWelcome, isFreshLogin = false) {
     // Hydrate config from society
     if (membership.societies) {
       hydrateSocietyConfig(membership.societies);
@@ -1535,15 +1538,21 @@
     delete currentUser.societies;
     isAuthenticated = true;
 
-    // Restore last tab
-    try {
-      const lastTab = localStorage.getItem('jpgs_last_tab');
-      if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
-        if (lastTab !== 'admin' || currentUser.role === 'admin') {
-          currentTab = lastTab;
+    // Fresh login (just clicked the magic link) → land on Home and clear any stale
+    // last-tab from a prior session. Page refresh while logged in → restore last tab.
+    if (isFreshLogin) {
+      currentTab = 'home';
+      try { localStorage.removeItem('jpgs_last_tab'); } catch(e) {}
+    } else {
+      try {
+        const lastTab = localStorage.getItem('jpgs_last_tab');
+        if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
+          if (lastTab !== 'admin' || currentUser.role === 'admin') {
+            currentTab = lastTab;
+          }
         }
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
 
     setMode('member');
     renderVisitorView(); // re-render with hydrated config
@@ -1917,6 +1926,8 @@
     if (supabase) supabase.auth.signOut();
     currentUser = null;
     isAuthenticated = false;
+    currentTab = 'home';
+    try { localStorage.removeItem('jpgs_last_tab'); } catch(e) {}
     clearActiveSociety();
     invalidateCache();
     setMode('visitor');

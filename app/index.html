@@ -1641,6 +1641,17 @@
     if (!supabase) return DEMO_EVENTS;
     const cached = _cacheGet('events');
     if (cached) return cached;
+
+    // Anonymous visitors: RLS now blocks direct events SELECT, so use the
+    // SECURITY DEFINER RPC that filters by society slug. Authenticated
+    // members read directly via the same-society policy.
+    if (!isAuthenticated) {
+      const slug = SOCIETY_CONFIG._societySubdomain || 'default';
+      const { data } = await supabase.rpc('events_for_society_slug', { slug });
+      const sorted = (data || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      return _cacheSet('events', sorted);
+    }
+
     let q = supabase.from('events').select('*').order('date', { ascending: true });
     if (SOCIETY_CONFIG._societyId) q = q.eq('society_id', SOCIETY_CONFIG._societyId);
     const { data } = await q;

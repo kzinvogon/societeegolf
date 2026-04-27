@@ -136,6 +136,7 @@ function deepMerge(target, source) {
 function hydrateSocietyConfig(society) {
   SOCIETY_CONFIG._societyId = society.id;
   SOCIETY_CONFIG._societyName = society.name;
+  SOCIETY_CONFIG._societySubdomain = society.subdomain;
   if (society.config && typeof society.config === 'object') {
     deepMerge(SOCIETY_CONFIG, society.config);
   }
@@ -162,6 +163,7 @@ function clearActiveSociety() {
   try { localStorage.removeItem(ACTIVE_SOCIETY_KEY); } catch(e) {}
   SOCIETY_CONFIG._societyId = null;
   SOCIETY_CONFIG._societyName = null;
+  SOCIETY_CONFIG._societySubdomain = null;
 }
 
 /**

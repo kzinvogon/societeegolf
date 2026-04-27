@@ -1022,39 +1022,18 @@
           <div id="authMessage" class="hidden"></div>
         </div>
 
-        <!-- Sent state (shown after login code sent) -->
+        <!-- Sent state (shown after magic link sent) -->
         <div class="login-sent hidden" id="authSentView">
           <div class="sent-icon">📬</div>
           <h3>Check your inbox</h3>
-          <p>We sent a login code to <strong id="sentEmail"></strong></p>
+          <p>We sent a login link to <strong id="sentEmail"></strong></p>
           <p class="sent-hint">Check your spam folder if it doesn't arrive within a minute.</p>
-
-          <div class="input-group" style="margin-top: 16px;">
-            <input
-              type="text"
-              class="input"
-              id="authOtpCode"
-              placeholder="Enter code"
-              autocomplete="one-time-code"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              maxlength="10"
-              style="font-size: 20px; letter-spacing: 6px; text-align: center;"
-              oninput="validateOtpCode(this)"
-            >
+          <div class="sent-actions">
+            <a href="https://mail.google.com" target="_blank" rel="noopener" class="btn-open-email gmail">Open Gmail</a>
+            <a href="https://outlook.live.com" target="_blank" rel="noopener" class="btn-open-email outlook">Open Outlook</a>
           </div>
-          <button class="btn btn-primary btn-full" id="authOtpSubmit" onclick="verifyOtpCode()" disabled>
-            <span class="btn-text">Verify code</span>
-            <span class="btn-spinner hidden">
-              <svg class="spinner" viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/>
-              </svg>
-            </span>
-          </button>
-          <div id="authOtpMessage" class="hidden"></div>
-
-          <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled style="margin-top: 16px;">
-            Resend code <span id="resendTimer">(30s)</span>
+          <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled>
+            Resend link <span id="resendTimer">(30s)</span>
           </button>
         </div>
 
@@ -1841,10 +1820,6 @@
     document.getElementById('authSubmit').disabled = true;
     document.getElementById('authMessage').classList.add('hidden');
     document.getElementById('authEmailError').classList.add('hidden');
-    const otpInput = document.getElementById('authOtpCode');
-    if (otpInput) otpInput.value = '';
-    document.getElementById('authOtpSubmit').disabled = true;
-    document.getElementById('authOtpMessage').classList.add('hidden');
     const btnText = document.querySelector('#authSubmit .btn-text');
     const btnSpin = document.querySelector('#authSubmit .btn-spinner');
     if (btnText) btnText.classList.remove('hidden');
@@ -1868,7 +1843,7 @@
     if (supabase) {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: 'https://app.societeegolf.app/' }
+        options: { emailRedirectTo: window.location.origin + '/' }
       });
       btn.disabled = false;
       btnText.classList.remove('hidden');
@@ -1884,8 +1859,6 @@
         document.getElementById('authFormView').classList.add('hidden');
         document.getElementById('authSentView').classList.remove('hidden');
         document.getElementById('sentEmail').textContent = email;
-        window._otpEmail = email;
-        setTimeout(() => document.getElementById('authOtpCode')?.focus(), 100);
         startResendCooldown();
       }
     } else {
@@ -1906,88 +1879,9 @@
     if (!email || !supabase) return;
     await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: 'https://app.societeegolf.app/' }
+      options: { emailRedirectTo: window.location.origin + '/' }
     });
-    // Clear the input so an old code from a previous email can't be re-submitted
-    const otpInput = document.getElementById('authOtpCode');
-    if (otpInput) {
-      otpInput.value = '';
-      document.getElementById('authOtpSubmit').disabled = true;
-    }
-    document.getElementById('authOtpMessage')?.classList.add('hidden');
     startResendCooldown();
-  }
-
-  function validateOtpCode(input) {
-    const code = input.value.replace(/\D/g, '').slice(0, 10);
-    input.value = code;
-    document.getElementById('authOtpSubmit').disabled = code.length < 6;
-  }
-
-  let _otpVerifyInFlight = false;
-  async function verifyOtpCode() {
-    if (_otpVerifyInFlight) return;
-    const email = window._otpEmail || document.getElementById('sentEmail').textContent;
-    const code = document.getElementById('authOtpCode').value.trim();
-    if (!email || !code || !supabase) return;
-    if (code.length < 6) return;
-    _otpVerifyInFlight = true;
-
-    const btn = document.getElementById('authOtpSubmit');
-    const btnText = btn.querySelector('.btn-text');
-    const btnSpin = btn.querySelector('.btn-spinner');
-    const msg = document.getElementById('authOtpMessage');
-
-    btn.disabled = true;
-    btnText.classList.add('hidden');
-    btnSpin.classList.remove('hidden');
-    msg.classList.add('hidden');
-
-    const showError = (text) => {
-      msg.classList.remove('hidden');
-      msg.className = 'auth-message';
-      msg.style.background = '#FEE2E2';
-      msg.style.color = 'var(--red)';
-      msg.textContent = text;
-    };
-
-    try {
-      console.log('[auth] verifyOtp start', { email, codeLen: code.length });
-      const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
-      console.log('[auth] verifyOtp result', { hasSession: !!data?.session, hasUser: !!data?.user, error: error?.message });
-
-      btn.disabled = false;
-      btnText.classList.remove('hidden');
-      btnSpin.classList.add('hidden');
-
-      if (error) {
-        showError(error.message.includes('expired') || error.message.includes('invalid')
-          ? 'Invalid or expired code. Tap Resend code to get a new one.'
-          : 'Error: ' + error.message);
-        return;
-      }
-
-      // verifyOtp succeeded. onAuthStateChange SIGNED_IN should fire and call loginWithSession,
-      // but fall back to driving the login manually if the session is already on the response.
-      if (data?.session) {
-        await loginWithSession(data.session);
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await loginWithSession(session);
-        } else {
-          showError('Code accepted but no session returned. Check browser console and try again.');
-        }
-      }
-    } catch (e) {
-      console.error('[auth] verifyOtp exception', e);
-      btn.disabled = false;
-      btnText.classList.remove('hidden');
-      btnSpin.classList.add('hidden');
-      showError('Network or server error: ' + (e.message || e));
-    } finally {
-      _otpVerifyInFlight = false;
-    }
   }
 
   function startResendCooldown() {

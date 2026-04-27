@@ -1428,6 +1428,13 @@
         auth: { detectSessionInUrl: true, flowType: 'implicit', persistSession: true, autoRefreshToken: true }
       });
 
+      // Resolve the tenant from the hostname BEFORE auth, so the visitor view
+      // and any pre-login data fetches use the right society's branding/data.
+      // If the slug doesn't resolve to a society, the 404 view is rendered
+      // and we bail before kicking off auth.
+      const tenantOk = await resolveTenantOrShow404();
+      if (!tenantOk) return;
+
       // detectSessionInUrl handles the ?code= exchange automatically.
       // getSession() awaits the client's internal initialize, so by this point
       // the code has been exchanged (or has failed) and the session is persisted.
@@ -1472,6 +1479,42 @@
     } catch (e) {
       console.warn('Supabase not configured, using demo mode', e);
     }
+  }
+
+  // Resolve the tenant from the URL host. Returns true to continue init,
+  // false if a tenant slug was present but didn't match any society (in
+  // which case the 404 view has already been rendered).
+  async function resolveTenantOrShow404() {
+    const slug = resolveTenantSlugFromHost();
+    if (!slug) return true;  // apex / app / dev — no tenant in the URL
+    try {
+      const { data, error } = await supabase.rpc('society_for_slug', { slug });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) { renderTenantNotFound(slug); return false; }
+      hydrateSocietyConfig(row);
+      applySocietyConfigToDOM();
+      return true;
+    } catch (e) {
+      console.warn('[tenant] resolve failed', e);
+      return true;  // fall through to default behaviour rather than 404 on a transient error
+    }
+  }
+
+  function renderTenantNotFound(slug) {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+      <div style="padding:48px 24px;text-align:center;max-width:480px;margin:0 auto;">
+        <div style="font-size:48px;">🏌️</div>
+        <h2 style="margin:16px 0 8px;">Society not found</h2>
+        <p style="color:var(--text-secondary);margin-bottom:24px;">
+          We couldn't find a society called <strong>${slug}</strong>.
+        </p>
+        <a href="https://societeegolf.app" class="btn btn-primary" style="display:inline-block;text-decoration:none;">
+          Visit SocieteeGolf
+        </a>
+      </div>`;
   }
 
   async function loginWithSession(session, isFreshLogin = false) {

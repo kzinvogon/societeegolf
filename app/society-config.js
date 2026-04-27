@@ -157,6 +157,26 @@ function getActiveSocietyId() {
 }
 
 /**
+ * Extract a tenant slug from the current hostname.
+ *   jpgs.societeegolf.app  → "jpgs"
+ *   app.societeegolf.app   → null (reserved, legacy default-host)
+ *   societeegolf.app       → null (apex, marketing site)
+ *   localhost / *.netlify.app → null (dev / preview)
+ */
+const RESERVED_SUBDOMAINS = new Set(['app','www','api','admin','mail','staging','preview','dev']);
+function resolveTenantSlugFromHost() {
+  const host = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
+  if (!host) return null;
+  if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.endsWith('.local')) return null;
+  if (host.endsWith('.netlify.app')) return null;
+  const parts = host.split('.');
+  if (parts.length < 3) return null;            // apex domain — no subdomain
+  const slug = parts[0].toLowerCase();
+  if (RESERVED_SUBDOMAINS.has(slug)) return null;
+  return slug;
+}
+
+/**
  * Clear the persisted active society on logout.
  */
 function clearActiveSociety() {

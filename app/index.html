@@ -2503,6 +2503,8 @@
           reserved_code: 'That code is reserved — pick another.',
           invalid_society_name: 'Please enter your society\'s name.',
           invalid_email: 'That email doesn\'t look right.',
+          admin_email_in_use: 'That email is already linked to a SocieteeGolf account. Use a different email for the new society admin, or log in with that email instead.',
+          anon_disallowed: 'Please log out of the demo before registering a real society.',
         };
         throw new Error(map[data?.error] || 'Could not create society.');
       }

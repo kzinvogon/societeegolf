@@ -1496,6 +1496,10 @@
       }
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          // Demo entry drives login itself — let it through without the
+          // handler racing ahead and signing the user out before the
+          // demo member row exists.
+          if (window._demoEntryInProgress) return;
           // onAuthStateChange that fires after init (e.g. token refresh) is not a fresh login.
           await loginWithSession(session, false);
         } else if (event === 'SIGNED_OUT') {
@@ -2061,13 +2065,18 @@
 
   // ===== JOIN FORM =====
   function updateNotifyStyle() {
+    // The legacy join form (with notify-by checkboxes) was removed in the
+    // chooser refactor. Bail if the elements aren't on the page.
     const emailCb = document.getElementById('notifyEmail');
     const whatsappCb = document.getElementById('notifyWhatsapp');
-    document.getElementById('notifyEmailLabel').style.borderColor = emailCb.checked ? 'var(--gold)' : 'var(--border)';
-    document.getElementById('notifyEmailLabel').style.background = emailCb.checked ? 'var(--gold-light)' : 'transparent';
-    document.getElementById('notifyWhatsappLabel').style.borderColor = whatsappCb.checked ? 'var(--gold)' : 'var(--border)';
-    document.getElementById('notifyWhatsappLabel').style.background = whatsappCb.checked ? 'var(--gold-light)' : 'transparent';
-    document.getElementById('joinNotifyError').classList.add('hidden');
+    const emailLabel = document.getElementById('notifyEmailLabel');
+    const whatsappLabel = document.getElementById('notifyWhatsappLabel');
+    if (!emailCb || !whatsappCb || !emailLabel || !whatsappLabel) return;
+    emailLabel.style.borderColor = emailCb.checked ? 'var(--gold)' : 'var(--border)';
+    emailLabel.style.background = emailCb.checked ? 'var(--gold-light)' : 'transparent';
+    whatsappLabel.style.borderColor = whatsappCb.checked ? 'var(--gold)' : 'var(--border)';
+    whatsappLabel.style.background = whatsappCb.checked ? 'var(--gold-light)' : 'transparent';
+    document.getElementById('joinNotifyError')?.classList.add('hidden');
   }
 
   async function submitJoinForm(e) {
@@ -2535,24 +2544,13 @@
     if (!supabase) return;
     let stage = 'init';
     try {
+      window._demoEntryInProgress = true;
       stage = 'signInAnonymously';
       console.log('[demo]', stage);
       const { data: authData, error: authErr } = await supabase.auth.signInAnonymously();
       if (authErr) throw authErr;
       if (!authData?.session) throw new Error('No session from signInAnonymously');
       console.log('[demo] anon uid:', authData.session.user.id);
-
-      // Force the client to attach this session before the RPC. Without
-      // this, supabase-js sometimes still uses the anon api-key on the
-      // very next request and the RPC sees auth.uid() as NULL.
-      stage = 'setSession';
-      await supabase.auth.setSession({
-        access_token: authData.session.access_token,
-        refresh_token: authData.session.refresh_token,
-      });
-      const verify = await supabase.auth.getSession();
-      console.log('[demo] post-setSession uid:', verify?.data?.session?.user?.id);
-      if (!verify?.data?.session?.user?.id) throw new Error('Session not attached to client after setSession');
 
       stage = 'enter_demo_society RPC';
       console.log('[demo]', stage);
@@ -2575,6 +2573,8 @@
           <button class="btn btn-primary" onclick="renderVisitorView()" style="margin-top:12px;">Back</button>
         </div>
       `;
+    } finally {
+      window._demoEntryInProgress = false;
     }
   }
 

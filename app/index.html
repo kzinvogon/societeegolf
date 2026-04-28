@@ -1554,8 +1554,11 @@
   async function loginWithSession(session, isFreshLogin = false) {
     if (!supabase) return;
 
-    // Find all memberships for this user across societies
-    const { data: memberships } = await supabase.from('members').select('*, societies(id, name, subdomain, config)').eq('id', session.user.id);
+    // Find all memberships for this user across societies. Filters on
+    // user_id (added in migration 011) so one auth.uid() can back
+    // multiple membership rows. members.id stays per-row for existing
+    // FKs in events/signups/results/messages.
+    const { data: memberships } = await supabase.from('members').select('*, societies(id, name, subdomain, config)').eq('user_id', session.user.id);
 
     // If no memberships, check for an approved join request and auto-create.
     // Otherwise: this email isn't tied to any society — sign them out and
@@ -1566,7 +1569,7 @@
       const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').maybeSingle();
       if (req) {
         const { data: newMember, error } = await supabase.from('members').insert({
-          id: session.user.id,
+          user_id: session.user.id,
           name: req.name,
           email: req.email,
           phone: req.phone,

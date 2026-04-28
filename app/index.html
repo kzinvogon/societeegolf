@@ -2542,6 +2542,18 @@
       if (!authData?.session) throw new Error('No session from signInAnonymously');
       console.log('[demo] anon uid:', authData.session.user.id);
 
+      // Force the client to attach this session before the RPC. Without
+      // this, supabase-js sometimes still uses the anon api-key on the
+      // very next request and the RPC sees auth.uid() as NULL.
+      stage = 'setSession';
+      await supabase.auth.setSession({
+        access_token: authData.session.access_token,
+        refresh_token: authData.session.refresh_token,
+      });
+      const verify = await supabase.auth.getSession();
+      console.log('[demo] post-setSession uid:', verify?.data?.session?.user?.id);
+      if (!verify?.data?.session?.user?.id) throw new Error('Session not attached to client after setSession');
+
       stage = 'enter_demo_society RPC';
       console.log('[demo]', stage);
       const { data: rpcData, error: rpcErr } = await supabase.rpc('enter_demo_society');

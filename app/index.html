@@ -2533,28 +2533,34 @@
       </div>
     `;
     if (!supabase) return;
+    let stage = 'init';
     try {
-      // 1. Anonymous sign-in (creates a real auth.users row, fires SIGNED_IN).
+      stage = 'signInAnonymously';
+      console.log('[demo]', stage);
       const { data: authData, error: authErr } = await supabase.auth.signInAnonymously();
       if (authErr) throw authErr;
-      if (!authData?.session) throw new Error('No session returned from anonymous sign-in');
+      if (!authData?.session) throw new Error('No session from signInAnonymously');
+      console.log('[demo] anon uid:', authData.session.user.id);
 
-      // 2. Bind that user to a demo-society member row (admin, idempotent).
+      stage = 'enter_demo_society RPC';
+      console.log('[demo]', stage);
       const { data: rpcData, error: rpcErr } = await supabase.rpc('enter_demo_society');
       if (rpcErr) throw rpcErr;
-      if (!rpcData || !rpcData.success) throw new Error(rpcData?.error || 'enter_demo_society failed');
+      if (!rpcData || !rpcData.success) throw new Error('enter_demo_society failed: ' + JSON.stringify(rpcData));
+      console.log('[demo] RPC result:', rpcData);
 
-      // 3. Now drive the normal logged-in path. loginWithSession will find
-      //    the just-inserted demo member, hydrate the demo society config,
-      //    and switch to the member view (Home / Events / Tee / Messages /
-      //    Me / Admin all populated by the existing flow).
+      stage = 'loginWithSession';
+      console.log('[demo]', stage);
       await loginWithSession(authData.session, true);
+      console.log('[demo] member view should be active');
     } catch (e) {
-      console.warn('[demo] entry failed', e);
+      const detail = (e && (e.message || e.error_description || e.error)) || String(e);
+      console.error('[demo] failed at', stage, e);
       container.innerHTML = `
         <div class="content-inner">
-          <p style="color:var(--red);">Demo unavailable — please try again.</p>
-          <button class="btn btn-primary" onclick="renderVisitorView()">Back</button>
+          <p style="color:var(--red); font-weight:600;">Demo unavailable — failed at <code>${stage}</code>.</p>
+          <p class="text-sm" style="color:var(--text-secondary); word-break:break-word;">${detail}</p>
+          <button class="btn btn-primary" onclick="renderVisitorView()" style="margin-top:12px;">Back</button>
         </div>
       `;
     }

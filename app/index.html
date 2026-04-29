@@ -2441,21 +2441,34 @@
   }
 
   // ===== REGISTER A NEW SOCIETY =====
-  function showRegisterSocietyView() {
+  // Locale → preferred currency. Default EUR, GBP for en-GB / en-IE,
+  // USD for en-US / en-CA. Override with the dropdown.
+  function detectPreferredCurrency() {
+    try {
+      const locale = (navigator.language || 'en').toLowerCase();
+      if (locale.includes('en-gb') || locale.includes('en-ie')) return 'GBP';
+      if (locale.includes('en-us') || locale.includes('en-ca')) return 'USD';
+    } catch (e) {}
+    return 'EUR';
+  }
+
+  let _registerPlanCache = null;
+  async function showRegisterSocietyView() {
     const container = document.getElementById('visitorView');
+    const defaultCurrency = detectPreferredCurrency();
     container.innerHTML = `
       <div class="content-inner">
         <button class="btn-ghost" onclick="renderVisitorView()" style="margin-bottom:12px;">← Back</button>
         <h2 class="section-title" style="margin-top:0;">Register a new society</h2>
         <div class="card">
-          <p class="card-body mb-16">Set your society up in a minute. You'll be the first admin and can invite members from inside the app.</p>
+          <p class="card-body mb-16">30-day free trial. We'll ask for a card at the end so you can keep going — cancel anytime before then and you won't be charged.</p>
           <form id="registerSocietyForm" onsubmit="submitRegisterSocietyForm(event)" novalidate>
             <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Society name</label>
             <input type="text" class="input" id="rsName" placeholder="e.g. Coastal Golf Society" required>
 
             <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Society code</label>
             <input type="text" class="input" id="rsCode" placeholder="e.g. coastal" pattern="[a-z0-9-]{2,32}" required>
-            <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">Lowercase letters, numbers, hyphens. 2–32 characters.</p>
+            <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">Used in the URL: <code>societeegolf.app/&lt;code&gt;</code>. Lowercase letters, numbers, hyphens. 2–32 characters.</p>
 
             <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Your name</label>
             <input type="text" class="input" id="rsAdminName" placeholder="Your full name" required>
@@ -2463,13 +2476,75 @@
             <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Your email</label>
             <input type="email" class="input" id="rsAdminEmail" placeholder="you@example.com" required>
 
-            <button type="submit" class="btn btn-primary btn-full" id="rsSubmitBtn">Create society & send login link</button>
+            <div style="display:flex;gap:12px;margin-top:8px;">
+              <div style="flex:1;">
+                <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Currency</label>
+                <select class="input" id="rsCurrency" onchange="renderPlanPicker()">
+                  <option value="EUR" ${defaultCurrency==='EUR'?'selected':''}>EUR €</option>
+                  <option value="GBP" ${defaultCurrency==='GBP'?'selected':''}>GBP £</option>
+                  <option value="USD" ${defaultCurrency==='USD'?'selected':''}>USD $</option>
+                </select>
+              </div>
+              <div style="flex:1;">
+                <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Billing</label>
+                <select class="input" id="rsInterval" onchange="renderPlanPicker()">
+                  <option value="month">Monthly</option>
+                  <option value="year">Annual (1 month free)</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="text-sm" style="font-weight:600;display:block;margin:12px 0 4px 0;">Choose a plan</label>
+            <div id="rsPlanPicker" style="display:flex;flex-direction:column;gap:8px;">
+              <div class="text-sm text-secondary" style="text-align:center;padding:16px;">Loading plans…</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" id="rsSubmitBtn" style="margin-top:16px;">Start 30-day trial</button>
           </form>
           <div id="rsSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;"></div>
           <div id="rsError" class="hidden auth-message" style="margin-top:12px; background:#FEE2E2; color:var(--red);"></div>
         </div>
       </div>
     `;
+
+    if (supabase && !_registerPlanCache) {
+      const { data: plans } = await supabase.from('plans').select('*').order('sort_order');
+      const { data: prices } = await supabase.from('plan_prices').select('*');
+      _registerPlanCache = { plans: plans || [], prices: prices || [] };
+    }
+    renderPlanPicker();
+  }
+
+  function renderPlanPicker() {
+    if (!_registerPlanCache) return;
+    const { plans, prices } = _registerPlanCache;
+    const currency = document.getElementById('rsCurrency')?.value || 'EUR';
+    const interval = document.getElementById('rsInterval')?.value || 'month';
+    const symbol = { EUR: '€', GBP: '£', USD: '$' }[currency];
+    const intervalLabel = interval === 'year' ? '/member/year' : '/member/month';
+    const el = document.getElementById('rsPlanPicker');
+    if (!el) return;
+
+    el.innerHTML = plans.map(p => {
+      const price = prices.find(pp => pp.plan_id === p.id && pp.currency === currency && pp.interval === interval);
+      const cents = price?.unit_amount_cents ?? 0;
+      const display = (cents / 100).toFixed(2);
+      const cap = p.member_cap == null ? 'Unlimited members' : `Up to ${p.member_cap} members`;
+      const checked = p.code === 'starter' ? 'checked' : '';
+      return `
+        <label class="card" style="cursor:pointer;display:flex;gap:12px;align-items:center;margin:0;">
+          <input type="radio" name="rsPlan" value="${p.code}" ${checked} style="margin:0;">
+          <div style="flex:1;">
+            <div style="font-weight:700;">${p.name}</div>
+            <div class="text-sm text-secondary">${cap}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700;">${symbol}${display}</div>
+            <div class="text-sm text-secondary">${intervalLabel}</div>
+          </div>
+        </label>
+      `;
+    }).join('');
   }
 
   async function submitRegisterSocietyForm(e) {
@@ -2478,6 +2553,10 @@
     const code = document.getElementById('rsCode').value.trim().toLowerCase();
     const adminName = document.getElementById('rsAdminName').value.trim();
     const adminEmail = document.getElementById('rsAdminEmail').value.trim().toLowerCase();
+    const currency = document.getElementById('rsCurrency').value;
+    const interval = document.getElementById('rsInterval').value;
+    const planRadio = document.querySelector('input[name="rsPlan"]:checked');
+    const planCode = planRadio?.value || 'starter';
     const btn = document.getElementById('rsSubmitBtn');
     const errEl = document.getElementById('rsError');
     const okEl = document.getElementById('rsSuccess');
@@ -2487,7 +2566,7 @@
     if (!supabase) {
       errEl.textContent = 'Demo mode — registration disabled.';
       errEl.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Create society & send login link';
+      btn.disabled = false; btn.textContent = 'Start 30-day trial';
       return;
     }
 
@@ -2497,6 +2576,9 @@
         p_society_code: code,
         p_admin_name: adminName,
         p_admin_email: adminEmail,
+        p_plan_code: planCode,
+        p_billing_currency: currency,
+        p_billing_interval: interval,
       });
       if (error) throw error;
       if (!data || !data.success) {
@@ -2506,24 +2588,30 @@
           reserved_code: 'That code is reserved — pick another.',
           invalid_society_name: 'Please enter your society\'s name.',
           invalid_email: 'That email doesn\'t look right.',
-          admin_email_in_use: 'That email is already linked to a SocieteeGolf account. Use a different email for the new society admin, or log in with that email instead.',
+          invalid_plan: 'Pick a plan to continue.',
+          invalid_currency: 'Currency not supported.',
+          invalid_interval: 'Billing interval not supported.',
+          plan_price_unavailable: 'That plan isn\'t available in your selected currency yet — pick another.',
+          already_in_this_society: 'You\'re already a member of a society with that code.',
           anon_disallowed: 'Please log out of the demo before registering a real society.',
         };
         throw new Error(map[data?.error] || 'Could not create society.');
       }
 
       // Society + admin member row exist. Send the magic link so the
-      // admin verifies their email and the trigger re-keys the member
-      // row to their auth.users.id on first login.
+      // admin verifies their email; handle_new_user fills user_id on
+      // first sign-in.
       const { error: linkErr } = await supabase.auth.signInWithOtp({
         email: adminEmail,
         options: { emailRedirectTo: window.location.origin + '/' }
       });
       if (linkErr) throw linkErr;
 
+      const trialEnds = new Date(data.trial_ends_at);
       okEl.innerHTML = `
-        <strong>${name}</strong> is set up. We've sent a login link to <strong>${adminEmail}</strong> —
-        click it to sign in as the admin and start adding members.
+        <strong>${name}</strong> is set up on the <strong>${planCode}</strong> plan.<br>
+        30-day trial — no charge until <strong>${trialEnds.toLocaleDateString()}</strong>.<br>
+        We've sent a login link to <strong>${adminEmail}</strong> — click it to sign in and start adding members.
       `;
       okEl.classList.remove('hidden');
       document.getElementById('registerSocietyForm').classList.add('hidden');
@@ -2531,7 +2619,7 @@
       console.warn('[register] failed', err);
       errEl.textContent = err.message || 'Could not create society — please try again.';
       errEl.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Create society & send login link';
+      btn.disabled = false; btn.textContent = 'Start 30-day trial';
     }
   }
 
@@ -3303,7 +3391,36 @@
       return played.length >= 3;
     });
 
+    // Member-cap banner — shown from 80% capacity. Demo + default
+    // are non-billable (no plan / no cap), so the banner stays hidden
+    // for them.
+    let capBanner = '';
+    try {
+      const { data: societyRow } = await supabase
+        .from('societies')
+        .select('plan_id, is_billable, plans(name, member_cap)')
+        .eq('id', currentUser.society_id)
+        .single();
+      const cap = societyRow?.plans?.member_cap;
+      if (societyRow?.is_billable && cap) {
+        const ratio = members.length / cap;
+        if (ratio >= 1) {
+          capBanner = `
+            <div class="auth-message" style="background:#FEE2E2;color:#991B1B;margin-bottom:12px;">
+              <strong>Member limit reached</strong> — ${members.length}/${cap} on the ${societyRow.plans.name} plan.
+              You can't approve new members until you upgrade.
+            </div>`;
+        } else if (ratio >= 0.8) {
+          capBanner = `
+            <div class="auth-message" style="background:#FEF3C7;color:#92400E;margin-bottom:12px;">
+              You're at ${members.length}/${cap} members on the ${societyRow.plans.name} plan. Upgrade soon to keep adding members.
+            </div>`;
+        }
+      }
+    } catch (e) { /* non-fatal — just skip the banner */ }
+
     document.getElementById('adminContent').innerHTML = `
+      ${capBanner}
       <!-- Quick Stats -->
       <div class="stats-grid">
         <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminMembersList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
@@ -3681,30 +3798,48 @@
   }
 
   async function adminUpdateJoinRequest(requestId, status) {
-    await supabase.from('join_requests').update({ status }).eq('id', requestId);
     if (status === 'approved') {
+      // Cap-enforced approval via RPC.
+      const { data, error } = await supabase.rpc('approve_join_request', { p_request_id: requestId });
+      if (error) {
+        alert('Could not approve: ' + error.message);
+        return;
+      }
+      if (!data?.success) {
+        const map = {
+          plan_member_limit_reached: 'Your plan\'s member limit has been reached. Upgrade to add more members.',
+          not_admin: 'You\'re not an admin of this society.',
+          already_processed: 'This request has already been ' + (data?.status || 'processed') + '.',
+          request_not_found: 'Request no longer exists — refresh and try again.',
+          not_authenticated: 'Please log in again.',
+        };
+        alert(map[data?.error] || 'Could not approve.');
+        return;
+      }
+      // Materialise the member row scoped to the request's society.
       const { data: req } = await supabase.from('join_requests').select('*').eq('id', requestId).single();
       if (req) {
-        const { data: existing } = await supabase.from('members').select('id').eq('email', req.email).single();
+        const { data: existing } = await supabase.from('members').select('id').eq('email', req.email).eq('society_id', req.society_id).maybeSingle();
         if (!existing) {
           const memberStatus = req.initial_member_status || 'applied';
-          const { error } = await supabase.from('members').insert({
+          const { error: insErr } = await supabase.from('members').insert({
             id: crypto.randomUUID(),
             name: req.name,
             email: req.email,
             phone: req.phone,
-            status: memberStatus
+            status: memberStatus,
+            society_id: req.society_id
           });
-          if (error) {
-            alert('Approved but could not create member: ' + error.message);
-          } else {
-            alert('Approved! Member created with status: ' + memberStatus);
-          }
+          if (insErr) alert('Approved but could not create member: ' + insErr.message);
+          else alert('Approved! Member created with status: ' + memberStatus);
         } else {
           alert('Approved! Member already exists.');
         }
       }
     } else {
+      // Reject: direct update is fine since RLS is_admin_of covers it.
+      const { error } = await supabase.from('join_requests').update({ status }).eq('id', requestId);
+      if (error) { alert('Could not update: ' + error.message); return; }
       alert('Status updated to ' + status);
     }
     renderAdmin();

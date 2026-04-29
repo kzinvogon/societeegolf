@@ -3391,36 +3391,64 @@
       return played.length >= 3;
     });
 
-    // Member-cap banner — shown from 80% capacity. Demo + default
-    // are non-billable (no plan / no cap), so the banner stays hidden
-    // for them.
-    let capBanner = '';
+    // Pull society + plan + billing state once for the cap banner AND
+    // the subscription card below.
+    let societyRow = null;
     try {
-      const { data: societyRow } = await supabase
+      const { data } = await supabase
         .from('societies')
-        .select('plan_id, is_billable, plans(name, member_cap)')
+        .select('plan_id, is_billable, subscription_status, trial_ends_at, billing_currency, billing_interval, stripe_subscription_id, plans(name, member_cap)')
         .eq('id', currentUser.society_id)
         .single();
-      const cap = societyRow?.plans?.member_cap;
-      if (societyRow?.is_billable && cap) {
-        const ratio = members.length / cap;
-        if (ratio >= 1) {
-          capBanner = `
-            <div class="auth-message" style="background:#FEE2E2;color:#991B1B;margin-bottom:12px;">
-              <strong>Member limit reached</strong> — ${members.length}/${cap} on the ${societyRow.plans.name} plan.
-              You can't approve new members until you upgrade.
-            </div>`;
-        } else if (ratio >= 0.8) {
-          capBanner = `
-            <div class="auth-message" style="background:#FEF3C7;color:#92400E;margin-bottom:12px;">
-              You're at ${members.length}/${cap} members on the ${societyRow.plans.name} plan. Upgrade soon to keep adding members.
-            </div>`;
-        }
+      societyRow = data || null;
+    } catch (e) { /* non-fatal */ }
+
+    let capBanner = '';
+    const cap = societyRow?.plans?.member_cap;
+    if (societyRow?.is_billable && cap) {
+      const ratio = members.length / cap;
+      if (ratio >= 1) {
+        capBanner = `
+          <div class="auth-message" style="background:#FEE2E2;color:#991B1B;margin-bottom:12px;">
+            <strong>Member limit reached</strong> — ${members.length}/${cap} on the ${societyRow.plans.name} plan.
+            You can't approve new members until you upgrade.
+          </div>`;
+      } else if (ratio >= 0.8) {
+        capBanner = `
+          <div class="auth-message" style="background:#FEF3C7;color:#92400E;margin-bottom:12px;">
+            You're at ${members.length}/${cap} members on the ${societyRow.plans.name} plan. Upgrade soon to keep adding members.
+          </div>`;
       }
-    } catch (e) { /* non-fatal — just skip the banner */ }
+    }
+
+    // Subscription card. Hidden for non-billable societies (default, demo).
+    let subscriptionCard = '';
+    if (societyRow?.is_billable && societyRow.plans) {
+      const status = societyRow.subscription_status || 'trialing';
+      const hasStripe = !!societyRow.stripe_subscription_id;
+      const trialEnd = societyRow.trial_ends_at ? new Date(societyRow.trial_ends_at) : null;
+      const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd - Date.now()) / 86400000)) : null;
+      const intervalLabel = societyRow.billing_interval === 'year' ? 'Annual' : 'Monthly';
+      const trialLine = trialEnd
+        ? `Trial ends <strong>${trialEnd.toLocaleDateString()}</strong>${trialDaysLeft != null ? ` — ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left.` : ''}`
+        : '';
+      subscriptionCard = `
+        <div class="card">
+          <h3 class="card-title">Subscription</h3>
+          <p class="card-body mt-8">
+            <strong>${societyRow.plans.name}</strong> · ${intervalLabel} · ${societyRow.billing_currency || 'EUR'}
+            <br>${trialLine}
+            <br>Status: <code>${status}</code>
+          </p>
+          ${hasStripe
+            ? '<p class="text-sm text-secondary" style="margin-top:8px;">Billing is set up.</p>'
+            : '<button class="btn btn-primary" style="margin-top:12px;" onclick="startStripeCheckout()">Set up billing</button>'}
+        </div>`;
+    }
 
     document.getElementById('adminContent').innerHTML = `
       ${capBanner}
+      ${subscriptionCard}
       <!-- Quick Stats -->
       <div class="stats-grid">
         <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('adminMembersList').scrollIntoView({behavior:'smooth'})"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
@@ -3797,6 +3825,38 @@
     await supabase.from('join_requests').update({ initial_member_status: memberStatus }).eq('id', requestId);
   }
 
+  // ===== STRIPE CHECKOUT =====
+  // Calls the Netlify function which verifies the caller is an admin
+  // and returns a Checkout session URL. Then redirects.
+  async function startStripeCheckout() {
+    if (!supabase || !currentUser) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { alert('Please log in again.'); return; }
+      const r = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token,
+        },
+        body: JSON.stringify({
+          society_id: currentUser.society_id,
+          return_url: window.location.origin + '/',
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.url) {
+        alert('Could not start checkout: ' + (data.error || r.status));
+        console.warn('[stripe] checkout error', data);
+        return;
+      }
+      window.location.href = data.url;
+    } catch (e) {
+      console.error('[stripe] checkout failed', e);
+      alert('Checkout error — please try again.');
+    }
+  }
+
   async function adminUpdateJoinRequest(requestId, status) {
     if (status === 'approved') {
       // Cap-enforced approval via RPC.
@@ -3973,6 +4033,24 @@
     await initSupabase();
     renderVisitorView();
     updateNotifyStyle();
+
+    // Post-Stripe-Checkout return — surface a one-time toast and clean
+    // up the query string. The webhook updates the society state in the
+    // background; we just acknowledge the user here.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const billing = params.get('billing');
+      if (billing === 'success') {
+        showToast('Billing set up — your trial is active.');
+      } else if (billing === 'cancelled') {
+        showToast('Checkout cancelled. You can set up billing later.');
+      }
+      if (billing) {
+        params.delete('billing');
+        const cleaned = params.toString() ? ('?' + params.toString()) : '';
+        window.history.replaceState({}, '', window.location.pathname + cleaned);
+      }
+    } catch (e) {}
 
     // Browser back button support
     window.addEventListener('popstate', () => {

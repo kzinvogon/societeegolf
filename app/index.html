@@ -2521,15 +2521,30 @@
     const currency = document.getElementById('rsCurrency')?.value || 'EUR';
     const interval = document.getElementById('rsInterval')?.value || 'month';
     const symbol = { EUR: '€', GBP: '£', USD: '$' }[currency];
-    const intervalLabel = interval === 'year' ? '/member/year' : '/member/month';
+    const intervalLabel = interval === 'year' ? '/year' : '/month';
     const el = document.getElementById('rsPlanPicker');
     if (!el) return;
 
     el.innerHTML = plans.map(p => {
+      const cap = p.member_cap == null ? 'Custom — talk to us' : `Up to ${p.member_cap} members`;
+      // Contact-only tier (Society+) — no price, no radio, just a CTA.
+      if (p.is_contact_only) {
+        return `
+          <label class="card" style="display:flex;gap:12px;align-items:center;margin:0;background:#F9FAFB;">
+            <input type="radio" name="rsPlan" value="${p.code}" style="margin:0;" disabled>
+            <div style="flex:1;">
+              <div style="font-weight:700;">${p.name}</div>
+              <div class="text-sm text-secondary">${cap}</div>
+            </div>
+            <div style="text-align:right;">
+              <a href="mailto:hello@societeegolf.app?subject=Society%2B%20enquiry" style="font-weight:700;color:var(--gold);text-decoration:none;">Contact us</a>
+            </div>
+          </label>
+        `;
+      }
       const price = prices.find(pp => pp.plan_id === p.id && pp.currency === currency && pp.interval === interval);
       const cents = price?.unit_amount_cents ?? 0;
-      const display = (cents / 100).toFixed(2);
-      const cap = p.member_cap == null ? 'Unlimited members' : `Up to ${p.member_cap} members`;
+      const display = Math.round(cents / 100); // flat rates are clean integers
       const checked = p.code === 'starter' ? 'checked' : '';
       return `
         <label class="card" style="cursor:pointer;display:flex;gap:12px;align-items:center;margin:0;">
@@ -2557,6 +2572,12 @@
     const interval = document.getElementById('rsInterval').value;
     const planRadio = document.querySelector('input[name="rsPlan"]:checked');
     const planCode = planRadio?.value || 'starter';
+    if (planCode === 'society_plus') {
+      const errEl = document.getElementById('rsError');
+      errEl.textContent = 'Society+ is set up by chat — please email hello@societeegolf.app and we\'ll be in touch.';
+      errEl.classList.remove('hidden');
+      return;
+    }
     const btn = document.getElementById('rsSubmitBtn');
     const errEl = document.getElementById('rsError');
     const okEl = document.getElementById('rsSuccess');

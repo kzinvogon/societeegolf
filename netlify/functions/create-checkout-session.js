@@ -58,7 +58,7 @@ exports.handler = async (event) => {
     return r.json();
   };
 
-  let society, member, priceRow, memberCount;
+  let society, member, priceRow;
   try {
     const sRows = await fetchJson(`${SUPABASE_URL}/rest/v1/societies?id=eq.${society_id}&select=id,name,plan_id,billing_currency,billing_interval,stripe_customer_id,stripe_subscription_id,is_billable,subscription_status`);
     society = sRows[0];
@@ -75,19 +75,18 @@ exports.handler = async (event) => {
     const ppRows = await fetchJson(`${SUPABASE_URL}/rest/v1/plan_prices?plan_id=eq.${society.plan_id}&currency=eq.${society.billing_currency}&interval=eq.${society.billing_interval}&select=stripe_price_id`);
     priceRow = ppRows[0];
     if (!priceRow?.stripe_price_id) return { statusCode: 400, body: JSON.stringify({ error: 'stripe_price_id_missing' }) };
-
-    const cRows = await fetchJson(`${SUPABASE_URL}/rest/v1/members?society_id=eq.${society_id}&select=id&head=false`);
-    memberCount = Math.max(1, cRows.length);
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: 'lookup_failed', detail: String(e) }) };
   }
 
-  // Build Stripe Checkout session.
+  // Build Stripe Checkout session. Pricing is flat per-society now —
+  // quantity is always 1, member count is enforced by the in-app
+  // hard cap (society_at_member_cap), not by Stripe seat count.
   const params = new URLSearchParams();
   params.set('mode', 'subscription');
   params.set('payment_method_types[0]', 'card');
   params.set('line_items[0][price]', priceRow.stripe_price_id);
-  params.set('line_items[0][quantity]', String(memberCount));
+  params.set('line_items[0][quantity]', '1');
   // 30-day trial — Stripe handles "no charge until day 30".
   params.set('subscription_data[trial_period_days]', '30');
   params.set('subscription_data[metadata][society_id]', society_id);

@@ -1098,6 +1098,16 @@
         <div id="messagesList"></div>
       </div>
 
+      <!-- TAB: Courses -->
+      <div id="tabCourses" class="content-inner tab-content hidden">
+        <h2 class="section-title">Courses & Rates</h2>
+        <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">
+          Rates shown are based on a minimum of 12 players.
+        </p>
+        <input type="search" class="input" id="coursesTabQuery" placeholder="Search by name, city, or region…" oninput="renderMemberCourses(this.value)">
+        <div id="coursesTabList" style="margin-top:12px;"></div>
+      </div>
+
       <!-- TAB: Profile -->
       <div id="tabProfile" class="content-inner tab-content hidden">
         <div id="profileContent"></div>
@@ -1135,6 +1145,11 @@
         <span>Messages</span>
         <span class="tab-pip"></span>
         <span class="tab-badge hidden" id="msgBadge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="courses" onclick="switchTab('courses')">
+        <span class="tab-icon">⛳</span>
+        <span>Courses</span>
+        <span class="tab-pip"></span>
       </button>
       <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
         <span class="tab-icon">👤</span>
@@ -1650,7 +1665,7 @@
     } else {
       try {
         const lastTab = localStorage.getItem('jpgs_last_tab');
-        if (lastTab && ['home','events','tee','messages','profile','admin'].includes(lastTab)) {
+        if (lastTab && ['home','events','tee','messages','courses','profile','admin'].includes(lastTab)) {
           if (lastTab !== 'admin' || currentUser.role === 'admin') {
             currentTab = lastTab;
           }
@@ -2172,7 +2187,7 @@
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
 
-    const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', profile: 'tabProfile', admin: 'tabAdmin' };
+    const tabMap = { home: 'tabHome', events: 'tabEvents', tee: 'tabTee', messages: 'tabMessages', courses: 'tabCourses', profile: 'tabProfile', admin: 'tabAdmin' };
     document.getElementById(tabMap[tab]).classList.remove('hidden');
 
     // Clear messages badge when visiting messages
@@ -2193,6 +2208,7 @@
     else if (tab === 'events') renderEvents();
     else if (tab === 'tee') renderTeeTimes();
     else if (tab === 'messages') renderMessages();
+    else if (tab === 'courses') renderMemberCourses();
     else if (tab === 'profile') renderProfile();
     else if (tab === 'admin') renderAdmin();
   }
@@ -2299,6 +2315,20 @@
         <div class="hero-card" style="margin-top: 16px;">
           <h1>Welcome to SocieteeGolf</h1>
           <p>The platform for golf societies. Find yours, start one, or take a look around.</p>
+        </div>
+
+        <div class="card" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:none;">
+          <h3 class="card-title">📚 Courses &amp; Rates</h3>
+          <p class="card-body mt-8">
+            Browse 70+ courses across Spain — Costa Blanca, Murcia, Costa del Sol,
+            Mallorca, Catalonia and more. Each society's negotiated green-fee rates
+            are pulled together in one place so the captain doesn't have to chase
+            them down event by event.
+          </p>
+          <p class="text-sm" style="margin-top:8px;color:#92400E;font-style:italic;">
+            * Rates shown are based on a minimum of 12 players. Society members see
+            their own society's negotiated rate card after sign-in.
+          </p>
         </div>
 
         <div class="card" style="cursor:pointer;" onclick="showJoinSocietyView()">
@@ -4095,6 +4125,105 @@
     if (typeof applyRateToEventForm === 'function' && document.getElementById('appCourseSelect')) {
       applyRateToEventForm();
     }
+  }
+
+  // ===== MEMBER: COURSES TAB =====
+  // Read-only library view for members. Lists every external_courses
+  // row, lazy-loads rates per course on tap (reuses the rates panel
+  // built for the admin event-creation flow). Members see only their
+  // own society's rates via RLS; for courses without a society rate,
+  // the panel shows the "Contact for pricing" message.
+
+  let _memberCoursesCache = null;
+
+  async function renderMemberCourses(query) {
+    const listEl = document.getElementById('coursesTabList');
+    if (!listEl || !supabase) return;
+    if (!_memberCoursesCache) {
+      const { data, error } = await supabase.rpc('search_external_courses', {
+        p_query: null,
+        p_country: null,
+        p_region: null,
+        p_limit: 200,
+      });
+      if (error) {
+        listEl.innerHTML = '<p style="color:var(--red);padding:16px;">' + error.message + '</p>';
+        return;
+      }
+      _memberCoursesCache = data || [];
+    }
+    const needle = (query || '').trim().toLowerCase();
+    const filtered = !needle
+      ? _memberCoursesCache
+      : _memberCoursesCache.filter(c =>
+          (c.name || '').toLowerCase().includes(needle) ||
+          (c.city || '').toLowerCase().includes(needle) ||
+          (c.region || '').toLowerCase().includes(needle)
+        );
+    if (!filtered.length) {
+      listEl.innerHTML = '<p class="text-sm text-secondary" style="text-align:center;padding:16px;">No courses match.</p>';
+      return;
+    }
+
+    // Group by region.
+    const byRegion = {};
+    for (const c of filtered) {
+      const r = c.region || 'Other';
+      if (!byRegion[r]) byRegion[r] = [];
+      byRegion[r].push(c);
+    }
+
+    listEl.innerHTML = Object.entries(byRegion).map(([region, courses]) => `
+      <h3 class="section-title" style="margin-top:16px;">${region}</h3>
+      <div class="card" style="padding:0;">
+        ${courses.map(c => {
+          const idEsc = (c.id || '').replace(/'/g,'');
+          return `
+            <div class="list-item" style="padding:10px 12px;flex-direction:column;align-items:stretch;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div class="list-text" style="flex:1;">
+                  <strong>${c.name}</strong>
+                  <p class="text-sm text-secondary" style="margin:0;">${c.city || ''}${c.holes ? ' · ' + c.holes + ' holes' : ''}</p>
+                </div>
+                <button class="btn btn-sm" style="background:#E0E7FF;color:#3730A3;" onclick="toggleMemberCourseRates('${idEsc}', this)">Rates</button>
+              </div>
+              <div id="memberRates-${idEsc}" style="display:none;margin-top:8px;"></div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `).join('');
+  }
+
+  async function toggleMemberCourseRates(courseId, btn) {
+    const panel = document.getElementById('memberRates-' + courseId);
+    if (!panel) return;
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+      btn.textContent = 'Rates';
+      return;
+    }
+    panel.style.display = 'block';
+    btn.textContent = 'Hide';
+    panel.innerHTML = '<p class="text-sm text-secondary" style="padding:8px;">Loading rates…</p>';
+    const { data, error } = await supabase.rpc('rates_for_course', {
+      p_course_id: courseId,
+      p_players: 12,
+      p_on_date: new Date().toISOString().split('T')[0],
+    });
+    if (error) {
+      panel.innerHTML = '<p class="text-sm" style="color:var(--red);">' + error.message + '</p>';
+      return;
+    }
+    if (!data || !data.length) {
+      panel.innerHTML = `
+        <div style="background:#FEF3C7;color:#92400E;padding:10px 12px;border-radius:6px;font-size:13px;">
+          <strong>Contact for pricing.</strong>
+          We don't have negotiated rates on file for this course yet.
+        </div>`;
+      return;
+    }
+    panel.innerHTML = renderRatesHtml(courseId, data, 12);
   }
 
   // ===== EVENT FORM: auto-fill cost from rate card =====

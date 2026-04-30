@@ -1815,9 +1815,10 @@
     return _cacheSet('messages', data || []);
   }
 
-  async function signUpForEvent(eventId) {
+  async function signUpForEvent(eventId, opts) {
+    opts = opts || {};
     if (!supabase) {
-      DEMO_SIGNUPS.push({ event_id: eventId, member_id: 'demo-1', handicap_at_signup: DEMO_MEMBER.handicap, paid: false });
+      DEMO_SIGNUPS.push({ event_id: eventId, member_id: 'demo-1', handicap_at_signup: DEMO_MEMBER.handicap, paid: false, buggy_requested: !!opts.buggy, player_type: opts.playerType || 'guest' });
       return true;
     }
     try {
@@ -1831,6 +1832,12 @@
           return false;
         }
       }
+      // Check signup cutoff (timestamp version takes precedence).
+      const cutoffAt = evt?.signup_cutoff_at ? new Date(evt.signup_cutoff_at) : (evt?.signup_cutoff ? new Date(evt.signup_cutoff + 'T23:59') : null);
+      if (cutoffAt && Date.now() > cutoffAt.getTime()) {
+        alert('Signups closed at ' + cutoffAt.toLocaleString() + '.');
+        return false;
+      }
       // Check member status
       if (currentUser.status === 'suspended' || currentUser.status === 'applied') {
         alert('Cannot sign up with current membership status.');
@@ -1839,7 +1846,9 @@
       const { error } = await supabase.from('signups').insert({
         event_id: eventId,
         member_id: currentUser.id,
-        handicap_at_signup: currentUser.handicap || 0
+        handicap_at_signup: currentUser.handicap || 0,
+        buggy_requested: !!opts.buggy,
+        player_type: opts.playerType || 'guest',
       });
       if (error) {
         if (error.code === '23505') {
@@ -3231,7 +3240,15 @@
       alert('Please log in to sign up for events.');
       return;
     }
-    const success = await signUpForEvent(eventId);
+    // Quick prompt for buggy + member-of-club self-declaration. Replaces
+    // the silent insert. A nicer modal can replace this later — for v1
+    // a confirm + checkbox interaction is enough.
+    const wantBuggy = confirm('Request a buggy for this event?\n\nOK = yes, Cancel = no.');
+    const isClubMember = confirm('Are you a member of this golf club?\n\nOK = yes (member rate may apply), Cancel = no, you\'re a guest.');
+    const success = await signUpForEvent(eventId, {
+      buggy: wantBuggy,
+      playerType: isClubMember ? 'club_member' : 'guest',
+    });
     if (success) {
       renderEvents();
       renderDashboard();
@@ -3689,21 +3706,33 @@
       <!-- Events List -->
       <div id="adminEventsList">
         <h3 class="section-title mt-16">Events</h3>
-        ${events.length > 0 ? events.map(evt => `
-          <div class="card" style="cursor:pointer; margin-bottom:8px;" onclick="openEventDetail(${evt.id})">
-            <div style="display:flex; gap:12px; align-items:center;">
-              <div class="event-date-box">
-                <div class="month">${getMonthShort(evt.date)}</div>
-                <div class="day">${getDay(evt.date)}</div>
-              </div>
-              <div style="flex:1;">
-                <h4 style="margin:0; font-size:14px;">${evt.title}</h4>
-                <span class="text-sm text-secondary">${evt.course || ''} · ${evt.location || ''}</span><br>
-                <span class="text-sm text-secondary">${evt.format || ''} · €${evt.cost || '–'}</span>
+        <div class="toggle-tabs" style="margin-bottom:8px;">
+          <button class="toggle-tab ${(window._adminEventFilter||'upcoming')==='upcoming'?'active':''}" onclick="window._adminEventFilter='upcoming'; renderAdmin();">Upcoming</button>
+          <button class="toggle-tab ${(window._adminEventFilter||'')==='past'?'active':''}" onclick="window._adminEventFilter='past'; renderAdmin();">Past</button>
+          <button class="toggle-tab ${(window._adminEventFilter||'')==='all'?'active':''}" onclick="window._adminEventFilter='all'; renderAdmin();">All</button>
+        </div>
+        ${(() => {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const filter = window._adminEventFilter || 'upcoming';
+          const filtered = events.filter(e => filter === 'all' ? true : (filter === 'upcoming' ? e.date >= todayStr : e.date < todayStr));
+          if (!filtered.length) return '<p class="text-sm text-secondary">No ' + filter + ' events.</p>';
+          return filtered.map(evt => `
+            <div class="card" style="margin-bottom:8px;">
+              <div style="display:flex; gap:12px; align-items:center;">
+                <div class="event-date-box" onclick="openEventDetail(${evt.id})" style="cursor:pointer;">
+                  <div class="month">${getMonthShort(evt.date)}</div>
+                  <div class="day">${getDay(evt.date)}</div>
+                </div>
+                <div style="flex:1; cursor:pointer;" onclick="openEventDetail(${evt.id})">
+                  <h4 style="margin:0; font-size:14px;">${evt.title}</h4>
+                  <span class="text-sm text-secondary">${evt.course || ''} · ${evt.location || ''}</span><br>
+                  <span class="text-sm text-secondary">${evt.format || ''} · €${evt.cost || '–'}</span>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="adminDeleteEvent(${evt.id}, '${(evt.title||'').replace(/'/g, "\\'")}')">Delete</button>
               </div>
             </div>
-          </div>
-        `).join('') : '<p class="text-sm text-secondary">No events yet.</p>'}
+          `).join('');
+        })()}
       </div>
 
       <!-- Members List -->
@@ -3789,11 +3818,31 @@
     return d.toISOString().split('T')[0];
   }
 
+  // Returns 'YYYY-MM-DDTHH:MM' for the Friday-17:00 (local) before the
+  // given event date, suitable for an <input type="datetime-local">.
+  function appGetFridayBeforeAt5(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = (day + 2) % 7;
+    d.setDate(d.getDate() - (diff === 0 ? 7 : diff));
+    d.setHours(17, 0, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   async function showAdminCreateEvent() {
     currentAdminScreen = 'createEvent';
-    const { data: courses } = await supabase.from('courses').select('*').order('name');
-    const courseOpts = (courses||[]).map(c =>
-      `<option value="${c.name}" data-loc="${c.location}">${c.name}</option>`
+    // Fetch the society's courses + its home course (for default
+    // selection) in parallel.
+    const [coursesRes, societyRes] = await Promise.all([
+      supabase.from('courses').select('*').eq('society_id', currentUser.society_id).order('name'),
+      supabase.from('societies').select('home_course_external_id, external_courses!societies_home_course_external_id_fkey(name)').eq('id', currentUser.society_id).maybeSingle(),
+    ]);
+    const courses = coursesRes.data || [];
+    const homeCourseName = societyRes?.data?.external_courses?.name || null;
+    const courseOpts = courses.map(c =>
+      `<option value="${c.name}" data-loc="${c.location || ''}" ${homeCourseName && c.name === homeCourseName ? 'selected' : ''}>${homeCourseName && c.name === homeCourseName ? '🏠 ' : ''}${c.name}</option>`
     ).join('');
 
     document.getElementById('adminContent').innerHTML = `
@@ -3805,11 +3854,11 @@
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Date</label>
           <input class="input" type="date" name="date" id="appDateInput" required onchange="
             var co = document.getElementById('appCutoff');
-            if (!co.dataset.manual) co.value = appGetFridayBefore(this.value);
+            if (!co.dataset.manual) co.value = appGetFridayBeforeAt5(this.value);
             applyRateToEventForm();
           ">
-          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Signup Cutoff <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(auto: Friday before event)</span></label>
-          <input class="input" type="date" name="signup_cutoff" id="appCutoff" onchange="this.dataset.manual='true'">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Signup Cutoff <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(auto: Friday 17:00 before event)</span></label>
+          <input class="input" type="datetime-local" name="signup_cutoff_at" id="appCutoff" required onchange="this.dataset.manual='true'">
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Course</label>
           <select class="input" name="course" id="appCourseSelect" required onchange="
             var loc = document.getElementById('appLocInput');
@@ -3858,10 +3907,16 @@
           society_id: currentUser.society_id,
         });
       }
+      // Cutoff is now a datetime-local string like '2026-05-08T17:00'.
+      // Persist both: signup_cutoff_at (timestamp, authoritative) and
+      // signup_cutoff (date, kept in sync for legacy reads).
+      const cutoffAt = f.signup_cutoff_at.value || null;
+      const cutoffDate = cutoffAt ? cutoffAt.split('T')[0] : null;
       const { error } = await supabase.from('events').insert({
         title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
         format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
-        signup_limit: parseInt(f.signup_limit.value)||null, signup_cutoff: f.signup_cutoff.value||null,
+        signup_limit: parseInt(f.signup_limit.value)||null,
+        signup_cutoff: cutoffDate, signup_cutoff_at: cutoffAt,
         tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null,
         society_id: currentUser.society_id,
       });
@@ -3869,6 +3924,11 @@
       alert('Event created!');
       renderAdmin();
     });
+
+    // If a home course was pre-selected, kick the rate auto-fill once
+    // (the change event doesn't fire on JS-rendered <option selected>).
+    const sel = document.getElementById('appCourseSelect');
+    if (sel && sel.value) applyRateToEventForm();
   }
 
   function showAdminPostMessage() {
@@ -3959,6 +4019,18 @@
       }
       alert('Results saved!');
     });
+  }
+
+  async function adminDeleteEvent(eventId, eventTitle) {
+    if (!supabase || !currentUser) return;
+    if (!confirm(`Delete "${eventTitle}"?\n\nThis removes the event AND any signups + results attached to it. Cannot be undone.`)) return;
+    // signups + results have ON DELETE CASCADE on event_id, so deleting
+    // the event row tears down the rest atomically.
+    const { error } = await supabase.from('events').delete().eq('id', eventId);
+    if (error) { alert('Could not delete: ' + error.message); return; }
+    invalidateCache();
+    showToast('Event deleted.');
+    renderAdmin();
   }
 
   async function adminApproveMember(memberId) {
@@ -4077,35 +4149,44 @@
     const ratesTable = rows.map(r => {
       const highlight = r.is_active_today && r.matches_player_count;
       const dim = !r.is_active_today;
-      const row = `
+      const memberFee = r.is_tbc && r.green_fee_cents == null ? '<em>TBC</em>' : fmt(r.green_fee_cents, r.currency);
+      const guestFee = r.green_fee_guest_cents == null ? '—' : fmt(r.green_fee_guest_cents, r.currency);
+      return `
         <tr style="${highlight ? 'background:#D1FAE5;' : ''}${dim ? 'color:var(--text-secondary);' : ''}">
           <td style="padding:6px 8px;">${r.season.toUpperCase()}</td>
           <td style="padding:6px 8px;">${r.is_tbc ? '<em>TBC</em>' : (r.date_range_label || '—')}</td>
-          <td style="padding:6px 8px;text-align:right;">${r.is_tbc && r.green_fee_cents == null ? '<em>TBC</em>' : fmt(r.green_fee_cents, r.currency)}</td>
+          <td style="padding:6px 8px;text-align:right;">${memberFee}</td>
+          <td style="padding:6px 8px;text-align:right;">${guestFee}</td>
           <td style="padding:6px 8px;text-align:right;">${r.buggy_included ? '<em>inc</em>' : (r.buggy_cents == null ? '—' : fmt(r.buggy_cents, r.currency))}</td>
           <td style="padding:6px 8px;text-align:center;">${r.min_players != null ? (r.min_players + (r.min_players_max ? '–' + (r.min_players_max - 1) : '+')) : '—'}</td>
           <td style="padding:6px 8px;text-align:center;">${r.captain_free_at != null ? (r.captain_free_at + '+') : '—'}</td>
         </tr>`;
-      return row;
     }).join('');
 
-    // Calculator: pick the first row matching today AND player count.
+    // Calculator: best-matching rate row.
     const match = rows.find(r => r.is_active_today && r.matches_player_count) || rows.find(r => r.matches_player_count);
     let calc = '';
-    if (match && !match.is_tbc && match.green_fee_cents != null) {
+    if (match && !match.is_tbc && (match.green_fee_cents != null || match.green_fee_guest_cents != null)) {
       const captainFree = (match.captain_free_at != null && players >= match.captain_free_at) ? 1 : 0;
       const payingPlayers = players - captainFree;
-      const gf = match.green_fee_cents;
+      const memberGf = match.green_fee_cents;
+      const guestGf = match.green_fee_guest_cents;
       const buggy = match.buggy_included ? 0 : (match.buggy_cents || 0);
-      // Default assumption: no buggies. Buggy-included rates always include them.
-      const totalGf = payingPlayers * gf;
-      const total = totalGf;
+      // Default assumption: all players play as guests (society-rate fallback).
+      // Both rates are shown if available; the headline is the guest rate
+      // since that's what most society-as-visitor scenarios use.
+      const headlineGf = guestGf != null ? guestGf : memberGf;
+      const headlineLabel = guestGf != null ? (memberGf != null ? 'guest' : '') : 'member';
+      const dualLine = (memberGf != null && guestGf != null)
+        ? `<br><span class="text-sm">Member rate: ${fmt(memberGf, match.currency)} per player · Guest rate: ${fmt(guestGf, match.currency)} per player.</span>`
+        : '';
       calc = `
         <div style="background:#F0FDF4;color:#065F46;padding:10px 12px;border-radius:6px;margin-top:8px;font-size:13px;">
-          <strong>${players} players · ${match.season.toUpperCase()} season:</strong>
-          ${payingPlayers} × ${fmt(gf, match.currency)} = <strong>${fmt(total, match.currency)}</strong>
+          <strong>${players} players · ${match.season.toUpperCase()} season ${headlineLabel ? '(' + headlineLabel + ' rate)' : ''}:</strong>
+          ${payingPlayers} × ${fmt(headlineGf, match.currency)} = <strong>${fmt(payingPlayers * headlineGf, match.currency)}</strong>
           ${captainFree ? '<br><span class="text-sm">Captain plays free at ' + match.captain_free_at + '+ players.</span>' : ''}
           ${match.buggy_included ? '<br><span class="text-sm">Buggies included.</span>' : (buggy ? '<br><span class="text-sm">Add ' + fmt(buggy, match.currency) + ' per buggy if needed.</span>' : '')}
+          ${dualLine}
         </div>`;
     } else if (rows.every(r => r.is_tbc)) {
       calc = `<div style="color:var(--text-secondary);font-size:12px;margin-top:6px;">Rate card is being confirmed for this course.</div>`;
@@ -4124,10 +4205,11 @@
           <thead><tr style="background:white;text-align:left;">
             <th style="padding:6px 8px;">Season</th>
             <th style="padding:6px 8px;">Dates</th>
-            <th style="padding:6px 8px;text-align:right;">GF</th>
+            <th style="padding:6px 8px;text-align:right;">Member</th>
+            <th style="padding:6px 8px;text-align:right;">Guest</th>
             <th style="padding:6px 8px;text-align:right;">Buggy</th>
             <th style="padding:6px 8px;text-align:center;">Min</th>
-            <th style="padding:6px 8px;text-align:center;">Captain free</th>
+            <th style="padding:6px 8px;text-align:center;">Captain</th>
           </tr></thead>
           <tbody>${ratesTable}</tbody>
         </table>
@@ -4396,11 +4478,22 @@
     listEl.innerHTML = '<p class="text-sm text-secondary" style="padding:16px;text-align:center;">Loading rates…</p>';
 
     // All this society's rate rows + course names, grouped by course.
-    const { data, error } = await supabase
-      .from('course_rates')
-      .select('*, external_courses(id, name, city, region)')
-      .eq('society_id', currentUser.society_id)
-      .order('external_course_id');
+    // Also fetch the home_course_external_id so we can render the 🏠
+    // badge + a "Set as home"/"Home (clear)" toggle per course.
+    const [ratesRes, societyRes] = await Promise.all([
+      supabase
+        .from('course_rates')
+        .select('*, external_courses(id, name, city, region)')
+        .eq('society_id', currentUser.society_id)
+        .order('external_course_id'),
+      supabase
+        .from('societies')
+        .select('home_course_external_id')
+        .eq('id', currentUser.society_id)
+        .maybeSingle(),
+    ]);
+    const { data, error } = ratesRes;
+    const homeCourseId = societyRes?.data?.home_course_external_id || null;
     if (error) { listEl.innerHTML = '<p style="color:var(--red);">' + error.message + '</p>'; return; }
 
     if (!data || !data.length) {
@@ -4420,6 +4513,7 @@
     }
 
     listEl.innerHTML = Object.values(byCourse).map(({ course, rates }) => {
+      const isHome = course?.id === homeCourseId;
       const rateRows = rates.map(r => `
         <div class="list-item" style="padding:8px 0;flex-direction:column;align-items:stretch;">
           <div style="display:flex;gap:8px;align-items:center;">
@@ -4428,7 +4522,8 @@
               ${r.is_tbc ? ' · <em>TBC</em>' : ''}
               <p class="text-sm text-secondary" style="margin:0;">
                 ${r.date_range_label || '—'}
-                ${r.green_fee_cents != null ? ' · €' + (r.green_fee_cents/100).toFixed(0) + ' GF' : ''}
+                ${r.green_fee_cents != null ? ' · €' + (r.green_fee_cents/100).toFixed(0) + ' member' : ''}
+                ${r.green_fee_guest_cents != null ? ' · €' + (r.green_fee_guest_cents/100).toFixed(0) + ' guest' : ''}
                 ${r.buggy_included ? ' · buggy inc' : (r.buggy_cents != null ? ' · €' + (r.buggy_cents/100).toFixed(0) + ' buggy' : '')}
                 ${r.min_players != null ? ' · ' + r.min_players + (r.min_players_max ? '–' + (r.min_players_max-1) : '+') + ' players' : ''}
                 ${r.captain_free_at != null ? ' · captain free at ' + r.captain_free_at : ''}
@@ -4438,14 +4533,33 @@
             <button class="btn btn-sm btn-danger" onclick="deleteRate('${r.id}')">Delete</button>
           </div>
         </div>`).join('');
+      const homeBtn = isHome
+        ? `<button class="btn btn-sm" style="background:#FEF3C7;color:#92400E;" onclick="setHomeCourse(null)">🏠 Home — clear</button>`
+        : `<button class="btn btn-sm" style="background:#F3F4F6;color:#1F2937;" onclick="setHomeCourse('${course.id}')">Set as home course</button>`;
       return `
-        <div class="card" style="margin-bottom:12px;">
-          <h4 style="margin:0 0 8px 0;">${course?.name || 'Unknown course'}</h4>
+        <div class="card" style="margin-bottom:12px;${isHome ? 'border:2px solid #FEF3C7;' : ''}">
+          <h4 style="margin:0 0 8px 0;">${isHome ? '🏠 ' : ''}${course?.name || 'Unknown course'}</h4>
           <p class="text-sm text-secondary" style="margin:0 0 8px 0;">${[course?.city, course?.region].filter(Boolean).join(' · ')}</p>
           ${rateRows}
-          <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;margin-top:8px;" onclick="showRateEditor(null, '${course.id}')">+ Add rate</button>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="showRateEditor(null, '${course.id}')">+ Add rate</button>
+            ${homeBtn}
+          </div>
         </div>`;
     }).join('');
+  }
+
+  // Set or clear the society's home course. Updates societies row,
+  // re-renders the rates list to reflect the badge/border swap.
+  async function setHomeCourse(courseId) {
+    if (!supabase || !currentUser) return;
+    const { error } = await supabase
+      .from('societies')
+      .update({ home_course_external_id: courseId })
+      .eq('id', currentUser.society_id);
+    if (error) { alert('Could not update home course: ' + error.message); return; }
+    showToast(courseId ? 'Home course set.' : 'Home course cleared.');
+    renderRatesAdminList();
   }
 
   async function searchRatesLibraryFromAdmin(query) {
@@ -4524,14 +4638,21 @@
 
           <div style="display:flex;gap:8px;">
             <div style="flex:1;">
-              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Green fee (€)</label>
-              <input class="input" type="number" min="0" step="1" name="green_fee" value="${row.green_fee_cents != null ? (row.green_fee_cents/100).toFixed(0) : ''}" placeholder="e.g. 50">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Member GF (€)</label>
+              <input class="input" type="number" min="0" step="1" name="green_fee" value="${row.green_fee_cents != null ? (row.green_fee_cents/100).toFixed(0) : ''}" placeholder="club member rate">
             </div>
             <div style="flex:1;">
-              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Buggy (€)</label>
-              <input class="input" type="number" min="0" step="1" name="buggy" value="${row.buggy_cents != null ? (row.buggy_cents/100).toFixed(0) : ''}" placeholder="leave blank if inc'd">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Guest GF (€)</label>
+              <input class="input" type="number" min="0" step="1" name="green_fee_guest" value="${row.green_fee_guest_cents != null ? (row.green_fee_guest_cents/100).toFixed(0) : ''}" placeholder="society visitor rate">
             </div>
           </div>
+          <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">
+            Member rate = society members who are also members of the host golf club. Guest rate = society members who aren't. Leave blank if only one rate applies.
+          </p>
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Buggy (€)</label>
+          <input class="input" type="number" min="0" step="1" name="buggy" value="${row.buggy_cents != null ? (row.buggy_cents/100).toFixed(0) : ''}" placeholder="leave blank if included">
+
           <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:-8px 0 12px 0;">
             <input type="checkbox" name="buggy_included" ${row.buggy_included ? 'checked' : ''}> Buggy included in green fee
           </label>
@@ -4578,6 +4699,7 @@
       days_label: f.days_label.value.trim() || 'Mon - Sun',
       date_range_label: f.date_range_label.value.trim() || null,
       green_fee_cents: eurosToCents(f.green_fee.value),
+      green_fee_guest_cents: eurosToCents(f.green_fee_guest.value),
       buggy_cents: eurosToCents(f.buggy.value),
       buggy_included: f.buggy_included.checked,
       min_players: num(f.min_players.value),

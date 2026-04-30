@@ -2328,7 +2328,35 @@
   // Search the public society directory, pick one, submit a join request.
   let _societyDirectoryCache = null;
 
+  // If the visitor still has an anonymous session attached (from a
+  // prior "Try the demo"), end it before showing the register / join
+  // flows. The register_society RPC rejects anon JWTs, and the
+  // demo-society membership has no business carrying into a real
+  // signup decision.
+  async function endAnonSessionIfAny() {
+    if (!supabase) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const isAnon = session?.user?.is_anonymous === true
+        || session?.user?.app_metadata?.is_anonymous === true
+        || session?.user?.app_metadata?.providers?.includes('anonymous');
+      if (isAnon) {
+        // Tear down local state synchronously first so the SIGNED_OUT
+        // echo doesn't loop through onAuthStateChange (same fix as
+        // commit e0239b3 for the main logout path).
+        isAuthenticated = false;
+        currentUser = null;
+        currentTab = 'home';
+        try { localStorage.removeItem('jpgs_last_tab'); } catch (e) {}
+        clearActiveSociety();
+        invalidateCache();
+        await supabase.auth.signOut().catch(() => {});
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
   async function showJoinSocietyView() {
+    await endAnonSessionIfAny();
     const container = document.getElementById('visitorView');
     container.innerHTML = `
       <div class="content-inner">
@@ -2454,6 +2482,7 @@
 
   let _registerPlanCache = null;
   async function showRegisterSocietyView() {
+    await endAnonSessionIfAny();
     const container = document.getElementById('visitorView');
     const defaultCurrency = detectPreferredCurrency();
     container.innerHTML = `

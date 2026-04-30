@@ -3532,6 +3532,12 @@
           <div class="list-text"><h4>Enter Results</h4><p>Record scores for a past event</p></div>
         </div>
       </div>
+      <div class="card" onclick="showAdminCourseRates()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#FEF3C7;">💶</div>
+          <div class="list-text"><h4>Manage Course Rates</h4><p>Edit your society's negotiated green-fee rates</p></div>
+        </div>
+      </div>
 
       <!-- Payment Reviews -->
       <div id="adminPaymentReviews">
@@ -4082,6 +4088,252 @@
     }
     document.getElementById('courseLibraryPanel').style.display = 'none';
     showToast('Added "' + name + '" to your courses.');
+  }
+
+  // ===== ADMIN: MANAGE COURSE RATES =====
+  // Lets an admin add/edit/delete their society's negotiated rates.
+  // RLS (course_rates_admin_all → is_admin_of) gates writes server-side
+  // so we can use direct PostgREST calls from the client.
+
+  async function showAdminCourseRates() {
+    currentAdminScreen = 'courseRates';
+    if (!currentUser || currentUser.role !== 'admin') return;
+    const root = document.getElementById('adminContent');
+    root.innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Course Rates</h3>
+      <p class="text-sm text-secondary" style="margin-bottom:12px;">
+        Your society's negotiated green-fee rates. Add a course from the
+        regional library, then add one or more rate rows per course
+        (typically one per season, day, or group-size tier).
+      </p>
+      <div class="card">
+        <input type="search" class="input" id="ratesAdminQuery" placeholder="Search the regional library to add a course…" oninput="searchRatesLibraryFromAdmin(this.value)">
+        <div id="ratesAdminLibraryResults" class="text-sm" style="margin-top:8px;"></div>
+      </div>
+      <div id="ratesAdminList" style="margin-top:16px;"></div>
+    `;
+    await renderRatesAdminList();
+  }
+
+  async function renderRatesAdminList() {
+    const listEl = document.getElementById('ratesAdminList');
+    if (!listEl || !supabase) return;
+    listEl.innerHTML = '<p class="text-sm text-secondary" style="padding:16px;text-align:center;">Loading rates…</p>';
+
+    // All this society's rate rows + course names, grouped by course.
+    const { data, error } = await supabase
+      .from('course_rates')
+      .select('*, external_courses(id, name, city, region)')
+      .eq('society_id', currentUser.society_id)
+      .order('external_course_id');
+    if (error) { listEl.innerHTML = '<p style="color:var(--red);">' + error.message + '</p>'; return; }
+
+    if (!data || !data.length) {
+      listEl.innerHTML = `
+        <div class="card" style="text-align:center;padding:24px;">
+          <p>No rates set up yet. Search the library above to add a course, then "Add rate".</p>
+        </div>`;
+      return;
+    }
+
+    // Group by course id.
+    const byCourse = {};
+    for (const r of data) {
+      const cid = r.external_course_id;
+      if (!byCourse[cid]) byCourse[cid] = { course: r.external_courses, rates: [] };
+      byCourse[cid].rates.push(r);
+    }
+
+    listEl.innerHTML = Object.values(byCourse).map(({ course, rates }) => {
+      const rateRows = rates.map(r => `
+        <div class="list-item" style="padding:8px 0;flex-direction:column;align-items:stretch;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;">
+              <strong>${r.season.toUpperCase()}</strong> · ${r.days_label}
+              ${r.is_tbc ? ' · <em>TBC</em>' : ''}
+              <p class="text-sm text-secondary" style="margin:0;">
+                ${r.date_range_label || '—'}
+                ${r.green_fee_cents != null ? ' · €' + (r.green_fee_cents/100).toFixed(0) + ' GF' : ''}
+                ${r.buggy_included ? ' · buggy inc' : (r.buggy_cents != null ? ' · €' + (r.buggy_cents/100).toFixed(0) + ' buggy' : '')}
+                ${r.min_players != null ? ' · ' + r.min_players + (r.min_players_max ? '–' + (r.min_players_max-1) : '+') + ' players' : ''}
+                ${r.captain_free_at != null ? ' · captain free at ' + r.captain_free_at : ''}
+              </p>
+            </div>
+            <button class="btn btn-sm" style="background:#E0E7FF;color:#3730A3;" onclick="showRateEditor('${r.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRate('${r.id}')">Delete</button>
+          </div>
+        </div>`).join('');
+      return `
+        <div class="card" style="margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0;">${course?.name || 'Unknown course'}</h4>
+          <p class="text-sm text-secondary" style="margin:0 0 8px 0;">${[course?.city, course?.region].filter(Boolean).join(' · ')}</p>
+          ${rateRows}
+          <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;margin-top:8px;" onclick="showRateEditor(null, '${course.id}')">+ Add rate</button>
+        </div>`;
+    }).join('');
+  }
+
+  async function searchRatesLibraryFromAdmin(query) {
+    clearTimeout(window._ratesLibTimer);
+    window._ratesLibTimer = setTimeout(async () => {
+      const el = document.getElementById('ratesAdminLibraryResults');
+      if (!el) return;
+      const { data, error } = await supabase.rpc('search_external_courses', {
+        p_query: (query || '').trim() || null,
+        p_country: 'Spain',
+        p_region: null,
+        p_limit: 20,
+      });
+      if (error) { el.innerHTML = '<em style="color:var(--red);">' + error.message + '</em>'; return; }
+      if (!data?.length) { el.innerHTML = '<em>No matches.</em>'; return; }
+      el.innerHTML = data.map(c => `
+        <div class="list-item" style="padding:6px 0;">
+          <div style="flex:1;">
+            <strong>${c.name}</strong>
+            <p class="text-sm text-secondary" style="margin:0;">${[c.city, c.region].filter(Boolean).join(' · ')}</p>
+          </div>
+          <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="showRateEditor(null, '${c.id}')">+ Add rate</button>
+        </div>
+      `).join('');
+    }, 200);
+  }
+
+  // Rate editor modal — used for both new (rateId=null + courseId) and
+  // existing (rateId) rows.
+  async function showRateEditor(rateId, courseId) {
+    let row = {
+      external_course_id: courseId || null,
+      society_id: currentUser.society_id,
+      days_label: 'Mon - Sun',
+      season: 'all',
+      date_range_label: '',
+      min_players: 12,
+      min_players_max: null,
+      green_fee_cents: null,
+      buggy_cents: null,
+      buggy_included: false,
+      captain_free_at: null,
+      is_tbc: false,
+    };
+    let courseName = '';
+    if (rateId) {
+      const { data, error } = await supabase
+        .from('course_rates')
+        .select('*, external_courses(name)')
+        .eq('id', rateId)
+        .single();
+      if (error || !data) { alert('Could not load rate: ' + (error?.message || 'not found')); return; }
+      row = data;
+      courseName = data.external_courses?.name || '';
+    } else if (courseId) {
+      const { data } = await supabase.from('external_courses').select('name').eq('id', courseId).maybeSingle();
+      courseName = data?.name || '';
+    }
+
+    const root = document.getElementById('adminContent');
+    root.innerHTML = `
+      <button class="btn-ghost mb-16" onclick="showAdminCourseRates()">← Back to rates</button>
+      <h3 class="section-title">${rateId ? 'Edit' : 'Add'} rate · ${courseName}</h3>
+      <div class="card">
+        <form id="rateEditorForm" onsubmit="submitRateEditor(event, '${rateId || ''}', '${row.external_course_id}')">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Season</label>
+          <select class="input" name="season" required>
+            ${['low','mid','high','all','tbc'].map(s => `<option value="${s}" ${row.season === s ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
+          </select>
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Days</label>
+          <input class="input" name="days_label" required value="${row.days_label || 'Mon - Sun'}" placeholder="e.g. Mon - Sun">
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Date range (free text for display)</label>
+          <input class="input" name="date_range_label" value="${row.date_range_label || ''}" placeholder='e.g. "Jan - 1 Mar, June - Aug + Dec" or "TBC"'>
+
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Green fee (€)</label>
+              <input class="input" type="number" min="0" step="1" name="green_fee" value="${row.green_fee_cents != null ? (row.green_fee_cents/100).toFixed(0) : ''}" placeholder="e.g. 50">
+            </div>
+            <div style="flex:1;">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Buggy (€)</label>
+              <input class="input" type="number" min="0" step="1" name="buggy" value="${row.buggy_cents != null ? (row.buggy_cents/100).toFixed(0) : ''}" placeholder="leave blank if inc'd">
+            </div>
+          </div>
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:-8px 0 12px 0;">
+            <input type="checkbox" name="buggy_included" ${row.buggy_included ? 'checked' : ''}> Buggy included in green fee
+          </label>
+
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Min players</label>
+              <input class="input" type="number" min="1" step="1" name="min_players" value="${row.min_players ?? ''}" placeholder="e.g. 12">
+            </div>
+            <div style="flex:1;">
+              <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Max players (exclusive)</label>
+              <input class="input" type="number" min="1" step="1" name="min_players_max" value="${row.min_players_max ?? ''}" placeholder="leave blank">
+            </div>
+          </div>
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Captain plays free at</label>
+          <input class="input" type="number" min="1" step="1" name="captain_free_at" value="${row.captain_free_at ?? ''}" placeholder="leave blank if no freebie">
+
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px;">
+            <input type="checkbox" name="is_tbc" ${row.is_tbc ? 'checked' : ''}> Rate is TBC (still being negotiated)
+          </label>
+
+          <button type="submit" class="btn btn-primary btn-full">${rateId ? 'Save changes' : 'Add rate'}</button>
+        </form>
+        <div id="rateEditorMsg" class="hidden auth-message" style="margin-top:12px;"></div>
+      </div>
+    `;
+  }
+
+  async function submitRateEditor(e, rateId, courseId) {
+    e.preventDefault();
+    const f = e.target;
+    const msg = document.getElementById('rateEditorMsg');
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+
+    const num = (v) => v === '' || v == null ? null : parseInt(v, 10);
+    const eurosToCents = (v) => v === '' || v == null ? null : Math.round(parseFloat(v) * 100);
+
+    const payload = {
+      society_id: currentUser.society_id,
+      external_course_id: courseId,
+      season: f.season.value,
+      days_label: f.days_label.value.trim() || 'Mon - Sun',
+      date_range_label: f.date_range_label.value.trim() || null,
+      green_fee_cents: eurosToCents(f.green_fee.value),
+      buggy_cents: eurosToCents(f.buggy.value),
+      buggy_included: f.buggy_included.checked,
+      min_players: num(f.min_players.value),
+      min_players_max: num(f.min_players_max.value),
+      captain_free_at: num(f.captain_free_at.value),
+      is_tbc: f.is_tbc.checked,
+    };
+
+    let error;
+    if (rateId) {
+      ({ error } = await supabase.from('course_rates').update(payload).eq('id', rateId));
+    } else {
+      ({ error } = await supabase.from('course_rates').insert(payload));
+    }
+    if (error) {
+      msg.classList.remove('hidden');
+      msg.style.background = '#FEE2E2';
+      msg.style.color = 'var(--red)';
+      msg.textContent = error.message;
+      btn.disabled = false;
+      return;
+    }
+    showAdminCourseRates();
+  }
+
+  async function deleteRate(rateId) {
+    if (!confirm('Delete this rate row? This cannot be undone.')) return;
+    const { error } = await supabase.from('course_rates').delete().eq('id', rateId);
+    if (error) { alert('Could not delete: ' + error.message); return; }
+    renderRatesAdminList();
   }
 
   // ===== STRIPE CHECKOUT =====

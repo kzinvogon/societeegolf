@@ -1,5 +1,174 @@
 # SocieteeGolf — Changelog
 
+## Phase 5: Self-Serve SaaS — Chooser Entry, Demo, Subscriptions, Course Rates (2026-04-27 → 2026-05-01)
+
+A working multi-tenant B2B SaaS shape on top of the Phase 4 multi-society
+foundation. Single-host pivot, anonymous-auth demo, Stripe billing,
+society directory, regional course library with negotiated rate cards.
+
+### Architecture pivot
+- **Single-host model.** Subdomain routing (the dormant `f7a3383`
+  resolver) parked in favour of one app entry at
+  `app.societeegolf.app`, tenant identified post-login by email. Same
+  shape as Linear / Notion / Vercel. Removes the wildcard-SSL +
+  Netlify-Pro-support-ticket dependency. Subdomain code stays for the
+  day a customer wants a custom domain (CNAME → one alias).
+- **Three-action chooser** at the visitor entry: Join my society /
+  Register a new society / Try the demo. The 120-line per-society
+  visitor view replaced with a 40-line intent picker.
+
+### Auth
+- Magic-link only (typed-OTP path removed in `5da38d4`).
+- `mailer_autoconfirm = true` on the project — new admins receive the
+  friendly magic-link template instead of the spam-prone "Confirm Your
+  Signup" template.
+- Anonymous sign-ins enabled (project setting) for the demo path.
+- `_demoEntryInProgress` flag in `onAuthStateChange` prevents the
+  SIGNED_IN handler from racing the demo flow's own login work.
+- `logout()` clears local state synchronously *before* `signOut()`
+  call so the SIGNED_OUT echo doesn't loop through the handler
+  (`e0239b3` fixes a Safari-freeze bug).
+- `loginWithSession` no-membership fallback: signs out + bounces to
+  the chooser instead of leaving a stranded session.
+
+### Schema
+- **Migration 004** — `events_anon_select` policy dropped; replaced
+  with `events_for_society_slug` and `society_for_slug` SECURITY
+  DEFINER RPCs. Tenant-scoped public reads.
+- **Migration 005** — `handle_new_user` no longer silently buckets
+  email-only signups into the seed default society; requires
+  explicit `society_id` metadata or matches an existing member by
+  email.
+- **Migration 006** — `society_directory()` + `register_society()`
+  RPCs, `societies.is_demo` + `societies.public_directory` flags,
+  seeded demo society (`subdomain='demo'`, id `0…002`).
+- **Migration 007** — `enter_demo_society()` RPC for the
+  anonymous-auth demo path; `register_society` rejects anon JWTs;
+  `cleanup_demo_anon_users()` helper.
+- **Migration 008** — pg_cron job `demo-anon-cleanup-nightly` at
+  03:15 UTC purges anonymous demo accounts older than 24h plus
+  their orphan member rows.
+- **Migration 009** — `register_society` blocks already-known
+  emails (the `members` PK was just `id`, so multi-society wasn't
+  possible without 011).
+- **Migration 010** — pricing tables: `plans`, `plan_prices`,
+  society billing columns (`plan_id`, `billing_currency`,
+  `billing_interval`, `trial_ends_at`, `current_period_end`,
+  `cancel_at_period_end`, `is_billable`). 4 plans × 3 currencies
+  × 2 intervals = 24 prices. RLS world-readable on the catalog.
+- **Migration 011** — multi-society membership unblocked.
+  `members.user_id` added (was `id == auth.uid()` for everyone, so
+  the same auth user couldn't appear in two member rows).
+  Existing rows backfilled. `members.id` now per-membership PK,
+  `user_id` is the auth link. RLS + helpers + trigger + RPCs all
+  updated to filter on `user_id`.
+- **Migration 012** — `register_society` accepts plan/currency/
+  interval params and stamps a 30-day trial. New
+  `approve_join_request(integer)` RPC enforces the plan member cap
+  on approval.
+- **Migration 013** — pricing v2: switched from per-member to
+  flat-rate per society after pricing-vs-society-economics
+  analysis. €5/€10/€20 per month for ≤50/100/200 members; Society+
+  is "contact us" (`is_contact_only`). Annual = 11 × monthly.
+- **Migration 014** — `external_courses` shared catalog (32
+  Costa Blanca + Murcia courses seeded from JPGS data + wanderlog
+  cross-reference). `search_external_courses` RPC.
+- **Migration 015** — `course_rates` per-society negotiated rate
+  rows. JSONB `date_ranges` for queryable matching plus the
+  original label string. 35 rate rows seeded from JPGS's
+  "Societies 2026 V3" rate card. `rates_for_course(course_id,
+  players, on_date)` RPC returns active-today + matches-player-count
+  flags computed server-side. Splits Villaitana into Levante/
+  Poniente courses (different rates).
+- **Migration 016** — broader Spain coverage: 38 more
+  society-friendly courses across Costa del Sol, Mallorca, Costa
+  Brava, Catalonia, Madrid, Tenerife. Total now 73 courses across
+  9 regions.
+
+### Stripe billing
+- 4 products + 24 prices bootstrapped in test mode via the Stripe
+  REST API. `plans.stripe_product_id` + `plan_prices.stripe_price_id`
+  persisted. Repriced in pricing v2 — old per-member prices archived,
+  18 new flat-rate prices created.
+- `netlify/functions/create-checkout-session.js` — verifies caller's
+  Supabase JWT, looks up the right price via service role, builds a
+  Stripe Checkout session in subscription mode with
+  `trial_period_days=30` and `quantity=1`.
+- `netlify/functions/stripe-webhook.js` — HMAC-SHA256 signature
+  verification (no Stripe SDK, fetch + crypto only). Handles
+  `checkout.session.completed`,
+  `customer.subscription.{created,updated,deleted}`,
+  `invoice.payment_{succeeded,failed}` → updates society
+  subscription columns.
+- Admin home Subscription card pulls plan name, interval, currency,
+  trial-end + days-left, status. "Set up billing" CTA opens
+  Checkout when `stripe_subscription_id` is null.
+- Post-Checkout return (`?billing=success`/`cancelled`) shows a
+  toast and cleans the query string.
+- **Pending:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` env vars on Netlify
+  + webhook endpoint registration in Stripe dashboard.
+
+### Visitor / member UX
+- Demo path: `signInAnonymously` → `enter_demo_society` RPC →
+  full member view of the demo society. Yellow banner pinned under
+  the header with a one-click "Register your society" jump that
+  ends the demo session and drops the user on the register form.
+- `endAnonSessionIfAny()` helper called at the top of
+  `showRegisterSocietyView` and `showJoinSocietyView` so a lingering
+  demo session doesn't trip the `is_anonymous` guard on
+  `register_society`.
+- Member-cap enforcement: 80% / 100% capacity banners on the admin
+  home; `approve_join_request` rejects when at cap.
+- Currency picker on register form auto-defaults from
+  `navigator.language` (EUR / GBP / USD).
+- Plan picker on register form pulls live from `plans` +
+  `plan_prices`. Society+ shows "Contact us" mailto instead of
+  price + radio.
+- Course library search panel in admin event creation. "Rates" /
+  "Use" action buttons per result. Rates panel: season/date/GF/
+  buggy/min/captain table with active-today highlighted, 12-player
+  default calculator (captain-freebie aware).
+- Admin "Manage Course Rates" screen — full CRUD on the society's
+  rate rows via direct PostgREST writes (gated by
+  `course_rates_admin_all` RLS).
+- Auto-fill event cost: when admin picks a course + date in the
+  Create Event form, the cost field pre-fills from the matching
+  rate, with a hint showing season + buggy treatment + captain
+  freebie. Manual cost overrides stick.
+
+### Layout / UX fixes
+- `e0239b3` — Safari freeze on logout (signOut/SIGNED_OUT loop).
+- `6f0de94` — tab bar pinned to viewport bottom on tall windows
+  was leaving a gap on desktop. Replaced with `position: sticky`
+  on a naturally-flowing document — bar sits inline at end of
+  short content, sticks while scrolling on long content.
+- `7c190e9` — fresh login lands on Home; page refreshes restore
+  last-tab. `localStorage.jpgs_last_tab` cleared on logout so it
+  doesn't follow the user to a new session.
+- `f4ade44` / `e8c77f9` — fixed an `_demoEntryInProgress` race
+  where the SIGNED_IN handler ran `loginWithSession` which signed
+  the brand-new anon user out before the demo member row existed.
+
+### Cleanup
+- Repo root swept: `deploy/`, `deploy_javeagolf/`, `deploy_go_javea/`,
+  legacy `jpgs_*.html` review packs, JPGS strategy docs all moved
+  to `_archive/`. `.gitignore` covers `node_modules`, `_archive`,
+  `.env*`, OS junk. `package.json` tracked.
+
+### Outstanding (parked, not blocked)
+- Apex marketing site (`index.html`) still has JPGS-pitched-to-
+  golfers content. Needs SaaS-pitched-to-organisers rewrite.
+- Stripe end-to-end verification waiting on Netlify env vars +
+  Stripe webhook endpoint registration.
+- `app/index.html` is now ~4,300 lines with module-style sections
+  but no actual modules. Refactor candidate before subdomain
+  routing comes back online.
+- `external_courses` covers Spain only. Add UK / Portugal / etc.
+  when the customer base demands.
+
+---
+
 ## Phase 4: Society Selection on Login (2026-04-19)
 
 ### Society Selector

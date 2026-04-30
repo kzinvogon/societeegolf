@@ -3730,9 +3730,10 @@
         <form id="appAdminEventForm">
           <input class="input" type="text" name="title" placeholder="Event title" required>
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Date</label>
-          <input class="input" type="date" name="date" required onchange="
+          <input class="input" type="date" name="date" id="appDateInput" required onchange="
             var co = document.getElementById('appCutoff');
             if (!co.dataset.manual) co.value = appGetFridayBefore(this.value);
+            applyRateToEventForm();
           ">
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Signup Cutoff <span style="font-weight:normal;color:var(--text-secondary);font-size:11px;">(auto: Friday before event)</span></label>
           <input class="input" type="date" name="signup_cutoff" id="appCutoff" onchange="this.dataset.manual='true'">
@@ -3742,6 +3743,7 @@
             var newDiv = document.getElementById('appNewCourse');
             if (this.value === '__new__') { newDiv.style.display='block'; loc.value=''; }
             else { newDiv.style.display='none'; var o=this.options[this.selectedIndex]; if(o.dataset.loc) loc.value=o.dataset.loc; }
+            applyRateToEventForm();
           ">
             <option value="">Select course...</option>
             ${courseOpts}
@@ -3761,9 +3763,10 @@
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
           <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
           <input class="input" type="text" name="format" placeholder="Format (e.g. Stableford)">
-          <input class="input" type="number" name="cost" placeholder="Cost (€)" required>
+          <input class="input" type="number" name="cost" id="appCostInput" placeholder="Cost (€)" required>
+          <p class="text-sm" id="appRateHint" style="margin:-8px 0 12px 0;color:var(--text-secondary);min-height:18px;"></p>
           <input class="input" type="url" name="payment_link" placeholder="Payment link (optional)">
-          <input class="input" type="number" name="signup_limit" placeholder="Max players">
+          <input class="input" type="number" name="signup_limit" id="appSignupLimit" placeholder="Max players" oninput="applyRateToEventForm()">
           <input class="input" type="time" name="tee_time_start" placeholder="First tee time">
           <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
           <button class="btn btn-primary btn-full" type="submit">Create Event</button>
@@ -4088,7 +4091,100 @@
     }
     document.getElementById('courseLibraryPanel').style.display = 'none';
     showToast('Added "' + name + '" to your courses.');
+    // If we're inside the event-creation form, pull in the rate now.
+    if (typeof applyRateToEventForm === 'function' && document.getElementById('appCourseSelect')) {
+      applyRateToEventForm();
+    }
   }
+
+  // ===== EVENT FORM: auto-fill cost from rate card =====
+  // Looks up the negotiated rate for the picked course on the event
+  // date and pre-fills the per-player cost. Only overwrites the cost
+  // field if the admin hasn't already typed a value (tracked via
+  // dataset.manual) — so a manual override stays sticky.
+  async function applyRateToEventForm() {
+    const courseSel = document.getElementById('appCourseSelect');
+    const dateEl = document.getElementById('appDateInput');
+    const costEl = document.getElementById('appCostInput');
+    const limitEl = document.getElementById('appSignupLimit');
+    const hintEl = document.getElementById('appRateHint');
+    if (!courseSel || !costEl || !hintEl) return;
+
+    const courseName = courseSel.value;
+    if (!courseName || courseName === '__new__') {
+      hintEl.textContent = '';
+      return;
+    }
+
+    // Resolve the external_course_id by name. The society's `courses`
+    // table holds names that are typically copied verbatim from the
+    // library; fall back to a case-insensitive lookup.
+    const { data: ec } = await supabase
+      .from('external_courses')
+      .select('id, name')
+      .ilike('name', courseName)
+      .limit(1)
+      .maybeSingle();
+    if (!ec) {
+      hintEl.textContent = 'No rate card on file for this course. Add one in Manage Course Rates.';
+      return;
+    }
+
+    const players = Math.max(1, parseInt(limitEl?.value || '12', 10) || 12);
+    const onDate = dateEl?.value || new Date().toISOString().split('T')[0];
+
+    const { data: rates, error } = await supabase.rpc('rates_for_course', {
+      p_course_id: ec.id,
+      p_players: players,
+      p_on_date: onDate,
+    });
+    if (error) {
+      hintEl.textContent = '';
+      console.warn('[event-rate] rpc error', error);
+      return;
+    }
+
+    // Pick the best matching row.
+    const match = (rates || []).find(r => r.is_active_today && r.matches_player_count)
+      || (rates || []).find(r => r.matches_player_count)
+      || null;
+
+    if (!match) {
+      hintEl.textContent = (rates || []).length
+        ? 'No rate matches ' + players + ' players on ' + onDate + '.'
+        : 'No rate card on file for this course.';
+      return;
+    }
+    if (match.is_tbc || match.green_fee_cents == null) {
+      hintEl.textContent = 'Rate is TBC for ' + courseName + ' (' + match.season.toUpperCase() + ').';
+      return;
+    }
+
+    const sym = { EUR: '€', GBP: '£', USD: '$' }[match.currency || 'EUR'] || '€';
+    const gfEuros = (match.green_fee_cents / 100).toFixed(0);
+    const buggyHint = match.buggy_included
+      ? ' · buggy inc'
+      : (match.buggy_cents ? ' · ' + sym + (match.buggy_cents / 100).toFixed(0) + ' buggy extra' : '');
+    const captainHint = match.captain_free_at != null && players >= match.captain_free_at
+      ? ' · captain free'
+      : '';
+    const matchToday = match.is_active_today ? '' : ' (note: not active for ' + onDate + ')';
+
+    hintEl.textContent = match.season.toUpperCase() + ' season: ' + sym + gfEuros + ' GF/player' + buggyHint + captainHint + matchToday;
+
+    // Auto-fill cost only if admin hasn't typed something manually.
+    if (!costEl.dataset.manual && (costEl.value === '' || costEl.value == null)) {
+      costEl.value = gfEuros;
+    }
+  }
+
+  // Track manual override on the cost field so we don't stomp on it
+  // when the admin changes the date afterwards.
+  document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'appCostInput') {
+      e.target.dataset.manual = 'true';
+    }
+  });
 
   // ===== ADMIN: MANAGE COURSE RATES =====
   // Lets an admin add/edit/delete their society's negotiated rates.

@@ -3715,6 +3715,14 @@
           <div id="appNewCourse" style="display:none;">
             <input class="input" type="text" name="newCourseName" placeholder="New course name">
           </div>
+          <p class="text-sm" style="margin:-8px 0 12px 0;">
+            Don't see your course?
+            <a href="#" onclick="toggleCourseLibrary(); return false;" style="color:var(--gold);text-decoration:underline;">Search the regional library</a>
+          </p>
+          <div id="courseLibraryPanel" style="display:none;background:var(--surface-alt,#F9FAFB);padding:12px;border-radius:8px;margin-bottom:12px;">
+            <input class="input" type="search" id="courseLibraryQuery" placeholder="Search e.g. 'plantio' or 'orihuela'…" oninput="searchCourseLibrary(this.value)">
+            <div id="courseLibraryResults" class="text-sm" style="margin-top:8px;"></div>
+          </div>
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
           <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
           <input class="input" type="text" name="format" placeholder="Format (e.g. Stableford)">
@@ -3844,6 +3852,92 @@
 
   async function adminSetInitialStatus(requestId, memberStatus) {
     await supabase.from('join_requests').update({ initial_member_status: memberStatus }).eq('id', requestId);
+  }
+
+  // ===== COURSE LIBRARY (external_courses) =====
+  // Lets admins pull a known regional course into their society in one
+  // click, instead of typing the name and hoping it's spelled the same
+  // way the rest of the society's events spell it.
+
+  let _courseLibSearchTimer = null;
+
+  function toggleCourseLibrary() {
+    const panel = document.getElementById('courseLibraryPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') {
+      // Pre-load the regional list (Costa Blanca + Murcia today).
+      searchCourseLibrary('');
+      setTimeout(() => document.getElementById('courseLibraryQuery')?.focus(), 50);
+    }
+  }
+
+  async function searchCourseLibrary(query) {
+    clearTimeout(_courseLibSearchTimer);
+    _courseLibSearchTimer = setTimeout(async () => {
+      const resultsEl = document.getElementById('courseLibraryResults');
+      if (!resultsEl) return;
+      if (!supabase) { resultsEl.innerHTML = '<em>Demo mode — library unavailable.</em>'; return; }
+      const { data, error } = await supabase.rpc('search_external_courses', {
+        p_query: (query || '').trim() || null,
+        p_country: 'Spain',
+        p_region: null,
+        p_limit: 25,
+      });
+      if (error) {
+        resultsEl.innerHTML = '<em style="color:var(--red);">Search failed: ' + error.message + '</em>';
+        return;
+      }
+      if (!data || !data.length) {
+        resultsEl.innerHTML = '<em>No matches. Use "Add new course" above for a course not in the library.</em>';
+        return;
+      }
+      resultsEl.innerHTML = data.map(c => `
+        <div class="list-item" style="padding:8px 0;cursor:pointer;" onclick="addCourseFromLibrary('${(c.id || '').replace(/'/g,'')}','${(c.name||'').replace(/'/g,"\\'")}','${(c.city||'').replace(/'/g,"\\'")}')">
+          <div class="list-text" style="flex:1;">
+            <strong>${c.name}</strong>
+            <p class="text-sm text-secondary" style="margin:0;">${[c.city, c.region].filter(Boolean).join(' · ')}</p>
+          </div>
+        </div>
+      `).join('');
+    }, 200);
+  }
+
+  async function addCourseFromLibrary(externalId, name, city) {
+    if (!supabase || !currentUser) return;
+    // Skip if the society already has this course.
+    const { data: existing } = await supabase
+      .from('courses')
+      .select('id, name')
+      .eq('society_id', currentUser.society_id)
+      .ilike('name', name)
+      .maybeSingle();
+
+    if (!existing) {
+      const { error } = await supabase.from('courses').insert({
+        name,
+        location: city || null,
+        society_id: currentUser.society_id,
+      });
+      if (error) { alert('Could not add course: ' + error.message); return; }
+    }
+
+    // Reload the course select with the newly-added course selected.
+    const { data: courses } = await supabase
+      .from('courses')
+      .select('name, location')
+      .eq('society_id', currentUser.society_id)
+      .order('name');
+    const sel = document.getElementById('appCourseSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">Select course...</option>'
+        + (courses || []).map(c => `<option value="${c.name}" data-loc="${c.location || ''}" ${c.name === name ? 'selected' : ''}>${c.name}</option>`).join('')
+        + '<option value="__new__">+ Add new course...</option>';
+      const loc = document.getElementById('appLocInput');
+      if (loc && city) loc.value = city;
+    }
+    document.getElementById('courseLibraryPanel').style.display = 'none';
+    showToast('Added "' + name + '" to your courses.');
   }
 
   // ===== STRIPE CHECKOUT =====

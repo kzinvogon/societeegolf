@@ -3892,15 +3892,130 @@
         resultsEl.innerHTML = '<em>No matches. Use "Add new course" above for a course not in the library.</em>';
         return;
       }
-      resultsEl.innerHTML = data.map(c => `
-        <div class="list-item" style="padding:8px 0;cursor:pointer;" onclick="addCourseFromLibrary('${(c.id || '').replace(/'/g,'')}','${(c.name||'').replace(/'/g,"\\'")}','${(c.city||'').replace(/'/g,"\\'")}')">
-          <div class="list-text" style="flex:1;">
-            <strong>${c.name}</strong>
-            <p class="text-sm text-secondary" style="margin:0;">${[c.city, c.region].filter(Boolean).join(' · ')}</p>
+      resultsEl.innerHTML = data.map(c => {
+        const idEsc = (c.id || '').replace(/'/g,'');
+        const nameEsc = (c.name||'').replace(/'/g,"\\'");
+        const cityEsc = (c.city||'').replace(/'/g,"\\'");
+        return `
+        <div class="list-item" style="padding:8px 0;flex-direction:column;align-items:stretch;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="list-text" style="flex:1;">
+              <strong>${c.name}</strong>
+              <p class="text-sm text-secondary" style="margin:0;">${[c.city, c.region].filter(Boolean).join(' · ')}</p>
+            </div>
+            <button type="button" class="btn btn-sm" style="background:#E0E7FF;color:#3730A3;" onclick="toggleCourseRates('${idEsc}', this)">Rates</button>
+            <button type="button" class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="addCourseFromLibrary('${idEsc}','${nameEsc}','${cityEsc}')">Use</button>
           </div>
+          <div id="rates-${idEsc}" style="display:none;margin-top:8px;"></div>
         </div>
-      `).join('');
+        `;
+      }).join('');
     }, 200);
+  }
+
+  // ===== COURSE RATES (per-society negotiated green-fee rates) =====
+  // Inline rates panel for a course in the library. Lazy-loads on
+  // expand. Server enforces same-society visibility via RLS, so anon
+  // visitors / wrong-society users get an empty result.
+  async function toggleCourseRates(courseId, btn) {
+    const panel = document.getElementById('rates-' + courseId);
+    if (!panel) return;
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+      btn.textContent = 'Rates';
+      return;
+    }
+    panel.style.display = 'block';
+    btn.textContent = 'Hide';
+    panel.innerHTML = '<p class="text-sm text-secondary" style="padding:8px;">Loading rates…</p>';
+    await renderCourseRates(courseId, panel, 12);
+  }
+
+  async function renderCourseRates(courseId, panel, players) {
+    if (!supabase) { panel.innerHTML = '<em>Demo mode.</em>'; return; }
+    const { data, error } = await supabase.rpc('rates_for_course', {
+      p_course_id: courseId,
+      p_players: players,
+      p_on_date: new Date().toISOString().split('T')[0],
+    });
+    if (error) {
+      panel.innerHTML = '<p class="text-sm" style="color:var(--red);">' + error.message + '</p>';
+      return;
+    }
+    if (!data || !data.length) {
+      panel.innerHTML = `
+        <div style="background:#FEF3C7;color:#92400E;padding:10px 12px;border-radius:6px;font-size:13px;">
+          <strong>Contact for pricing.</strong>
+          We don't have negotiated rates on file for this course yet — reach out to the captain or the course directly.
+        </div>`;
+      return;
+    }
+    panel.innerHTML = renderRatesHtml(courseId, data, players);
+  }
+
+  function renderRatesHtml(courseId, rows, players) {
+    const sym = { EUR: '€', GBP: '£', USD: '$' };
+    const fmt = (cents, currency) => cents == null ? '—' : (sym[currency || 'EUR'] || '€') + (cents / 100).toFixed(0);
+
+    const ratesTable = rows.map(r => {
+      const highlight = r.is_active_today && r.matches_player_count;
+      const dim = !r.is_active_today;
+      const row = `
+        <tr style="${highlight ? 'background:#D1FAE5;' : ''}${dim ? 'color:var(--text-secondary);' : ''}">
+          <td style="padding:6px 8px;">${r.season.toUpperCase()}</td>
+          <td style="padding:6px 8px;">${r.is_tbc ? '<em>TBC</em>' : (r.date_range_label || '—')}</td>
+          <td style="padding:6px 8px;text-align:right;">${r.is_tbc && r.green_fee_cents == null ? '<em>TBC</em>' : fmt(r.green_fee_cents, r.currency)}</td>
+          <td style="padding:6px 8px;text-align:right;">${r.buggy_included ? '<em>inc</em>' : (r.buggy_cents == null ? '—' : fmt(r.buggy_cents, r.currency))}</td>
+          <td style="padding:6px 8px;text-align:center;">${r.min_players != null ? (r.min_players + (r.min_players_max ? '–' + (r.min_players_max - 1) : '+')) : '—'}</td>
+          <td style="padding:6px 8px;text-align:center;">${r.captain_free_at != null ? (r.captain_free_at + '+') : '—'}</td>
+        </tr>`;
+      return row;
+    }).join('');
+
+    // Calculator: pick the first row matching today AND player count.
+    const match = rows.find(r => r.is_active_today && r.matches_player_count) || rows.find(r => r.matches_player_count);
+    let calc = '';
+    if (match && !match.is_tbc && match.green_fee_cents != null) {
+      const captainFree = (match.captain_free_at != null && players >= match.captain_free_at) ? 1 : 0;
+      const payingPlayers = players - captainFree;
+      const gf = match.green_fee_cents;
+      const buggy = match.buggy_included ? 0 : (match.buggy_cents || 0);
+      // Default assumption: no buggies. Buggy-included rates always include them.
+      const totalGf = payingPlayers * gf;
+      const total = totalGf;
+      calc = `
+        <div style="background:#F0FDF4;color:#065F46;padding:10px 12px;border-radius:6px;margin-top:8px;font-size:13px;">
+          <strong>${players} players · ${match.season.toUpperCase()} season:</strong>
+          ${payingPlayers} × ${fmt(gf, match.currency)} = <strong>${fmt(total, match.currency)}</strong>
+          ${captainFree ? '<br><span class="text-sm">Captain plays free at ' + match.captain_free_at + '+ players.</span>' : ''}
+          ${match.buggy_included ? '<br><span class="text-sm">Buggies included.</span>' : (buggy ? '<br><span class="text-sm">Add ' + fmt(buggy, match.currency) + ' per buggy if needed.</span>' : '')}
+        </div>`;
+    } else if (rows.every(r => r.is_tbc)) {
+      calc = `<div style="color:var(--text-secondary);font-size:12px;margin-top:6px;">Rate card is being confirmed for this course.</div>`;
+    } else if (!match) {
+      calc = `<div style="color:var(--text-secondary);font-size:12px;margin-top:6px;">No rate matches ${players} players on today's date — adjust below.</div>`;
+    }
+
+    return `
+      <div style="background:#F9FAFB;padding:8px;border-radius:6px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <label class="text-sm" style="font-weight:600;margin:0;">Players:</label>
+          <input type="number" min="1" max="200" value="${players}" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;"
+                 onchange="renderCourseRates('${courseId}', document.getElementById('rates-${courseId}'), parseInt(this.value)||12)">
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:white;text-align:left;">
+            <th style="padding:6px 8px;">Season</th>
+            <th style="padding:6px 8px;">Dates</th>
+            <th style="padding:6px 8px;text-align:right;">GF</th>
+            <th style="padding:6px 8px;text-align:right;">Buggy</th>
+            <th style="padding:6px 8px;text-align:center;">Min</th>
+            <th style="padding:6px 8px;text-align:center;">Captain free</th>
+          </tr></thead>
+          <tbody>${ratesTable}</tbody>
+        </table>
+        ${calc}
+      </div>`;
   }
 
   async function addCourseFromLibrary(externalId, name, city) {

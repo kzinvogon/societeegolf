@@ -2678,20 +2678,63 @@
         throw new Error(map[data?.error] || 'Could not create society.');
       }
 
-      // Society + admin member row exist. Send the magic link so the
-      // admin verifies their email; handle_new_user fills user_id on
-      // first sign-in.
-      const { error: linkErr } = await supabase.auth.signInWithOtp({
-        email: adminEmail,
-        options: { emailRedirectTo: window.location.origin + '/' }
-      });
-      if (linkErr) throw linkErr;
-
+      // Society + admin member row exist. Now send a richer welcome
+      // email via our Netlify function (which generates the magic
+      // link via the Supabase admin API and embeds it in branded
+      // HTML with society/plan/trial details). Falls back to the
+      // bare-bones signInWithOtp template if the function is down,
+      // so the admin still gets *some* way in.
       const trialEnds = new Date(data.trial_ends_at);
+      const planRow = _registerPlanCache?.plans.find(p => p.code === planCode);
+      const priceRow = _registerPlanCache?.prices.find(pp =>
+        pp.plan_id === planRow?.id && pp.currency === currency && pp.interval === interval
+      );
+      const symMap = { EUR: '€', GBP: '£', USD: '$' };
+      const priceDisplay = priceRow
+        ? `${symMap[currency] || ''}${(priceRow.unit_amount_cents / 100).toFixed(0)}`
+        : null;
+
+      let welcomeEmailSent = false;
+      try {
+        const r = await fetch('/.netlify/functions/send-society-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            society_id: data.society_id,
+            society_name: name,
+            society_code: code,
+            admin_name: adminName,
+            admin_email: adminEmail,
+            plan_name: planRow?.name || planCode,
+            plan_member_cap: planRow?.member_cap || null,
+            currency,
+            billing_interval: interval,
+            trial_ends_at: data.trial_ends_at,
+            price_display: priceDisplay,
+          }),
+        });
+        welcomeEmailSent = r.ok;
+        if (!r.ok) {
+          const detail = await r.text().catch(() => '');
+          console.warn('[register] welcome email failed', r.status, detail);
+        }
+      } catch (e) {
+        console.warn('[register] welcome email error', e);
+      }
+
+      // Fallback: bare-bones magic link if the welcome email didn't go.
+      if (!welcomeEmailSent) {
+        const { error: linkErr } = await supabase.auth.signInWithOtp({
+          email: adminEmail,
+          options: { emailRedirectTo: window.location.origin + '/' }
+        });
+        if (linkErr) throw linkErr;
+      }
+
       okEl.innerHTML = `
-        <strong>${name}</strong> is set up on the <strong>${planCode}</strong> plan.<br>
+        <strong>${name}</strong> is set up on the <strong>${planRow?.name || planCode}</strong> plan.<br>
         30-day trial — no charge until <strong>${trialEnds.toLocaleDateString()}</strong>.<br>
-        We've sent a login link to <strong>${adminEmail}</strong> — click it to sign in and start adding members.
+        We've sent a welcome email to <strong>${adminEmail}</strong> with your sign-in link, plan details, and what to do first.
       `;
       okEl.classList.remove('hidden');
       document.getElementById('registerSocietyForm').classList.add('hidden');

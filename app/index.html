@@ -3852,13 +3852,18 @@
       let courseName = f.course.value;
       if (courseName === '__new__') {
         courseName = f.newCourseName.value;
-        if (courseName) await supabase.from('courses').insert({ name: courseName, location: f.location.value });
+        if (courseName) await supabase.from('courses').insert({
+          name: courseName,
+          location: f.location.value,
+          society_id: currentUser.society_id,
+        });
       }
       const { error } = await supabase.from('events').insert({
         title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
         format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
         signup_limit: parseInt(f.signup_limit.value)||null, signup_cutoff: f.signup_cutoff.value||null,
-        tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null
+        tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null,
+        society_id: currentUser.society_id,
       });
       if (error) { alert('Error: ' + error.message); return; }
       alert('Event created!');
@@ -3886,7 +3891,8 @@
     document.getElementById('appAdminMsgForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const { error } = await supabase.from('messages').insert({
-        title: this.title.value, body: this.body.value, priority: this.priority.value
+        title: this.title.value, body: this.body.value, priority: this.priority.value,
+        society_id: currentUser.society_id,
       });
       if (error) { alert('Error: ' + error.message); return; }
       alert('Message posted!');
@@ -4697,7 +4703,8 @@
       title: 'Membership Payment Required',
       body: 'Congratulations on completing your 3 probation games! To become a full member of SocieteeGolf, please pay the €25 quarterly membership fee.\n\nOnce paid, go to your Profile and submit your proof of payment.\n\nThe committee will review and confirm your membership.',
       priority: 'important',
-      recipients: memberId
+      recipients: memberId,
+      society_id: currentUser.society_id,
     });
     await supabase.from('members').update({ payment_due_sent_at: new Date().toISOString() }).eq('id', memberId);
     alert('Payment link sent to ' + memberName);
@@ -4711,7 +4718,8 @@
       title: 'Welcome — Full Member!',
       body: 'Congratulations! Your payment has been confirmed and you are now a full member of SocieteeGolf.',
       priority: 'normal',
-      recipients: memberId
+      recipients: memberId,
+      society_id: currentUser.society_id,
     });
     alert(memberName + ' promoted to Full Member!');
     renderAdmin();
@@ -4724,7 +4732,8 @@
       title: 'Payment Proof Rejected',
       body: 'Your payment proof could not be verified. Please resubmit your proof of payment in your Profile.',
       priority: 'important',
-      recipients: memberId
+      recipients: memberId,
+      society_id: currentUser.society_id,
     });
     alert('Payment proof rejected. Member notified.');
     renderAdmin();

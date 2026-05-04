@@ -1353,6 +1353,28 @@
   let currentMode = 'visitor';    // 'visitor' or 'member'
   let currentTab = 'home';
   let currentUser = null;         // null or member object
+
+  // ===== ROLE HELPERS =====
+  // Roles that get to see the Admin tab. Mirrors the Postgres
+  // has_role_in checks but for client-side UI gating only — RLS is
+  // the real boundary.
+  const MANAGE_ROLES = ['admin','captain','vice_captain','treasurer'];
+  const EVENT_ROLES  = ['admin','captain','vice_captain'];
+  const ROLE_LABEL = {
+    admin: 'Admin',
+    captain: 'Captain',
+    vice_captain: 'Vice-Captain',
+    treasurer: 'Treasurer',
+    sponsor: 'Sponsor',
+    member: 'Member',
+  };
+  function userHasRole(roles) {
+    return !!currentUser && roles.includes(currentUser.role);
+  }
+  function userIsAdmin()       { return userHasRole(['admin']); }
+  function userCanManage()     { return userHasRole(MANAGE_ROLES); }
+  function userCanRunEvents()  { return userHasRole(EVENT_ROLES); }
+  function userIsTreasurer()   { return userHasRole(['treasurer']); }
   let isAuthenticated = false;
   let eventTabView = 'upcoming';  // 'upcoming' or 'past'
   let navHistory = [];            // tab navigation history
@@ -1666,7 +1688,7 @@
       try {
         const lastTab = localStorage.getItem('jpgs_last_tab');
         if (lastTab && ['home','events','tee','messages','courses','profile','admin'].includes(lastTab)) {
-          if (lastTab !== 'admin' || currentUser.role === 'admin') {
+          if (lastTab !== 'admin' || userCanManage()) {
             currentTab = lastTab;
           }
         }
@@ -1920,9 +1942,16 @@
         avatar.classList.remove('hidden');
         avatar.textContent = currentUser.name.charAt(0);
         // Show admin tab if user is admin
+        // Admin tab is visible to anyone with a "manage" role
+        // (admin / captain / vice_captain / treasurer). Section-level
+        // gating inside renderAdmin keeps non-admins out of member CRUD
+        // and rate editing.
         const adminBtn = document.getElementById('adminTabBtn');
-        if (currentUser.role === 'admin') {
+        const adminBtnLabel = adminBtn?.querySelector('span:nth-of-type(2)');
+        if (userCanManage()) {
           adminBtn.classList.remove('hidden');
+          // Re-label so "Admin" doesn't lie when a captain sees it.
+          if (adminBtnLabel) adminBtnLabel.textContent = userIsAdmin() ? 'Admin' : 'Manage';
         } else {
           adminBtn.classList.add('hidden');
         }
@@ -3505,7 +3534,7 @@
   // ===== RENDER: ADMIN TAB =====
   async function renderAdmin() {
     currentAdminScreen = null;
-    if (!currentUser || currentUser.role !== 'admin') return;
+    if (!userCanManage()) return;
 
     const [eventsRes, membersRes, msgsRes, reqsRes] = await Promise.all([
       supabase ? supabase.from('events').select('*').order('date', { ascending: false }) : { data: DEMO_EVENTS },
@@ -3604,6 +3633,7 @@
 
       <!-- Quick Actions -->
       <h3 class="section-title">Quick Actions</h3>
+      ${userCanRunEvents() ? `
       <div class="card" onclick="showAdminCreateEvent()" style="cursor:pointer;">
         <div class="list-item" style="border:none;padding:4px 0;">
           <div class="list-icon" style="background:#D1FAE5;">📅</div>
@@ -3622,12 +3652,23 @@
           <div class="list-text"><h4>Enter Results</h4><p>Record scores for a past event</p></div>
         </div>
       </div>
+      ` : ''}
+      ${userIsTreasurer() && !userCanRunEvents() ? `
+      <div class="card" onclick="showAdminPostMessage()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#E0E7FF;">💬</div>
+          <div class="list-text"><h4>Post Finance Notice</h4><p>Send a payment-related message to members</p></div>
+        </div>
+      </div>
+      ` : ''}
+      ${userIsAdmin() ? `
       <div class="card" onclick="showAdminCourseRates()" style="cursor:pointer;">
         <div class="list-item" style="border:none;padding:4px 0;">
           <div class="list-icon" style="background:#FEF3C7;">💶</div>
           <div class="list-text"><h4>Manage Course Rates</h4><p>Edit your society's negotiated green-fee rates</p></div>
         </div>
       </div>
+      ` : ''}
 
       <!-- Payment Reviews -->
       <div id="adminPaymentReviews">
@@ -3736,19 +3777,28 @@
       </div>
 
       <!-- Members List -->
+      <!-- Member CRUD is admin-only; captains and treasurers see a
+           read-only roster instead of an Edit affordance. -->
       <div id="adminMembersList">
         <h3 class="section-title mt-16">Members</h3>
         ${members.map(m => {
           const statusColors = {applied:'amber',probation:'blue',full_member:'green',suspended:'red'};
           const statusLabels = {applied:'Applied',probation:'Probation',full_member:'Full Member',suspended:'Suspended'};
           const mPlayed = allSignups.filter(s => s.member_id === m.id && events.some(e => e.id === s.event_id && e.date < today)).length;
+          const roleBadge = (m.role && m.role !== 'member')
+            ? `<span class="badge badge-blue" style="font-size:10px;margin-left:4px;">${ROLE_LABEL[m.role] || m.role}</span>`
+            : '';
+          const editable = userIsAdmin();
+          const cardOpen = editable
+            ? `<div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="showAppEditMember('${m.id}')">`
+            : `<div class="card" style="margin-bottom:8px;">`;
           return `
-          <div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="showAppEditMember('${m.id}')">
+          ${cardOpen}
             <div class="flex-between">
               <div>
                 <strong>${m.name}</strong>
                 <span class="badge badge-${statusColors[m.status]||'amber'}" style="font-size:10px;margin-left:6px;">${statusLabels[m.status]||m.status}</span>
-                ${m.role === 'admin' ? '<span class="badge badge-blue" style="font-size:10px;margin-left:4px;">Admin</span>' : ''}
+                ${roleBadge}
                 ${m.status === 'probation' ? `<span class="text-sm" style="margin-left:6px;color:${mPlayed>=3?'#16a34a':'#d97706'};font-weight:600;">${mPlayed}/3</span>` : ''}
               </div>
             </div>
@@ -3760,6 +3810,7 @@
   }
 
   async function showAppEditMember(memberId) {
+    if (!userIsAdmin()) return;
     currentAdminScreen = 'editMember';
     const { data: m } = await supabase.from('members').select('*').eq('id', memberId).single();
     if (!m) return;
@@ -3785,9 +3836,16 @@
           </select>
           <label class="text-sm" style="font-weight:600;">Role</label>
           <select class="input" name="role">
-            <option value="member" ${m.role==='member'?'selected':''}>Member</option>
-            <option value="admin" ${m.role==='admin'?'selected':''}>Admin</option>
+            <option value="member"       ${m.role==='member'?'selected':''}>Member</option>
+            <option value="vice_captain" ${m.role==='vice_captain'?'selected':''}>Vice-Captain</option>
+            <option value="captain"      ${m.role==='captain'?'selected':''}>Captain</option>
+            <option value="treasurer"    ${m.role==='treasurer'?'selected':''}>Treasurer</option>
+            <option value="sponsor"      ${m.role==='sponsor'?'selected':''}>Sponsor</option>
+            <option value="admin"        ${m.role==='admin'?'selected':''}>Admin</option>
           </select>
+          <p class="text-sm text-secondary" style="margin:-8px 0 12px 0;">
+            Admin = full access. Captain / Vice-Captain = manage events &amp; results. Treasurer = payments &amp; messages. Sponsor = badged on events. Member = standard.
+          </p>
           <button class="btn btn-primary btn-full mt-8" type="submit">Save Changes</button>
         </form>
       </div>
@@ -3832,6 +3890,7 @@
   }
 
   async function showAdminCreateEvent() {
+    if (!userCanRunEvents()) return;
     currentAdminScreen = 'createEvent';
     // Fetch the society's courses + its home course (for default
     // selection) in parallel.
@@ -3932,6 +3991,7 @@
   }
 
   function showAdminPostMessage() {
+    if (!userCanManage()) return;
     document.getElementById('adminContent').innerHTML = `
       <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
       <h3 class="section-title">Post Announcement</h3>
@@ -3961,6 +4021,7 @@
   }
 
   async function showAdminEnterResults() {
+    if (!userCanRunEvents()) return;
     const { data: events } = await supabase.from('events').select('*').lt('date', new Date().toISOString().split('T')[0]).order('date', { ascending: false });
     document.getElementById('adminContent').innerHTML = `
       <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
@@ -4022,7 +4083,7 @@
   }
 
   async function adminDeleteEvent(eventId, eventTitle) {
-    if (!supabase || !currentUser) return;
+    if (!supabase || !currentUser || !userCanRunEvents()) return;
     if (!confirm(`Delete "${eventTitle}"?\n\nThis removes the event AND any signups + results attached to it. Cannot be undone.`)) return;
     // signups + results have ON DELETE CASCADE on event_id, so deleting
     // the event row tears down the rest atomically.

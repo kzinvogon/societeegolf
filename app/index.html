@@ -1071,6 +1071,7 @@
       <div id="tabHome" class="content-inner tab-content">
         <div id="welcomeCard"></div>
         <div id="probationAlert"></div>
+        <div id="openProposalsCard"></div>
         <div id="nextEventCountdown"></div>
         <div id="quickActions"></div>
         <div id="latestMessage"></div>
@@ -2974,6 +2975,9 @@
   async function renderDashboard() {
     if (!currentUser) return;
 
+    // Open proposals card (Interest Sounder) — fire-and-forget; non-fatal.
+    loadOpenProposalsForMember();
+
     const [events, messages] = await Promise.all([
       getEvents(),
       getMessages(),
@@ -3634,6 +3638,12 @@
       <!-- Quick Actions -->
       <h3 class="section-title">Quick Actions</h3>
       ${userCanRunEvents() ? `
+      <div class="card" onclick="showAdminProposalForm()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#FEF3C7;">📣</div>
+          <div class="list-text"><h4>Sound out next event</h4><p>Float 2–4 options, see who'd play before booking</p></div>
+        </div>
+      </div>
       <div class="card" onclick="showAdminCreateEvent()" style="cursor:pointer;">
         <div class="list-item" style="border:none;padding:4px 0;">
           <div class="list-icon" style="background:#D1FAE5;">📅</div>
@@ -3744,6 +3754,14 @@
         `).join('') : '<p class="text-sm text-secondary">No pending join requests.</p>'}
       </div>
 
+      <!-- Open proposals (Interest Sounder) -->
+      ${userCanRunEvents() ? `
+      <div id="adminProposalsList">
+        <h3 class="section-title mt-16">Open proposals</h3>
+        <div id="adminProposalsListBody"><p class="text-sm text-secondary">Loading…</p></div>
+      </div>
+      ` : ''}
+
       <!-- Events List -->
       <div id="adminEventsList">
         <h3 class="section-title mt-16">Events</h3>
@@ -3807,6 +3825,43 @@
         }).join('')}
       </div>
     `;
+
+    // Lazy-load the open-proposals list (only rendered for
+    // event-running roles).
+    if (userCanRunEvents()) loadAdminProposalsList();
+  }
+
+  async function loadAdminProposalsList() {
+    const el = document.getElementById('adminProposalsListBody');
+    if (!el || !supabase) return;
+    const { data, error } = await supabase
+      .from('event_proposals')
+      .select('id, title, status, voting_closes_at, created_at, event_proposal_options(id)')
+      .eq('society_id', currentUser.society_id)
+      .in('status', ['open','closed'])
+      .order('created_at', { ascending: false });
+    if (error) { el.innerHTML = '<p style="color:var(--red);">' + error.message + '</p>'; return; }
+    if (!data?.length) {
+      el.innerHTML = '<p class="text-sm text-secondary">No open proposals. Tap "Sound out next event" to start one.</p>';
+      return;
+    }
+    el.innerHTML = data.map(p => {
+      const closes = p.voting_closes_at ? new Date(p.voting_closes_at) : null;
+      const optionCount = p.event_proposal_options?.length || 0;
+      return `
+        <div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="showAdminProposalTally('${p.id}')">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;">
+              <strong>${p.title}</strong>
+              <p class="text-sm text-secondary" style="margin:0;">
+                ${optionCount} option${optionCount===1?'':'s'} · ${p.status.toUpperCase()}
+                ${closes ? ' · closes ' + closes.toLocaleString() : ''}
+              </p>
+            </div>
+            <span class="text-sm" style="color:var(--gold);">View tally →</span>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   async function showAppEditMember(memberId) {
@@ -4018,6 +4073,336 @@
       alert('Message posted!');
       renderAdmin();
     });
+  }
+
+  // ===== INTEREST SOUNDER (event_proposals) =====
+
+  // Captain UI: build a proposal with 2–4 candidate options.
+  let _proposalOptionRowSeq = 0;
+
+  async function showAdminProposalForm() {
+    if (!userCanRunEvents()) return;
+    currentAdminScreen = 'soundOutEvent';
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Sound out next event</h3>
+      <p class="text-sm text-secondary" style="margin-bottom:12px;">
+        Float 2–4 candidate options (course, date, approximate price). Members
+        tap "I'd play" on the ones they're up for. You'll see the tally and
+        promote the winner to a real event in one click.
+      </p>
+      <div class="card">
+        <form id="proposalForm" onsubmit="submitProposal(event)" novalidate>
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Title</label>
+          <input class="input" name="title" required placeholder="e.g. May away day">
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Voting closes (optional)</label>
+          <input class="input" type="datetime-local" name="voting_closes_at">
+
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Notes (optional)</label>
+          <textarea class="input" name="notes" placeholder="Any context for members" style="min-height:48px;"></textarea>
+
+          <h4 style="margin:16px 0 8px 0;">Options</h4>
+          <div id="proposalOptionsContainer"></div>
+          <button type="button" class="btn btn-sm" style="background:#E0E7FF;color:#3730A3;margin-top:8px;" onclick="addProposalOptionRow()">+ Add option</button>
+
+          <button type="submit" class="btn btn-primary btn-full" style="margin-top:16px;">Post proposal</button>
+        </form>
+        <div id="proposalFormMsg" class="hidden auth-message" style="margin-top:12px;"></div>
+      </div>
+    `;
+    // Two starter rows for convenience.
+    addProposalOptionRow();
+    addProposalOptionRow();
+  }
+
+  function addProposalOptionRow() {
+    const container = document.getElementById('proposalOptionsContainer');
+    if (!container) return;
+    const id = ++_proposalOptionRowSeq;
+    const wrap = document.createElement('div');
+    wrap.className = 'card';
+    wrap.style.cssText = 'background:#F9FAFB;margin-bottom:8px;padding:10px;';
+    wrap.id = 'po-' + id;
+    wrap.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <strong style="flex:1;">Option ${id}</strong>
+        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('po-${id}').remove()">Remove</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="flex:2;">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Course</label>
+          <input class="input proposal-course-name" data-row="${id}" placeholder="Type to search library…" oninput="searchProposalCourses(${id}, this.value)" autocomplete="off">
+          <input type="hidden" class="proposal-course-id" data-row="${id}">
+          <input type="hidden" class="proposal-course-location" data-row="${id}">
+          <div class="proposal-course-results text-sm" data-row="${id}" style="background:white;border:1px solid var(--border);border-radius:6px;margin-top:-8px;display:none;max-height:160px;overflow-y:auto;"></div>
+        </div>
+        <div style="flex:1;">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Date</label>
+          <input class="input proposal-date" data-row="${id}" type="date" required>
+        </div>
+        <div style="flex:1;">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Approx. €</label>
+          <input class="input proposal-price" data-row="${id}" type="number" min="0" step="1" placeholder="e.g. 55">
+        </div>
+      </div>
+      <input class="input proposal-notes" data-row="${id}" placeholder="Notes (e.g. format, tee window)" style="margin-top:8px;">
+    `;
+    container.appendChild(wrap);
+  }
+
+  let _proposalSearchTimer = null;
+  async function searchProposalCourses(rowId, query) {
+    clearTimeout(_proposalSearchTimer);
+    _proposalSearchTimer = setTimeout(async () => {
+      const resultsEl = document.querySelector('.proposal-course-results[data-row="' + rowId + '"]');
+      if (!resultsEl) return;
+      const q = (query || '').trim();
+      if (!q) { resultsEl.style.display = 'none'; return; }
+      const { data } = await supabase.rpc('search_external_courses', { p_query: q, p_country: null, p_region: null, p_limit: 10 });
+      if (!data?.length) { resultsEl.innerHTML = '<p class="text-sm" style="padding:8px;">No matches — type continues as a free-text course name.</p>'; resultsEl.style.display = 'block'; return; }
+      resultsEl.style.display = 'block';
+      resultsEl.innerHTML = data.map(c => `
+        <div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #F3F4F6;" onclick="pickProposalCourse(${rowId}, '${c.id}', '${(c.name||'').replace(/'/g,"\\'")}', '${(c.city||'').replace(/'/g,"\\'")}')">
+          <strong>${c.name}</strong> <span class="text-sm text-secondary">${c.city||''}</span>
+        </div>
+      `).join('');
+    }, 200);
+  }
+
+  function pickProposalCourse(rowId, courseId, name, city) {
+    const sel = (cls) => document.querySelector('.' + cls + '[data-row="' + rowId + '"]');
+    sel('proposal-course-name').value = name;
+    sel('proposal-course-id').value = courseId;
+    sel('proposal-course-location').value = city || '';
+    const res = sel('proposal-course-results');
+    if (res) res.style.display = 'none';
+  }
+
+  async function submitProposal(e) {
+    e.preventDefault();
+    const f = e.target;
+    const msg = document.getElementById('proposalFormMsg');
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+
+    const title = f.title.value.trim();
+    const notes = f.notes.value.trim() || null;
+    const closesAt = f.voting_closes_at.value || null;
+
+    // Collect option rows.
+    const rows = Array.from(document.querySelectorAll('#proposalOptionsContainer > .card'));
+    const options = rows.map((row, i) => {
+      const id = row.id.replace('po-', '');
+      const sel = (cls) => row.querySelector('.' + cls);
+      const courseName = sel('proposal-course-name').value.trim();
+      const courseId = sel('proposal-course-id').value || null;
+      const city = sel('proposal-course-location').value || null;
+      const date = sel('proposal-date').value || null;
+      const price = sel('proposal-price').value ? Math.round(parseFloat(sel('proposal-price').value) * 100) : null;
+      const notes = sel('proposal-notes').value.trim() || null;
+      return { courseName, courseId, city, date, price, notes, sortOrder: i + 1 };
+    }).filter(o => o.courseName && o.date);
+
+    if (options.length < 2) {
+      msg.classList.remove('hidden');
+      msg.style.background = '#FEE2E2';
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'At least 2 options required, each with a course and a date.';
+      btn.disabled = false;
+      return;
+    }
+
+    // Insert proposal.
+    const { data: proposal, error: pErr } = await supabase.from('event_proposals').insert({
+      society_id: currentUser.society_id,
+      title,
+      notes,
+      voting_closes_at: closesAt,
+      created_by: currentUser.id,
+    }).select().single();
+    if (pErr) { msg.classList.remove('hidden'); msg.style.background = '#FEE2E2'; msg.style.color = 'var(--red)'; msg.textContent = pErr.message; btn.disabled = false; return; }
+
+    // Insert options.
+    const optionRows = options.map(o => ({
+      proposal_id: proposal.id,
+      external_course_id: o.courseId,
+      course_name: o.courseName,
+      course_location: o.city,
+      candidate_date: o.date,
+      approx_price_cents: o.price,
+      notes: o.notes,
+      sort_order: o.sortOrder,
+    }));
+    const { error: oErr } = await supabase.from('event_proposal_options').insert(optionRows);
+    if (oErr) {
+      // Rollback by deleting the proposal we just inserted.
+      await supabase.from('event_proposals').delete().eq('id', proposal.id);
+      msg.classList.remove('hidden'); msg.style.background = '#FEE2E2'; msg.style.color = 'var(--red)';
+      msg.textContent = 'Could not save options: ' + oErr.message;
+      btn.disabled = false;
+      return;
+    }
+
+    showToast('Proposal posted. Members can now vote.');
+    showAdminProposalTally(proposal.id);
+  }
+
+  // Tally view: shows yes-vote counts per option, captain picks winner
+  // and promotes to a real event.
+  async function showAdminProposalTally(proposalId) {
+    if (!userCanRunEvents()) return;
+    currentAdminScreen = 'proposalTally';
+    const root = document.getElementById('adminContent');
+    root.innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back to admin</button>
+      <h3 class="section-title">Proposal tally</h3>
+      <div id="proposalTallyBody"><p class="text-sm text-secondary">Loading…</p></div>
+    `;
+    const { data: prop } = await supabase
+      .from('event_proposals')
+      .select('id, title, notes, status, voting_closes_at, promoted_event_id')
+      .eq('id', proposalId)
+      .single();
+    const { data: tally, error } = await supabase.rpc('proposal_tally', { p_proposal_id: proposalId });
+    if (error) { document.getElementById('proposalTallyBody').innerHTML = '<p style="color:var(--red);">' + error.message + '</p>'; return; }
+    const total = (tally || []).reduce((acc, r) => acc + (r.yes_votes || 0), 0);
+    const top = (tally || []).reduce((best, r) => (!best || r.yes_votes > best.yes_votes) ? r : best, null);
+
+    document.getElementById('proposalTallyBody').innerHTML = `
+      <div class="card">
+        <h4 style="margin:0 0 4px 0;">${prop?.title || 'Untitled'}</h4>
+        <p class="text-sm text-secondary" style="margin:0 0 8px 0;">
+          Status: ${prop?.status?.toUpperCase()}
+          ${prop?.voting_closes_at ? ' · closes ' + new Date(prop.voting_closes_at).toLocaleString() : ''}
+          · ${total} total vote${total===1?'':'s'}
+        </p>
+        ${prop?.notes ? `<p class="card-body">${prop.notes}</p>` : ''}
+      </div>
+      ${(tally || []).map(o => {
+        const isTop = top && o.option_id === top.option_id && o.yes_votes > 0;
+        const promoted = prop?.status === 'promoted';
+        return `
+          <div class="card" style="margin-top:8px;${isTop && !promoted ? 'border:2px solid #C9A961;' : ''}">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="flex:1;">
+                <strong>${isTop && !promoted ? '⭐ ' : ''}${o.course_name}</strong>
+                <p class="text-sm text-secondary" style="margin:0;">
+                  ${o.course_location ? o.course_location + ' · ' : ''}
+                  ${new Date(o.candidate_date).toLocaleDateString()}
+                  ${o.approx_price_cents != null ? ' · approx €' + (o.approx_price_cents/100).toFixed(0) : ''}
+                </p>
+                ${o.notes ? '<p class="text-sm" style="margin:4px 0 0 0;">' + o.notes + '</p>' : ''}
+              </div>
+              <div style="text-align:center;min-width:60px;">
+                <div style="font-size:22px;font-weight:700;">${o.yes_votes}</div>
+                <div class="text-sm text-secondary">votes</div>
+              </div>
+              ${promoted
+                ? '<span class="badge badge-green">Promoted</span>'
+                : '<button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;" onclick="promoteProposalToEvent(\'' + proposalId + '\', \'' + o.option_id + '\')">Promote →</button>'}
+            </div>
+          </div>`;
+      }).join('')}
+      ${prop?.status === 'open' ? `
+        <button class="btn btn-sm btn-danger" style="margin-top:12px;" onclick="cancelProposal('${proposalId}')">Cancel proposal</button>
+      ` : ''}
+    `;
+  }
+
+  async function promoteProposalToEvent(proposalId, optionId) {
+    if (!confirm('Promote this option to a real event? Members will be able to sign up.')) return;
+    const { data, error } = await supabase.rpc('promote_proposal_to_event', {
+      p_proposal_id: proposalId,
+      p_option_id: optionId,
+    });
+    if (error) { alert('Could not promote: ' + error.message); return; }
+    if (!data?.success) { alert('Could not promote: ' + (data?.error || 'unknown')); return; }
+    showToast('Event created from proposal.');
+    invalidateCache();
+    renderAdmin();
+  }
+
+  async function cancelProposal(proposalId) {
+    if (!confirm('Cancel this proposal? Votes will be deleted.')) return;
+    const { error } = await supabase.from('event_proposals').update({ status: 'cancelled' }).eq('id', proposalId);
+    if (error) { alert('Could not cancel: ' + error.message); return; }
+    showToast('Proposal cancelled.');
+    renderAdmin();
+  }
+
+  // ===== MEMBER-SIDE: open proposals on Home =====
+  // Loaded by renderDashboard; renders into #openProposalsCard if any
+  // open proposal exists for this society.
+  async function loadOpenProposalsForMember() {
+    const wrap = document.getElementById('openProposalsCard');
+    if (!wrap || !supabase || !currentUser) return;
+    const { data, error } = await supabase
+      .from('event_proposals')
+      .select('id, title, voting_closes_at')
+      .eq('society_id', currentUser.society_id)
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
+    if (error || !data?.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = data.map(p => `
+      <div class="card" style="background:#FEF3C7;color:#92400E;cursor:pointer;" onclick="showMemberProposalVote('${p.id}')">
+        <h3 class="card-title">📣 Captain wants your input</h3>
+        <p class="card-body mt-8"><strong>${p.title}</strong> — tap to vote on which option you'd play.</p>
+        ${p.voting_closes_at ? '<p class="text-sm" style="margin-top:6px;">Voting closes ' + new Date(p.voting_closes_at).toLocaleString() + '</p>' : ''}
+      </div>
+    `).join('');
+  }
+
+  async function showMemberProposalVote(proposalId) {
+    // Hijack the home tab body to render the voting screen.
+    currentTab = 'home';
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById('tabHome').classList.remove('hidden');
+    const root = document.getElementById('tabHome');
+
+    const { data: prop } = await supabase.from('event_proposals').select('*').eq('id', proposalId).single();
+    const { data: opts } = await supabase.from('event_proposal_options').select('*').eq('proposal_id', proposalId).order('sort_order');
+    const { data: myVotes } = await supabase
+      .from('event_proposal_votes')
+      .select('option_id')
+      .eq('proposal_id', proposalId)
+      .eq('member_id', currentUser.id);
+    const yesIds = new Set((myVotes || []).map(v => v.option_id));
+
+    root.innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderDashboard()">← Back</button>
+      <h2 class="section-title">${prop?.title || 'Proposal'}</h2>
+      ${prop?.notes ? `<p class="card-body">${prop.notes}</p>` : ''}
+      <p class="text-sm text-secondary" style="margin-bottom:8px;">Tap "I'd play" on each option you're up for. You can opt into more than one.</p>
+      ${(opts || []).map(o => {
+        const opted = yesIds.has(o.id);
+        return `
+          <div class="card" style="margin-bottom:8px;${opted ? 'border:2px solid #16a34a;' : ''}">
+            <h4 style="margin:0;">${o.course_name}</h4>
+            <p class="text-sm text-secondary" style="margin:0;">
+              ${o.course_location ? o.course_location + ' · ' : ''}
+              ${new Date(o.candidate_date).toLocaleDateString()}
+              ${o.approx_price_cents != null ? ' · approx €' + (o.approx_price_cents/100).toFixed(0) : ''}
+            </p>
+            ${o.notes ? '<p class="text-sm" style="margin:4px 0 0 0;">' + o.notes + '</p>' : ''}
+            <button class="btn btn-sm" style="margin-top:8px;background:${opted ? '#FEE2E2' : '#D1FAE5'};color:${opted ? '#991B1B' : '#065F46'};" onclick="toggleProposalVote('${proposalId}', '${o.id}', ${opted})">${opted ? "✓ I'd play (tap to remove)" : "I'd play"}</button>
+          </div>`;
+      }).join('')}
+    `;
+  }
+
+  async function toggleProposalVote(proposalId, optionId, currentlyOpted) {
+    if (currentlyOpted) {
+      const { error } = await supabase.from('event_proposal_votes').delete()
+        .eq('proposal_id', proposalId).eq('option_id', optionId).eq('member_id', currentUser.id);
+      if (error) { alert('Could not remove vote: ' + error.message); return; }
+    } else {
+      const { error } = await supabase.from('event_proposal_votes').insert({
+        proposal_id: proposalId, option_id: optionId, member_id: currentUser.id,
+      });
+      if (error) { alert('Could not save vote: ' + error.message); return; }
+    }
+    showMemberProposalVote(proposalId);
   }
 
   async function showAdminEnterResults() {

@@ -903,11 +903,16 @@
     .btn-open-email.outlook { background: #e8f0fe; color: #1a73e8; }
     .btn-open-email:hover { opacity: 0.8; }
     .btn-resend {
-      background: none; border: none; color: var(--text-secondary);
-      font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px;
+      background: none; border: none;
+      font-size: 13px; padding: 4px;
     }
-    .btn-resend:not(:disabled) { color: var(--navy); }
-    .btn-resend:disabled { cursor: not-allowed; }
+    .btn-resend:not(:disabled) {
+      color: var(--navy); cursor: pointer; text-decoration: underline;
+    }
+    .btn-resend:disabled {
+      color: var(--text-secondary); cursor: not-allowed; opacity: 0.55;
+      text-decoration: none;
+    }
 
     /* ===== Toast ===== */
     .app-toast {
@@ -1045,7 +1050,7 @@
             <a href="https://outlook.live.com" target="_blank" rel="noopener" class="btn-open-email outlook">Open Outlook</a>
           </div>
           <button class="btn-resend" id="resendBtn" onclick="resendMagicLink()" disabled>
-            Resend link <span id="resendTimer">(30s)</span>
+            <span id="resendLabel">Resend link</span><span id="resendTimer"> in 30s</span>
           </button>
         </div>
 
@@ -2077,7 +2082,7 @@
     const timer = document.getElementById('resendTimer');
     let seconds = 30;
     btn.disabled = true;
-    timer.textContent = '(' + seconds + 's)';
+    timer.textContent = ' in ' + seconds + 's';
     const interval = setInterval(() => {
       seconds--;
       if (seconds <= 0) {
@@ -2085,7 +2090,7 @@
         btn.disabled = false;
         timer.textContent = '';
       } else {
-        timer.textContent = '(' + seconds + 's)';
+        timer.textContent = ' in ' + seconds + 's';
       }
     }, 1000);
   }

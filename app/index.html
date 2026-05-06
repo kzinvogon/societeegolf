@@ -1779,33 +1779,63 @@
     document.getElementById('memberView').classList.add('hidden');
 
     const inner = container.querySelector('.auth-screen');
+    // data-society-id attributes + post-render addEventListener so the
+    // handlers don't depend on inline-onclick global resolution (which
+    // can silently fail under unusual page state) and any errors thrown
+    // by the click target surface in the console + an alert.
     inner.innerHTML = `
       <div class="login-icon">⛳</div>
       <h2>Choose Your Society</h2>
       <p class="login-subtitle">You're a member of multiple societies. Which one would you like to open?</p>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+      <div id="societyPickerList" style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
         ${memberships.map(m => `
-          <button class="btn btn-primary btn-full" onclick="pickSociety('${m.society_id}')" style="text-align:left;padding:14px 16px;">
+          <button class="btn btn-primary btn-full society-pick-btn" data-society-id="${m.society_id}" style="text-align:left;padding:14px 16px;">
             <strong>${m.societies?.name || 'Society'}</strong><br>
             <span style="font-size:12px;opacity:0.8;">${m.status === 'full_member' ? 'Full Member' : m.status === 'probation' ? 'Probation' : m.status}</span>
           </button>
         `).join('')}
       </div>
       <div class="mt-16">
-        <button class="btn-ghost" onclick="logout()">Log Out</button>
+        <button class="btn-ghost" id="societyPickerLogout">Log Out</button>
       </div>
     `;
 
-    // Store memberships for pickSociety to use
     window._pendingMemberships = memberships;
+
+    // Bind explicitly so a missing global / inline-onclick gotcha can't
+    // make the chooser silently dead.
+    inner.querySelectorAll('.society-pick-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const id = btn.dataset.societyId;
+        try {
+          await pickSociety(id);
+        } catch (err) {
+          console.error('[chooser] pickSociety threw', err);
+          alert('Could not open that society: ' + (err?.message || err));
+        }
+      });
+    });
+    const logoutBtn = document.getElementById('societyPickerLogout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        try { logout(); } catch (err) {
+          console.error('[chooser] logout threw', err);
+          alert('Could not log out: ' + (err?.message || err));
+        }
+      });
+    }
   }
 
   async function pickSociety(societyId) {
     const memberships = window._pendingMemberships || [];
     const membership = memberships.find(m => m.society_id === societyId);
-    if (membership) {
-      await selectSocietyAndLogin(membership, true);
+    if (!membership) {
+      console.warn('[chooser] no membership found for', societyId);
+      return;
     }
+    await selectSocietyAndLogin(membership, true);
     delete window._pendingMemberships;
   }
 

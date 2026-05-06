@@ -3757,13 +3757,13 @@
       return played.length >= 3;
     });
 
-    // Pull society + plan + billing state once for the cap banner AND
-    // the subscription card below.
+    // Pull society + plan + billing state once for the cap banner,
+    // the subscription card AND the invite/code card.
     let societyRow = null;
     try {
       const { data } = await supabase
         .from('societies')
-        .select('plan_id, is_billable, subscription_status, trial_ends_at, billing_currency, billing_interval, stripe_subscription_id, plans(name, member_cap)')
+        .select('name, subdomain, plan_id, is_billable, subscription_status, trial_ends_at, billing_currency, billing_interval, stripe_subscription_id, plans(name, member_cap)')
         .eq('id', currentUser.society_id)
         .single();
       societyRow = data || null;
@@ -3812,8 +3812,35 @@
         </div>`;
     }
 
+    // Invite card — surfaces the society code so admins can share it
+    // with new or existing members. The "code" stored in the DB lives
+    // on societies.subdomain (legacy column name; it's the join code).
+    let inviteCard = '';
+    if (societyRow?.subdomain && societyRow.subdomain !== 'default') {
+      const code = societyRow.subdomain;
+      const safeCode = code.replace(/[^a-zA-Z0-9_-]/g, '');
+      const safeName = (societyRow.name || 'our society').replace(/'/g, "\\'");
+      inviteCard = `
+        <div class="card" style="border:1px solid var(--gold); margin-bottom:12px;">
+          <h3 class="card-title">Invite members</h3>
+          <p class="card-body mt-8">Share this code with new or existing members so they can find ${societyRow.name || 'your society'}:</p>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+            <code id="societyJoinCode" style="font-size:18px; font-weight:700; letter-spacing:2px; padding:8px 12px; background:var(--gold-light); border-radius:8px; flex:1; text-align:center;">${safeCode}</code>
+            <button class="btn btn-sm btn-primary" onclick="copySocietyCode('${safeCode}')">Copy code</button>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <button class="btn btn-sm" onclick="copyInviteText('${safeCode}', '${safeName}')">Copy invite message</button>
+            <button class="btn btn-sm" onclick="shareInvite('${safeCode}', '${safeName}')">Share…</button>
+          </div>
+          <p class="text-sm text-secondary" style="margin:8px 0 0 0;">
+            Members tap "Join my society" on the visitor page, then search by name or paste this code.
+          </p>
+        </div>`;
+    }
+
     document.getElementById('adminContent').innerHTML = `
       ${capBanner}
+      ${inviteCard}
       ${subscriptionCard}
       <!-- Quick Stats -->
       <div class="stats-grid">
@@ -4774,6 +4801,48 @@
       }
       alert('Results saved!');
     });
+  }
+
+  // Society-code share helpers (admin Invite card).
+  function _inviteText(code, societyName) {
+    const origin = (window.location && window.location.origin) ? window.location.origin : 'https://app.societeegolf.app';
+    return `Join ${societyName || 'our society'} on SocieteeGolf.\n\nGo to ${origin}, tap "Join my society" and enter this code:\n${code}`;
+  }
+
+  async function copySocietyCode(code) {
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast('Code copied: ' + code);
+    } catch (e) {
+      // Older browsers / restricted contexts: fall back to a prompt
+      // so the user can copy manually.
+      window.prompt('Copy this code:', code);
+    }
+  }
+
+  async function copyInviteText(code, societyName) {
+    const text = _inviteText(code, societyName);
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Invite message copied — paste into WhatsApp / email.');
+    } catch (e) {
+      window.prompt('Copy this invite message:', text);
+    }
+  }
+
+  async function shareInvite(code, societyName) {
+    const text = _inviteText(code, societyName);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join ' + (societyName || 'our society'), text });
+        return;
+      } catch (e) {
+        // User cancelled share sheet — silent.
+        if (e?.name === 'AbortError') return;
+      }
+    }
+    // No native share (desktop) — fall back to copy.
+    copyInviteText(code, societyName);
   }
 
   async function adminDeleteEvent(eventId, eventTitle) {

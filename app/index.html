@@ -2395,6 +2395,21 @@
     return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
   }
 
+  // True once the event's playing window has passed. A typical 18-hole
+  // round runs ~4–5h; we use a 5h grace from the listed tee time so an
+  // event tee-ing off at 09:00 stops being "Next Event" around 14:00.
+  // Without a tee_time_start we keep showing it until end-of-day.
+  function isEventPast(evt) {
+    if (!evt || !evt.date) return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (evt.date < todayStr) return true;
+    if (evt.date > todayStr) return false;
+    if (!evt.tee_time_start) return false;
+    const tee = new Date(evt.date + 'T' + evt.tee_time_start);
+    if (isNaN(tee.getTime())) return false;
+    return Date.now() > tee.getTime() + 5 * 60 * 60 * 1000;
+  }
+
   function timeAgo(isoStr) {
     const diff = Date.now() - new Date(isoStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -2929,7 +2944,7 @@
   async function renderVisitorNextEvent() {
     const events = await getEvents();
     const today = new Date().toISOString().split('T')[0];
-    const upcoming = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = events.filter(e => !isEventPast(e)).sort((a, b) => a.date.localeCompare(b.date));
 
     const container = document.getElementById('visitorNextEvent');
     if (upcoming.length === 0) {
@@ -2977,9 +2992,9 @@
 
     let filtered;
     if (visitorEventView === 'upcoming') {
-      filtered = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+      filtered = events.filter(e => !isEventPast(e)).sort((a, b) => a.date.localeCompare(b.date));
     } else {
-      filtered = events.filter(e => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
+      filtered = events.filter(e => isEventPast(e)).sort((a, b) => b.date.localeCompare(a.date));
     }
 
     if (filtered.length === 0) {
@@ -3067,7 +3082,7 @@
       refreshMySignups()
     ]);
     const today = new Date().toISOString().split('T')[0];
-    const upcoming = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = events.filter(e => !isEventPast(e)).sort((a, b) => a.date.localeCompare(b.date));
     const nextEvent = upcoming[0];
 
     // Welcome
@@ -3192,9 +3207,9 @@
 
     let filtered;
     if (eventTabView === 'upcoming') {
-      filtered = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+      filtered = events.filter(e => !isEventPast(e)).sort((a, b) => a.date.localeCompare(b.date));
     } else {
-      filtered = events.filter(e => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
+      filtered = events.filter(e => isEventPast(e)).sort((a, b) => b.date.localeCompare(a.date));
     }
 
     if (filtered.length === 0) {
@@ -3394,7 +3409,7 @@
       .map(s => s.event_id);
 
     const myEvents = events
-      .filter(e => myEventIds.includes(e.id) && e.date >= today)
+      .filter(e => myEventIds.includes(e.id) && !isEventPast(e))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (myEvents.length === 0) {

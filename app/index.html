@@ -3277,6 +3277,16 @@
     const isPast = evt.date < today;
     const signups = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === eventId) : await getSignups(eventId);
 
+    // Phase C: pull saved teams. Members see them only when published;
+    // event-running roles see drafts too. RLS enforces this server-side
+    // so the client query is the same in both cases.
+    const teamsRes = supabase
+      ? await supabase.from('event_teams').select('id, team_number, member_ids, tee_time, status, notes').eq('event_id', eventId).order('team_number')
+      : { data: [] };
+    const teams = teamsRes?.data || [];
+    const publishedTeams = teams.filter(t => t.status === 'published');
+    const useStoredTeams = (publishedTeams.length > 0) || (userCanRunEvents() && teams.length > 0);
+
     document.getElementById('modalTitle').textContent = evt.title;
 
     let html = `
@@ -3295,11 +3305,44 @@
       </div>`;
     }
 
-    // Signed-up players
-    if (signups.length > 0 && isAuthenticated) {
+    // Lookup tables for rendering teams: signup → handicap, member id → name.
+    const signupByMember = {};
+    signups.forEach(s => { signupByMember[s.member_id] = s; });
+    const memberName = (mid) => {
+      if (!supabase) return getMemberName(mid);
+      const s = signupByMember[mid];
+      return s?.members?.name || 'Member';
+    };
+
+    if (useStoredTeams) {
+      // Phase C path: render saved teams (with assigned tee times).
+      html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Lineup${publishedTeams.length === 0 ? ' (Draft)' : ''}</h3>`;
+      teams.forEach(t => {
+        const teeLabel = t.tee_time || 'TBC';
+        html += `
+          <div class="tee-group">
+            <div class="tee-group-header">
+              <span class="tee-time">${teeLabel}</span>
+              <span class="tee-group-label">Team ${t.team_number}${t.status === 'draft' ? ' · draft' : ''}</span>
+            </div>
+            ${(t.member_ids || []).map(mid => {
+              const s = signupByMember[mid];
+              const name = memberName(mid);
+              const isMe = mid === (currentUser?.id || 'demo-1');
+              const hcp = s?.handicap_at_signup ?? '–';
+              return `<div class="tee-player ${isMe ? 'is-me' : ''}">
+                <span>${name} ${isMe ? '(You)' : ''}</span>
+                <span class="handicap">HCP ${hcp}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        `;
+      });
+    } else if (signups.length > 0 && isAuthenticated) {
+      // Pre-Phase-C / no-lineup-yet fallback: tee groups by handicap
+      // in fours. Captain hasn't (or can't yet) generate teams.
       html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Signed Up Players</h3>`;
 
-      // Generate tee time groups
       const sorted = [...signups].sort((a, b) => (a.handicap_at_signup || 99) - (b.handicap_at_signup || 99));
       const groups = [];
       for (let i = 0; i < sorted.length; i += 4) {
@@ -3307,7 +3350,7 @@
       }
 
       const startTime = evt.tee_time_start || '09:00';
-      const interval = evt.tee_interval || 10;
+      const interval = evt.tee_time_interval_minutes || evt.tee_interval || 10;
 
       groups.forEach((group, gi) => {
         const [h, m] = startTime.split(':').map(Number);
@@ -3332,6 +3375,29 @@
           </div>
         `;
       });
+    }
+
+    // Admin/captain controls — shown only to event-running roles.
+    if (userCanRunEvents() && isAuthenticated) {
+      const hasTeams = teams.length > 0;
+      const allPublished = hasTeams && teams.every(t => t.status === 'published');
+      html += `
+        <div class="card mt-16" style="border:1px solid var(--gold);">
+          <h4 style="margin:0 0 8px 0; font-size:14px;">Lineup controls</h4>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-sm btn-primary" onclick="openTeamGenerator(${eventId})">
+              ${hasTeams ? 'Edit lineup' : 'Generate teams'}
+            </button>
+            ${hasTeams ? `<button class="btn btn-sm" onclick="${allPublished ? 'unpublishTeams' : 'publishTeams'}(${eventId})">
+              ${allPublished ? 'Unpublish' : 'Publish to members'}
+            </button>` : ''}
+            ${hasTeams ? `<button class="btn btn-sm btn-danger" onclick="clearTeams(${eventId})">Clear lineup</button>` : ''}
+          </div>
+          <p class="text-sm text-secondary" style="margin:8px 0 0 0;">
+            ${signups.length} signed up · ${hasTeams ? teams.length + ' teams (' + (allPublished ? 'published' : 'draft') + ')' : 'no lineup yet'}
+          </p>
+        </div>
+      `;
     }
 
     // Results (for past events)
@@ -4057,16 +4123,29 @@
     if (!userCanRunEvents()) return;
     currentAdminScreen = 'createEvent';
     // Fetch the society's courses + its home course (for default
-    // selection) in parallel.
-    const [coursesRes, societyRes] = await Promise.all([
+    // selection) + the format library (globals + this society's
+    // customs) in parallel.
+    const [coursesRes, societyRes, formatsRes] = await Promise.all([
       supabase.from('courses').select('*').eq('society_id', currentUser.society_id).order('name'),
       supabase.from('societies').select('home_course_external_id, external_courses!societies_home_course_external_id_fkey(name)').eq('id', currentUser.society_id).maybeSingle(),
+      supabase.from('event_formats')
+        .select('id, code, name, description, team_size_min, team_size_max, scoring_method, sort_order, society_id')
+        .or(`society_id.is.null,society_id.eq.${currentUser.society_id}`)
+        .order('sort_order'),
     ]);
     const courses = coursesRes.data || [];
     const homeCourseName = societyRes?.data?.external_courses?.name || null;
     const courseOpts = courses.map(c =>
       `<option value="${c.name}" data-loc="${c.location || ''}" ${homeCourseName && c.name === homeCourseName ? 'selected' : ''}>${homeCourseName && c.name === homeCourseName ? '🏠 ' : ''}${c.name}</option>`
     ).join('');
+    const formats = formatsRes?.data || [];
+    const formatOpts = formats.map(fmt => {
+      const teamLabel = fmt.team_size_min === fmt.team_size_max
+        ? (fmt.team_size_min === 1 ? 'individual' : 'teams of ' + fmt.team_size_min)
+        : 'teams of ' + fmt.team_size_min + '–' + fmt.team_size_max;
+      const tag = fmt.society_id ? '' : '';
+      return `<option value="${fmt.id}" data-team-min="${fmt.team_size_min}" data-team-max="${fmt.team_size_max}" data-scoring="${fmt.scoring_method}" data-name="${(fmt.name || '').replace(/"/g, '&quot;')}">${fmt.name} · ${teamLabel}</option>`;
+    }).join('');
 
     document.getElementById('adminContent').innerHTML = `
       <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
@@ -4107,12 +4186,57 @@
           </div>
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
           <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
-          <input class="input" type="text" name="format" placeholder="Format (e.g. Stableford)">
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Format</label>
+          <select class="input" name="format_id" id="appFormatSelect" required onchange="
+            var custom = document.getElementById('appFormatCustom');
+            var hint = document.getElementById('appFormatHint');
+            if (this.value === '__custom__') {
+              custom.style.display = 'block';
+              hint.textContent = 'Enter a custom format name. We''ll save it to your society''s library after this event.';
+            } else if (this.value) {
+              custom.style.display = 'none';
+              var o = this.options[this.selectedIndex];
+              hint.textContent = (o.dataset.scoring ? 'Scoring: ' + o.dataset.scoring.replace(/_/g, ' ') : '') +
+                                 (o.dataset.teamMin ? ' · Team size: ' + (o.dataset.teamMin === o.dataset.teamMax ? o.dataset.teamMin : (o.dataset.teamMin + '–' + o.dataset.teamMax)) : '');
+            } else {
+              custom.style.display = 'none';
+              hint.textContent = '';
+            }
+          ">
+            <option value="">Select format...</option>
+            ${formatOpts}
+            <option value="__custom__">+ Custom format...</option>
+          </select>
+          <div id="appFormatCustom" style="display:none;margin-top:-4px;margin-bottom:12px;">
+            <input class="input" type="text" name="custom_format" placeholder="Custom format name" style="margin-bottom:6px;">
+            <select class="input" name="custom_team_size" style="margin-bottom:6px;">
+              <option value="1">Individual play</option>
+              <option value="2">Teams of 2 (pairs)</option>
+              <option value="3">Teams of 3</option>
+              <option value="4">Teams of 4</option>
+            </select>
+            <select class="input" name="custom_scoring">
+              <option value="stableford">Stableford (points)</option>
+              <option value="medal">Medal (strokes)</option>
+              <option value="scramble">Scramble (team gross)</option>
+              <option value="better_ball">Better Ball</option>
+              <option value="matchplay">Matchplay</option>
+              <option value="custom">Custom / free-form</option>
+            </select>
+          </div>
+          <p class="text-sm" id="appFormatHint" style="margin:-8px 0 12px 0;color:var(--text-secondary);min-height:18px;"></p>
           <input class="input" type="number" name="cost" id="appCostInput" placeholder="Cost (€)" required>
           <p class="text-sm" id="appRateHint" style="margin:-8px 0 12px 0;color:var(--text-secondary);min-height:18px;"></p>
           <input class="input" type="url" name="payment_link" placeholder="Payment link (optional)">
           <input class="input" type="number" name="signup_limit" id="appSignupLimit" placeholder="Max players" oninput="applyRateToEventForm()">
           <input class="input" type="time" name="tee_time_start" placeholder="First tee time">
+          <select class="input" name="tee_time_interval_minutes" style="margin-bottom:12px;">
+            <option value="">Tee interval (default: 10 min between groups)</option>
+            <option value="8">8 min</option>
+            <option value="10" selected>10 min</option>
+            <option value="12">12 min</option>
+            <option value="15">15 min</option>
+          </select>
           <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
           <button class="btn btn-primary btn-full" type="submit">Create Event</button>
         </form>
@@ -4140,12 +4264,51 @@
       const cutoffLocal = f.signup_cutoff_at.value || null;
       const cutoffDate = cutoffLocal ? cutoffLocal.split('T')[0] : null;
       const cutoffAt = cutoffLocal ? new Date(cutoffLocal).toISOString() : null;
+
+      // Resolve format. Three paths: a real format_id from the
+      // library; a custom one (insert into event_formats first, then
+      // use its id); or none (legacy events with no format selected).
+      let formatId = null;
+      let formatLabel = null;
+      const formatChoice = f.format_id.value;
+      if (formatChoice && formatChoice !== '__custom__') {
+        formatId = formatChoice;
+        const opt = f.format_id.options[f.format_id.selectedIndex];
+        formatLabel = opt?.dataset?.name || null;
+      } else if (formatChoice === '__custom__') {
+        const customName = (f.custom_format.value || '').trim();
+        if (!customName) { alert('Please enter a custom format name.'); return; }
+        const teamSize = parseInt(f.custom_team_size.value, 10) || 1;
+        const scoring = f.custom_scoring.value || 'custom';
+        const codeFromName = customName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || ('custom_' + Date.now());
+        const { data: newFmt, error: fmtErr } = await supabase
+          .from('event_formats')
+          .insert({
+            society_id: currentUser.society_id,
+            code: codeFromName,
+            name: customName,
+            team_size_min: teamSize,
+            team_size_max: teamSize,
+            scoring_method: scoring,
+            is_default: false,
+          })
+          .select('id, name')
+          .single();
+        if (fmtErr) { alert('Couldn\'t save custom format: ' + fmtErr.message); return; }
+        formatId = newFmt.id;
+        formatLabel = newFmt.name;
+      }
+
+      const interval = parseInt(f.tee_time_interval_minutes.value, 10);
       const { error } = await supabase.from('events').insert({
         title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
-        format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
+        format: formatLabel, format_id: formatId,
+        cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
         signup_limit: parseInt(f.signup_limit.value)||null,
         signup_cutoff: cutoffDate, signup_cutoff_at: cutoffAt,
-        tee_time_start: f.tee_time_start.value||null, notes: f.notes.value||null,
+        tee_time_start: f.tee_time_start.value||null,
+        tee_time_interval_minutes: Number.isFinite(interval) ? interval : null,
+        notes: f.notes.value||null,
         society_id: currentUser.society_id,
       });
       if (error) { alert('Error: ' + error.message); return; }
@@ -4594,6 +4757,330 @@
     invalidateCache();
     showToast('Event deleted.');
     renderAdmin();
+  }
+
+  // =====================================================================
+  // Phase C — Team generator
+  // =====================================================================
+
+  // Snake-draft team builder: sorts players by handicap (best first),
+  // then deals them in alternating directions across N teams. Result:
+  // each team's average draft position is roughly (numTeams + 1) / 2,
+  // so total handicap balance is good without any optimization passes.
+  // Caller decides how many teams (numTeams) — typically derived from
+  // signups.length / format.team_size_max.
+  function snakeDraftTeams(players, numTeams) {
+    const sorted = [...players].sort((a, b) => {
+      const ha = (a.handicap_at_signup ?? 99);
+      const hb = (b.handicap_at_signup ?? 99);
+      return ha - hb;
+    });
+    const teams = Array.from({ length: numTeams }, () => []);
+    sorted.forEach((p, i) => {
+      const round = Math.floor(i / numTeams);
+      const idxInRound = i % numTeams;
+      const teamIdx = (round % 2 === 0) ? idxInRound : (numTeams - 1 - idxInRound);
+      teams[teamIdx].push(p);
+    });
+    return teams;
+  }
+
+  // Compute tee times for N teams given start HH:MM + interval minutes.
+  function spreadTeeTimes(startHHMM, intervalMin, numTeams) {
+    const [h, m] = (startHHMM || '09:00').split(':').map(Number);
+    const startMins = (h * 60) + m;
+    const out = [];
+    for (let i = 0; i < numTeams; i++) {
+      const total = startMins + (i * intervalMin);
+      const hh = String(Math.floor(total / 60)).padStart(2, '0');
+      const mm = String(total % 60).padStart(2, '0');
+      out.push(hh + ':' + mm);
+    }
+    return out;
+  }
+
+  // Cache the in-progress draft so swap controls can mutate it without
+  // re-running the snake. Keyed by event id.
+  window._draftLineup = window._draftLineup || {};
+
+  async function openTeamGenerator(eventId) {
+    if (!userCanRunEvents() || !supabase) return;
+
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    if (!evt) return;
+
+    const signups = await getSignups(eventId);
+    if (signups.length === 0) {
+      alert('No signups yet — nothing to draft from.');
+      return;
+    }
+
+    // Pull the chosen format (for team size hint) + any existing teams
+    // (so re-opening the generator after a save shows them).
+    let formatRow = null;
+    if (evt.format_id) {
+      const r = await supabase.from('event_formats').select('*').eq('id', evt.format_id).maybeSingle();
+      formatRow = r.data || null;
+    }
+    const existingRes = await supabase.from('event_teams').select('id, team_number, member_ids, tee_time, status').eq('event_id', eventId).order('team_number');
+    const existing = existingRes.data || [];
+
+    // Seed the draft state — prefer existing rows over a fresh snake
+    // so the captain's tweaks aren't blown away when they reopen.
+    const preferredTeamSize = (formatRow?.team_size_max) || 4;
+    if (!window._draftLineup[eventId]) {
+      if (existing.length > 0) {
+        window._draftLineup[eventId] = {
+          teamSize: preferredTeamSize,
+          interval: evt.tee_time_interval_minutes || 10,
+          startTime: evt.tee_time_start || '09:00',
+          teams: existing.map(t => ({
+            id: t.id,
+            members: (t.member_ids || []).map(mid => signups.find(s => s.member_id === mid)).filter(Boolean),
+            teeTime: t.tee_time,
+            status: t.status,
+          })),
+        };
+      } else {
+        const numTeams = Math.max(1, Math.ceil(signups.length / preferredTeamSize));
+        const teams = snakeDraftTeams(signups, numTeams);
+        const tees = spreadTeeTimes(evt.tee_time_start || '09:00', evt.tee_time_interval_minutes || 10, numTeams);
+        window._draftLineup[eventId] = {
+          teamSize: preferredTeamSize,
+          interval: evt.tee_time_interval_minutes || 10,
+          startTime: evt.tee_time_start || '09:00',
+          teams: teams.map((members, i) => ({
+            id: null,
+            members,
+            teeTime: tees[i],
+            status: 'draft',
+          })),
+        };
+      }
+    }
+
+    renderTeamGenerator(eventId, evt, formatRow, signups);
+  }
+
+  function renderTeamGenerator(eventId, evt, formatRow, signups) {
+    const draft = window._draftLineup[eventId];
+    const teamSizeOptions = [1, 2, 3, 4].map(n =>
+      `<option value="${n}" ${n === draft.teamSize ? 'selected' : ''}>${n === 1 ? 'Individual (1)' : 'Teams of ' + n}</option>`
+    ).join('');
+
+    const memberName = (mid) => {
+      const s = signups.find(x => x.member_id === mid);
+      return s?.members?.name || 'Member';
+    };
+
+    const teamsHtml = draft.teams.map((t, i) => `
+      <div class="card" style="margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <strong style="flex:1;">Team ${i + 1}</strong>
+          <input class="input" style="width:90px;margin:0;padding:6px;" type="time" value="${t.teeTime || ''}"
+                 onchange="window._draftLineup[${eventId}].teams[${i}].teeTime = this.value;">
+        </div>
+        ${t.members.map((m, mi) => `
+          <div class="tee-player" style="display:flex; align-items:center; gap:6px;">
+            <span style="flex:1;">${memberName(m.member_id)}</span>
+            <span class="handicap">HCP ${m.handicap_at_signup ?? '–'}</span>
+            <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="moveDraftPlayer(${eventId}, ${i}, ${mi}, -1)">↑</button>
+            <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="moveDraftPlayer(${eventId}, ${i}, ${mi}, 1)">↓</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+
+    const totalHCPs = draft.teams.map(t => {
+      const sum = t.members.reduce((acc, m) => acc + (m.handicap_at_signup ?? 99), 0);
+      return Math.round(sum * 10) / 10;
+    });
+
+    const formatLabel = formatRow ? `${formatRow.name} · default team size ${formatRow.team_size_max === formatRow.team_size_min ? formatRow.team_size_max : formatRow.team_size_min + '–' + formatRow.team_size_max}` : 'Format not set on this event.';
+
+    document.getElementById('modalBody').innerHTML = `
+      <h3 style="margin-top:0;">Lineup — ${evt.title}</h3>
+      <p class="text-sm text-secondary" style="margin-top:-8px;">${formatLabel}</p>
+
+      <div class="card" style="background:var(--gold-light); border:none; margin-bottom:12px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <label class="text-sm" style="font-weight:600;">Team size</label>
+          <select class="input" style="margin:0;width:auto;" onchange="window._draftLineup[${eventId}].teamSize = parseInt(this.value, 10);">
+            ${teamSizeOptions}
+          </select>
+          <label class="text-sm" style="font-weight:600;">Tee start</label>
+          <input class="input" type="time" style="margin:0;width:110px;" value="${draft.startTime}"
+                 onchange="window._draftLineup[${eventId}].startTime = this.value;">
+          <label class="text-sm" style="font-weight:600;">Interval</label>
+          <select class="input" style="margin:0;width:90px;"
+                  onchange="window._draftLineup[${eventId}].interval = parseInt(this.value, 10);">
+            ${[8,10,12,15].map(n => `<option value="${n}" ${n === draft.interval ? 'selected' : ''}>${n} min</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+          <button class="btn btn-sm btn-primary" onclick="regenerateLineup(${eventId})">Regenerate (snake-draft by HCP)</button>
+          <button class="btn btn-sm" onclick="respreadTeeTimes(${eventId})">Re-spread tee times</button>
+        </div>
+      </div>
+
+      <div>${teamsHtml}</div>
+
+      <p class="text-sm text-secondary" style="margin-top:8px;">
+        Team handicap totals: ${totalHCPs.join(' / ')}
+      </p>
+
+      <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveDraftLineup(${eventId}, false)">Save draft</button>
+        <button class="btn btn-primary" onclick="saveDraftLineup(${eventId}, true)">Save + Publish</button>
+        <button class="btn-ghost" onclick="closeTeamGenerator(${eventId})">Cancel</button>
+      </div>
+    `;
+    document.getElementById('eventModal').classList.add('open');
+  }
+
+  function moveDraftPlayer(eventId, teamIdx, memberIdx, delta) {
+    const d = window._draftLineup[eventId];
+    if (!d) return;
+    const team = d.teams[teamIdx];
+    if (!team) return;
+
+    if (delta === -1) {
+      // Move up: into the previous team's tail (or to the same team's
+      // tail if it's the first team — wraparound behaviour kept simple).
+      if (teamIdx === 0) return;
+      const player = team.members.splice(memberIdx, 1)[0];
+      d.teams[teamIdx - 1].members.push(player);
+    } else {
+      // Move down: into the next team's head.
+      if (teamIdx === d.teams.length - 1) return;
+      const player = team.members.splice(memberIdx, 1)[0];
+      d.teams[teamIdx + 1].members.unshift(player);
+    }
+    // Drop empty teams from the end so we don't render orphan rows.
+    while (d.teams.length > 1 && d.teams[d.teams.length - 1].members.length === 0) {
+      d.teams.pop();
+    }
+    // Re-render to refresh totals.
+    (async () => {
+      const events = await getEvents();
+      const evt = events.find(e => e.id === eventId);
+      const signups = await getSignups(eventId);
+      let formatRow = null;
+      if (evt.format_id) {
+        const r = await supabase.from('event_formats').select('*').eq('id', evt.format_id).maybeSingle();
+        formatRow = r.data || null;
+      }
+      renderTeamGenerator(eventId, evt, formatRow, signups);
+    })();
+  }
+
+  async function regenerateLineup(eventId) {
+    const d = window._draftLineup[eventId];
+    if (!d) return;
+    const signups = await getSignups(eventId);
+    const numTeams = Math.max(1, Math.ceil(signups.length / d.teamSize));
+    const teams = snakeDraftTeams(signups, numTeams);
+    const tees = spreadTeeTimes(d.startTime, d.interval, numTeams);
+    d.teams = teams.map((members, i) => ({
+      id: d.teams[i]?.id || null,
+      members,
+      teeTime: tees[i],
+      status: 'draft',
+    }));
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    let formatRow = null;
+    if (evt.format_id) {
+      const r = await supabase.from('event_formats').select('*').eq('id', evt.format_id).maybeSingle();
+      formatRow = r.data || null;
+    }
+    renderTeamGenerator(eventId, evt, formatRow, signups);
+  }
+
+  async function respreadTeeTimes(eventId) {
+    const d = window._draftLineup[eventId];
+    if (!d) return;
+    const tees = spreadTeeTimes(d.startTime, d.interval, d.teams.length);
+    d.teams.forEach((t, i) => { t.teeTime = tees[i]; });
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    const signups = await getSignups(eventId);
+    let formatRow = null;
+    if (evt.format_id) {
+      const r = await supabase.from('event_formats').select('*').eq('id', evt.format_id).maybeSingle();
+      formatRow = r.data || null;
+    }
+    renderTeamGenerator(eventId, evt, formatRow, signups);
+  }
+
+  async function saveDraftLineup(eventId, publish) {
+    const d = window._draftLineup[eventId];
+    if (!d) return;
+
+    // Wipe existing rows and re-insert. Simpler than diff-ing across
+    // re-orders / regenerations and the table is small (≤ ~12 rows).
+    const { error: delErr } = await supabase.from('event_teams').delete().eq('event_id', eventId);
+    if (delErr) { alert('Could not save: ' + delErr.message); return; }
+
+    const rows = d.teams.map((t, i) => ({
+      event_id: eventId,
+      team_number: i + 1,
+      member_ids: t.members.map(m => m.member_id),
+      tee_time: t.teeTime || null,
+      status: publish ? 'published' : 'draft',
+    }));
+    if (rows.length === 0) {
+      delete window._draftLineup[eventId];
+      document.getElementById('eventModal').classList.remove('open');
+      return;
+    }
+    const { error: insErr } = await supabase.from('event_teams').insert(rows);
+    if (insErr) { alert('Could not save: ' + insErr.message); return; }
+
+    // Also persist the chosen interval back onto the event so members
+    // see the same spacing if they re-render via the fallback.
+    await supabase.from('events').update({
+      tee_time_start: d.startTime,
+      tee_time_interval_minutes: d.interval,
+    }).eq('id', eventId);
+
+    delete window._draftLineup[eventId];
+    showToast(publish ? 'Lineup published.' : 'Draft saved.');
+    document.getElementById('eventModal').classList.remove('open');
+  }
+
+  function closeTeamGenerator(eventId) {
+    delete window._draftLineup[eventId];
+    document.getElementById('eventModal').classList.remove('open');
+  }
+
+  async function publishTeams(eventId) {
+    if (!userCanRunEvents() || !supabase) return;
+    const { error } = await supabase.from('event_teams').update({ status: 'published' }).eq('event_id', eventId);
+    if (error) { alert('Could not publish: ' + error.message); return; }
+    showToast('Lineup published.');
+    document.getElementById('eventModal').classList.remove('open');
+    openEventDetail(eventId);
+  }
+
+  async function unpublishTeams(eventId) {
+    if (!userCanRunEvents() || !supabase) return;
+    const { error } = await supabase.from('event_teams').update({ status: 'draft' }).eq('event_id', eventId);
+    if (error) { alert('Could not unpublish: ' + error.message); return; }
+    showToast('Lineup hidden from members.');
+    document.getElementById('eventModal').classList.remove('open');
+    openEventDetail(eventId);
+  }
+
+  async function clearTeams(eventId) {
+    if (!userCanRunEvents() || !supabase) return;
+    if (!confirm('Clear the lineup for this event? Members will no longer see teams until you regenerate.')) return;
+    const { error } = await supabase.from('event_teams').delete().eq('event_id', eventId);
+    if (error) { alert('Could not clear: ' + error.message); return; }
+    showToast('Lineup cleared.');
+    document.getElementById('eventModal').classList.remove('open');
+    openEventDetail(eventId);
   }
 
   async function adminApproveMember(memberId) {

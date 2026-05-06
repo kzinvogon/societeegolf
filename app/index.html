@@ -1521,8 +1521,31 @@
 
   async function initSupabase() {
     if (typeof DEMO_MODE !== 'undefined' && DEMO_MODE) return;
+
+    // The esm.sh CDN occasionally returns 5xx or stalls. Try the
+    // primary first, then jsdelivr, then unpkg before giving up —
+    // otherwise the whole app silently degrades to "Demo mode" UX.
+    const cdns = [
+      'https://esm.sh/@supabase/supabase-js@2',
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+      'https://unpkg.com/@supabase/supabase-js@2/dist/module/index.js',
+    ];
+
+    let createClient = null;
+    for (const url of cdns) {
+      try {
+        const mod = await import(url);
+        if (mod?.createClient) { createClient = mod.createClient; break; }
+      } catch (e) {
+        console.warn('[supabase] CDN failed', url, e?.message);
+      }
+    }
+    if (!createClient) {
+      console.warn('Supabase client failed to load from all CDNs');
+      return;
+    }
+
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: { detectSessionInUrl: true, flowType: 'implicit', persistSession: true, autoRefreshToken: true }
       });
@@ -2539,7 +2562,10 @@
     `;
 
     if (!supabase) {
-      document.getElementById('societyDirectoryList').innerHTML = '<p class="text-sm text-secondary">Demo mode — directory unavailable.</p>';
+      const isDemo = (typeof DEMO_MODE !== 'undefined' && DEMO_MODE);
+      document.getElementById('societyDirectoryList').innerHTML = isDemo
+        ? '<p class="text-sm text-secondary">Demo mode — directory unavailable.</p>'
+        : '<p class="text-sm" style="color:var(--red);">Couldn\'t connect to the directory. <a href="#" onclick="location.reload();return false;" style="text-decoration:underline;">Refresh the page</a> to retry.</p>';
       return;
     }
     try {
@@ -2781,7 +2807,10 @@
     btn.disabled = true; btn.textContent = 'Creating…';
 
     if (!supabase) {
-      errEl.textContent = 'Demo mode — registration disabled.';
+      const isDemo = (typeof DEMO_MODE !== 'undefined' && DEMO_MODE);
+      errEl.textContent = isDemo
+        ? 'Demo mode — registration disabled.'
+        : 'Can\'t reach the server right now — refresh the page and try again.';
       errEl.classList.remove('hidden');
       btn.disabled = false; btn.textContent = 'Start 30-day trial';
       return;
@@ -5116,7 +5145,11 @@
     _courseLibSearchTimer = setTimeout(async () => {
       const resultsEl = document.getElementById('courseLibraryResults');
       if (!resultsEl) return;
-      if (!supabase) { resultsEl.innerHTML = '<em>Demo mode — library unavailable.</em>'; return; }
+      if (!supabase) {
+        const isDemo = (typeof DEMO_MODE !== 'undefined' && DEMO_MODE);
+        resultsEl.innerHTML = isDemo ? '<em>Demo mode — library unavailable.</em>' : '<em style="color:var(--red);">Can\'t reach the course library — refresh to retry.</em>';
+        return;
+      }
       const { data, error } = await supabase.rpc('search_external_courses', {
         p_query: (query || '').trim() || null,
         p_country: 'Spain',
@@ -5171,7 +5204,11 @@
   }
 
   async function renderCourseRates(courseId, panel, players) {
-    if (!supabase) { panel.innerHTML = '<em>Demo mode.</em>'; return; }
+    if (!supabase) {
+      const isDemo = (typeof DEMO_MODE !== 'undefined' && DEMO_MODE);
+      panel.innerHTML = isDemo ? '<em>Demo mode.</em>' : '<em style="color:var(--red);">Can\'t reach the rates service — refresh to retry.</em>';
+      return;
+    }
     const { data, error } = await supabase.rpc('rates_for_course', {
       p_course_id: courseId,
       p_players: players,

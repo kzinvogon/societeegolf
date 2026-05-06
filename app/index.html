@@ -1011,7 +1011,7 @@
       <div class="auth-screen">
         <div class="login-icon">⛳</div>
         <h2>Member Login</h2>
-        <p class="login-subtitle">Enter your email — we'll send you a login link. No password needed.</p>
+        <p class="login-subtitle">Enter your email — we'll send you a login link <em>and</em> a 6-digit code. No password needed.</p>
 
         <!-- Login form -->
         <div class="auth-form" id="authFormView">
@@ -1043,8 +1043,38 @@
         <div class="login-sent hidden" id="authSentView">
           <div class="sent-icon">📬</div>
           <h3>Check your inbox</h3>
-          <p>We sent a login link to <strong id="sentEmail"></strong></p>
-          <p class="sent-hint">Check your spam folder if it doesn't arrive within a minute.</p>
+          <p>We sent a login link <em>and</em> a 6-digit code to <strong id="sentEmail"></strong></p>
+          <p class="sent-hint">Tap the link in the email, or type the code below to log in here.</p>
+
+          <!-- 6-digit OTP fallback. Supabase's signInWithOtp generates a
+               token alongside the magic link; for it to appear in the
+               email, the Magic Link template in the Supabase dashboard
+               must include {{ .Token }}. -->
+          <div class="input-group" style="margin-top:16px;">
+            <input
+              type="text"
+              class="input"
+              id="authOtpCode"
+              placeholder="6-digit code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              style="text-align:center;letter-spacing:6px;font-size:18px;"
+              oninput="this.value=this.value.replace(/\D/g,'').slice(0,6); document.getElementById('authOtpVerify').disabled = this.value.length !== 6;"
+            >
+          </div>
+          <button class="btn btn-primary btn-full" id="authOtpVerify" onclick="verifyOtpCode()" disabled>
+            <span class="btn-text">Verify code</span>
+            <span class="btn-spinner hidden">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/>
+              </svg>
+            </span>
+          </button>
+          <div id="authOtpMessage" class="hidden"></div>
+
+          <p class="sent-hint" style="margin-top:16px;">Or open the email and tap the link:</p>
           <div class="sent-actions">
             <a href="https://mail.google.com" target="_blank" rel="noopener" class="btn-open-email gmail">Open Gmail</a>
             <a href="https://outlook.live.com" target="_blank" rel="noopener" class="btn-open-email outlook">Open Outlook</a>
@@ -2017,6 +2047,12 @@
     const btnSpin = document.querySelector('#authSubmit .btn-spinner');
     if (btnText) btnText.classList.remove('hidden');
     if (btnSpin) btnSpin.classList.add('hidden');
+    // Clear OTP fallback state too.
+    const otp = document.getElementById('authOtpCode');
+    if (otp) otp.value = '';
+    const otpBtn = document.getElementById('authOtpVerify');
+    if (otpBtn) otpBtn.disabled = true;
+    document.getElementById('authOtpMessage')?.classList.add('hidden');
   }
 
   async function sendMagicLink() {
@@ -2077,6 +2113,42 @@
     startResendCooldown();
   }
 
+  async function verifyOtpCode() {
+    const email = document.getElementById('sentEmail').textContent;
+    const code = document.getElementById('authOtpCode').value.trim();
+    if (!email || !supabase || code.length !== 6) return;
+
+    const btn = document.getElementById('authOtpVerify');
+    const btnText = btn.querySelector('.btn-text');
+    const btnSpin = btn.querySelector('.btn-spinner');
+    const msg = document.getElementById('authOtpMessage');
+
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnSpin.classList.remove('hidden');
+    msg.classList.add('hidden');
+
+    // Use type:'email' — same channel signInWithOtp generated the token
+    // for. Supabase issues a session on success; onAuthStateChange's
+    // SIGNED_IN handler routes to loginWithSession from there.
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+
+    btnText.classList.remove('hidden');
+    btnSpin.classList.add('hidden');
+
+    if (error) {
+      btn.disabled = false;
+      msg.classList.remove('hidden');
+      msg.className = 'auth-message';
+      msg.style.background = '#FEE2E2';
+      msg.style.color = 'var(--red)';
+      msg.textContent = error.message.toLowerCase().includes('expired')
+        ? 'That code has expired — tap "Resend link" to get a new one.'
+        : 'Invalid code. Double-check the email and try again.';
+    }
+    // On success the SIGNED_IN listener takes over and swaps to member view.
+  }
+
   function startResendCooldown() {
     const btn = document.getElementById('resendBtn');
     const timer = document.getElementById('resendTimer');
@@ -2111,13 +2183,19 @@
     // event that supabase.auth.signOut() emits a moment later is a no-op
     // in onAuthStateChange — otherwise the handler re-enters logout()
     // and Safari hangs on an unbounded signOut loop.
-    if (!isAuthenticated && !currentUser) return;
+    //
+    // The society chooser is rendered AFTER the magic-link session is
+    // live but BEFORE selectSocietyAndLogin sets isAuthenticated. So
+    // include _pendingMemberships in the "work to do" check, otherwise
+    // clicking Log Out on the chooser is a no-op and the session stays.
+    if (!isAuthenticated && !currentUser && !window._pendingMemberships) return;
     isAuthenticated = false;
     currentUser = null;
     currentTab = 'home';
     try { localStorage.removeItem('jpgs_last_tab'); } catch(e) {}
     clearActiveSociety();
     invalidateCache();
+    if (window._pendingMemberships) delete window._pendingMemberships;
     setMode('visitor');
     if (supabase) {
       // Fire-and-forget; we've already torn down local state.
@@ -3940,13 +4018,24 @@
   // given event date, suitable for an <input type="datetime-local">.
   function appGetFridayBeforeAt5(dateStr) {
     if (!dateStr) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (x) => `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
     const d = new Date(dateStr + 'T00:00:00');
     const day = d.getDay();
     const diff = (day + 2) % 7;
     d.setDate(d.getDate() - (diff === 0 ? 7 : diff));
     d.setHours(17, 0, 0, 0);
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    // If Friday-before-event is past, fall back to the evening BEFORE
+    // the event (event date - 1, at 17:00) — captain still has the
+    // night to finalise tee times. If even that is past (event is today
+    // or already-late), leave blank so the user picks consciously.
+    if (d.getTime() < Date.now()) {
+      const eve = new Date(dateStr + 'T17:00');
+      eve.setDate(eve.getDate() - 1);
+      if (eve.getTime() < Date.now()) return '';
+      return fmt(eve);
+    }
+    return fmt(d);
   }
 
   async function showAdminCreateEvent() {
@@ -4029,8 +4118,13 @@
       // Cutoff is now a datetime-local string like '2026-05-08T17:00'.
       // Persist both: signup_cutoff_at (timestamp, authoritative) and
       // signup_cutoff (date, kept in sync for legacy reads).
-      const cutoffAt = f.signup_cutoff_at.value || null;
-      const cutoffDate = cutoffAt ? cutoffAt.split('T')[0] : null;
+      // datetime-local has no timezone; treat it as the user's local
+      // time and convert to UTC ISO before sending to TIMESTAMPTZ,
+      // otherwise Postgres interprets the naive string as UTC and
+      // the value comes back shifted by the TZ offset.
+      const cutoffLocal = f.signup_cutoff_at.value || null;
+      const cutoffDate = cutoffLocal ? cutoffLocal.split('T')[0] : null;
+      const cutoffAt = cutoffLocal ? new Date(cutoffLocal).toISOString() : null;
       const { error } = await supabase.from('events').insert({
         title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
         format: f.format.value||null, cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
@@ -4193,7 +4287,10 @@
 
     const title = f.title.value.trim();
     const notes = f.notes.value.trim() || null;
-    const closesAt = f.voting_closes_at.value || null;
+    // datetime-local is naive; convert local→UTC ISO so TIMESTAMPTZ
+    // doesn't read it as UTC and shift it by the TZ offset.
+    const closesLocal = f.voting_closes_at.value || null;
+    const closesAt = closesLocal ? new Date(closesLocal).toISOString() : null;
 
     // Collect option rows.
     const rows = Array.from(document.querySelectorAll('#proposalOptionsContainer > .card'));

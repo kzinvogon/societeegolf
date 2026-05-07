@@ -3257,7 +3257,7 @@
               <div style="font-size:28px;">🏆</div>
               <div>
                 <strong>${winnerName}</strong>
-                ${winner.points ? `<span class="text-sm text-secondary"> — ${winner.points} pts</span>` : ''}
+                ${winner?.points ? `<span class="text-sm text-secondary"> — ${winner.points} pts</span>` : ''}
                 <br><span class="text-sm text-secondary">${lastEvt.title} · ${formatDate(lastEvt.date)}</span>
               </div>
             </div>
@@ -5061,7 +5061,7 @@
           teams.forEach(t => {
             const score = parseInt(this.querySelector(`[name="tscore_${t.id}"]`)?.value);
             const points = parseInt(this.querySelector(`[name="tpoints_${t.id}"]`)?.value);
-            if (score || points) {
+            if (!isNaN(score) || !isNaN(points)) {
               (t.member_ids || []).forEach(mid => {
                 teamEntries.push({ event_id: eventId, member_id: mid, team_id: t.id, score: score||null, points: points||null });
               });
@@ -5085,7 +5085,7 @@
           (signups||[]).forEach(s => {
             const score = parseInt(this.querySelector(`[name="score_${s.member_id}"]`)?.value);
             const points = parseInt(this.querySelector(`[name="points_${s.member_id}"]`)?.value);
-            if (score || points) entries.push({ event_id: eventId, member_id: s.member_id, score: score||null, points: points||null });
+            if (!isNaN(score) || !isNaN(points)) entries.push({ event_id: eventId, member_id: s.member_id, score: isNaN(score)?null:score, points: isNaN(points)?null:points });
           });
           entries.sort((a,b) => (b.points||0)-(a.points||0));
           entries.forEach((e,i) => e.position = i+1);
@@ -5119,29 +5119,34 @@
     const evt = events.find(e => e.id === eventId);
     if (evt && results.length > 0) {
       const winner = results.find(r => r.position === 1);
-      const winnerName = winner?.name || winner?.members?.name || 'Unknown';
-      const title = `Results: ${evt.title}`;
-      const body = `Results are in for ${evt.title} at ${evt.course} on ${formatDate(evt.date)}.\n\n` +
-        (winner.points
-          ? `Winner: ${winnerName} with ${winner.points} points (score: ${winner.score || '-'}).\n\n`
-          : `Winner: ${winnerName}.\n\n`) +
-        `Full leaderboard available in the Events tab.`;
+      if (winner) {
+        const winnerName = winner?.name || winner?.members?.name || 'Unknown';
+        const title = `Results: ${evt.title}`;
+        const body = `Results are in for ${evt.title} at ${evt.course} on ${formatDate(evt.date)}.\n\n` +
+          (winner.points
+            ? `Winner: ${winnerName} with ${winner.points} points (score: ${winner.score || '-'}).\n\n`
+            : `Winner: ${winnerName}.\n\n`) +
+          `Full leaderboard available in the Events tab.`;
 
-      await supabase.from('messages').insert({
-        title,
-        body,
-        priority: 'important',
-        society_id: SOCIETY_CONFIG._societyId
-      });
-      invalidateCache();
+        const { error: msgErr } = await supabase.from('messages').insert({
+          title,
+          body,
+          priority: 'important',
+          society_id: SOCIETY_CONFIG._societyId
+        });
+        if (msgErr) console.warn('Failed to send results notification:', msgErr);
+      }
     }
 
+    invalidateCache();
     showToast('Results published — members notified');
     loadResultsForm(eventId);
   }
 
   async function unpublishResults(eventId) {
-    await supabase.from('events').update({ results_published_at: null }).eq('id', eventId);
+    const { error } = await supabase.from('events').update({ results_published_at: null }).eq('id', eventId);
+    if (error) { alert('Error unpublishing: ' + error.message); return; }
+    invalidateCache();
     showToast('Results unpublished');
     loadResultsForm(eventId);
   }
@@ -5244,7 +5249,8 @@
 
   async function deleteSponsor(sponsorId) {
     if (!confirm('Delete this sponsor? This will also remove it from any linked events.')) return;
-    await supabase.from('society_sponsors').delete().eq('id', sponsorId);
+    const { error } = await supabase.from('society_sponsors').delete().eq('id', sponsorId);
+    if (error) { alert('Error deleting sponsor: ' + error.message); return; }
     showToast('Sponsor deleted');
     showAdminSponsors();
   }

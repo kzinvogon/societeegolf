@@ -9,11 +9,11 @@ The "captain loop" is a 7-block flow: Course Intelligence → Interest Sounder �
 | A | Roles & permissions | ✅ shipped | 018 | `fccb4d8` |
 | B | Interest Sounder | ✅ shipped | 019 | `3af29b7` |
 | C | Format library + team generator | ✅ shipped | 020 | `92e795f` |
-| D | Results + push to members | ← **next** | — | — |
-| F | Sponsor (parallel-able with D/E) | planned | — | — |
+| D | Results + push to members | ✅ shipped | 022 | — |
+| F | Sponsor (parallel-able with D/E) | ← **next** | — | — |
 | E | Course intelligence (automation) | deferred | — | — |
 
-**Order in practice:** A → B → C → **D** → F → E. E is last because it depends on partner integrations and is the riskiest; A–D + F are pure UX wins.
+**Order in practice:** A → B → C → D → **F** → E. E is last because it depends on partner integrations and is the riskiest; A–D + F are pure UX wins.
 
 ---
 
@@ -63,23 +63,19 @@ Also shipped same day:
 
 ---
 
-## Phase D — Results + push to members (next, ~1 day)
+## Phase D — Results + push to members ✅ shipped (2026-05-07)
 
 Builds directly on Phase C — uses `event_teams` for team formats, `event_formats.scoring_method` to pick the right entry form.
 
-**Schema:**
-- `results.team_id` FK to `event_teams` (nullable; per-member rows still allowed for individual formats).
-- Notification on results publish: a broadcast `messages` row with `priority='important'` so it lands in the member feed.
-
-**Client:**
-- Captain's results-entry form switches mode based on `event.format_id` + `format.scoring_method`:
-  - `stableford` / `medal` / `matchplay` — per-player rows with score / position auto-computed.
-  - `scramble` / `better_ball` — per-team rows; score applies to all members of that team.
-  - `custom` — free-form text scores.
-- "Mark published" button gates leaderboard visibility for members. Trigger or client-side composes the broadcast message.
-- Member-side: event detail shows the published leaderboard. Home tab gets a "Latest result" card linking to the most recent published event.
-
-**Why D follows C:** the `event_teams` rows already exist for team formats; results just need to attach to them.
+- **Migration 022** — `results.team_id` FK to `event_teams` (nullable; per-member rows for individual formats). `events.results_published_at` timestamp gates member visibility. RLS split into `results_published_read` (same-society, published only) and `results_draft_read` (event-running roles see unpublished).
+- **Format-aware results entry** — `loadResultsForm()` switches on `scoring_method`:
+  - `stableford` / `medal` / `matchplay` — per-player rows with score + points (label adapts: "Points" / "Net" / "W/L"), auto-calculated position.
+  - `scramble` / `better_ball` — per-team rows; score applies to all members of that team via `team_id`. Shared positions for same-score teams.
+  - `custom` — free-form textarea for non-standard formats.
+- **Publish gate** — "Publish results to members" / "Unpublish" buttons on the results entry form. Members only see results in event detail when `results_published_at` is set; captains see "(Draft)" label.
+- **Auto-notification** — publishing inserts a broadcast `messages` row (`priority='important'`) with winner name, points, event title, and course.
+- **Event detail** — results display handles individual, team (grouped by `team_id`), and custom (free text) results. Shows "Results not yet published" to members when unpublished.
+- **Home tab** — "Latest Result" card with trophy icon, winner name, points, event title. Taps through to event detail.
 
 ---
 

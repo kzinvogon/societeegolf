@@ -1109,6 +1109,7 @@
         <div id="openProposalsCard"></div>
         <div id="nextEventCountdown"></div>
         <div id="quickActions"></div>
+        <div id="latestResult"></div>
         <div id="latestMessage"></div>
         <div id="memberStats"></div>
       </div>
@@ -3236,6 +3237,34 @@
       `;
     }
 
+    // Latest published result
+    const latestResultEl = document.getElementById('latestResult');
+    latestResultEl.innerHTML = '';
+    const pastWithResults = events
+      .filter(e => e.results_published_at && e.date < today)
+      .sort((a,b) => b.results_published_at.localeCompare(a.results_published_at));
+    if (pastWithResults.length > 0) {
+      const lastEvt = pastWithResults[0];
+      const lastResults = await getResults(lastEvt.id);
+      const winner = lastResults.find(r => r.position === 1);
+      if (winner) {
+        const winnerName = winner.name || winner.members?.name || 'Unknown';
+        latestResultEl.innerHTML = `
+          <div class="card" onclick="openEventDetail(${lastEvt.id})" style="cursor:pointer;">
+            <div class="card-title" style="font-size:14px;">Latest Result</div>
+            <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+              <div style="font-size:28px;">🏆</div>
+              <div>
+                <strong>${winnerName}</strong>
+                ${winner.points ? `<span class="text-sm text-secondary"> — ${winner.points} pts</span>` : ''}
+                <br><span class="text-sm text-secondary">${lastEvt.title} · ${formatDate(lastEvt.date)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     // Stats
     document.getElementById('memberStats').innerHTML = `
       <div class="stats-grid">
@@ -3462,21 +3491,64 @@
     // Results (for past events)
     if (isPast) {
       const results = await getResults(eventId);
-      if (results.length > 0) {
-        html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Results</h3>`;
-        html += `<table class="results-table">
-          <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Pts</th></tr></thead>
-          <tbody>
-            ${results.map(r => `
-              <tr class="${r.position === 1 ? 'pos-1' : ''}">
-                <td>${r.position}</td>
-                <td>${r.name || (r.members?.name) || 'Unknown'}</td>
-                <td>${r.score}</td>
-                <td><strong>${r.points}</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>`;
+      const resultsPublished = !!evt.results_published_at;
+      const canSeeResults = resultsPublished || userCanRunEvents();
+
+      if (canSeeResults && results.length > 0) {
+        // Check if results have notes (custom format)
+        const customResult = results.find(r => r.notes && !r.score && !r.points);
+        if (customResult) {
+          html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Results${!resultsPublished ? ' (Draft)' : ''}</h3>`;
+          html += `<div class="card" style="white-space:pre-wrap;">${customResult.notes}</div>`;
+        } else {
+          // Check if team results (deduplicate by team_id for display)
+          const hasTeamResults = results.some(r => r.team_id);
+          if (hasTeamResults) {
+            // Group by team_id, show team results
+            const teamMap = new Map();
+            results.forEach(r => {
+              const key = r.team_id || r.member_id;
+              if (!teamMap.has(key)) {
+                teamMap.set(key, { position: r.position, score: r.score, points: r.points, members: [] });
+              }
+              teamMap.get(key).members.push(r.name || r.members?.name || 'Unknown');
+            });
+            const teamResults = [...teamMap.values()].sort((a,b) => a.position - b.position);
+
+            html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Results${!resultsPublished ? ' (Draft)' : ''}</h3>`;
+            html += `<table class="results-table">
+              <thead><tr><th>#</th><th>Team</th><th>Score</th><th>Pts</th></tr></thead>
+              <tbody>
+                ${teamResults.map(t => `
+                  <tr class="${t.position === 1 ? 'pos-1' : ''}">
+                    <td>${t.position}</td>
+                    <td>${t.members.join(', ')}</td>
+                    <td>${t.score || '-'}</td>
+                    <td><strong>${t.points || '-'}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`;
+          } else {
+            // Individual results
+            html += `<h3 style="margin-top:20px; margin-bottom:10px; font-size:15px;">Results${!resultsPublished ? ' (Draft)' : ''}</h3>`;
+            html += `<table class="results-table">
+              <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Pts</th></tr></thead>
+              <tbody>
+                ${results.map(r => `
+                  <tr class="${r.position === 1 ? 'pos-1' : ''}">
+                    <td>${r.position}</td>
+                    <td>${r.name || (r.members?.name) || 'Unknown'}</td>
+                    <td>${r.score || '-'}</td>
+                    <td><strong>${r.points || '-'}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`;
+          }
+        }
+      } else if (isPast && !resultsPublished && !userCanRunEvents()) {
+        html += `<p class="text-sm text-secondary" style="margin-top:16px;">Results not yet published.</p>`;
       }
     }
 
@@ -4773,64 +4845,232 @@
 
   async function showAdminEnterResults() {
     if (!userCanRunEvents()) return;
-    const { data: events } = await supabase.from('events').select('*').lt('date', new Date().toISOString().split('T')[0]).order('date', { ascending: false });
+    const { data: events } = await supabase.from('events').select('*, event_formats(*)').lt('date', new Date().toISOString().split('T')[0]).order('date', { ascending: false });
     document.getElementById('adminContent').innerHTML = `
       <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
       <h3 class="section-title">Enter Results</h3>
       <div class="card">
         <select class="input" id="adminResultsEvent" onchange="loadResultsForm(this.value)">
           <option value="">Select event...</option>
-          ${(events||[]).map(e => `<option value="${e.id}">${e.title} — ${new Date(e.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</option>`).join('')}
+          ${(events||[]).map(e => {
+            const pub = e.results_published_at ? ' ✓ Published' : '';
+            return `<option value="${e.id}" data-format='${JSON.stringify(e.event_formats||{})}'>${e.title} — ${new Date(e.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}${pub}</option>`;
+          }).join('')}
         </select>
         <div id="adminResultsForm"></div>
       </div>
     `;
+    // Stash events for later reference
+    window._adminResultsEvents = events || [];
   }
 
   async function loadResultsForm(eventId) {
     if (!eventId) { document.getElementById('adminResultsForm').innerHTML = ''; return; }
-    const { data: signups } = await supabase.from('signups').select('*, members(name, handicap)').eq('event_id', parseInt(eventId));
-    const { data: existing } = await supabase.from('results').select('*').eq('event_id', parseInt(eventId));
-    const rMap = {};
-    (existing||[]).forEach(r => rMap[r.member_id] = r);
+    eventId = parseInt(eventId);
+    const evt = (window._adminResultsEvents || []).find(e => e.id === eventId);
+    const format = evt?.event_formats || {};
+    const method = (format.scoring_method || 'stableford').toLowerCase();
+    const isTeamFormat = ['scramble', 'better_ball'].includes(method);
 
-    document.getElementById('adminResultsForm').innerHTML = `
-      <form id="adminResultsEntryForm" style="margin-top:12px;">
-        ${(signups||[]).map(s => `
-          <div class="card" style="padding:10px 14px;margin-bottom:8px;">
-            <div class="flex-between">
-              <strong>${s.members?.name||'Unknown'}</strong>
-              <span class="text-sm text-secondary">HCP ${s.handicap_at_signup||'-'}</span>
+    const { data: signups } = await supabase.from('signups').select('*, members(name, handicap)').eq('event_id', eventId);
+    const { data: existing } = await supabase.from('results').select('*').eq('event_id', eventId);
+    const rMap = {};
+    (existing||[]).forEach(r => { rMap[r.member_id] = r; });
+
+    // For team formats, load teams
+    let teams = [];
+    if (isTeamFormat) {
+      const { data: t } = await supabase.from('event_teams').select('*').eq('event_id', eventId).order('team_number');
+      teams = t || [];
+    }
+
+    const isPublished = !!evt?.results_published_at;
+    const signupByMember = {};
+    (signups||[]).forEach(s => { signupByMember[s.member_id] = s; });
+
+    let formHtml = '';
+
+    if (method === 'custom') {
+      // Free-form text results
+      const existingNotes = (existing||[]).length > 0 ? existing[0].notes || '' : '';
+      formHtml = `
+        <form id="adminResultsEntryForm" style="margin-top:12px;">
+          <p class="text-sm text-secondary mb-8">Custom format — enter results as free text.</p>
+          <textarea class="input" name="custom_notes" rows="8" placeholder="e.g. Team A beat Team B 3&2...">${existingNotes}</textarea>
+          <button class="btn btn-primary btn-full mt-8" type="submit">Save Results</button>
+        </form>
+      `;
+    } else if (isTeamFormat && teams.length > 0) {
+      // Per-team entry (scramble / better_ball)
+      formHtml = `
+        <form id="adminResultsEntryForm" style="margin-top:12px;">
+          <p class="text-sm text-secondary mb-8">${format.name || method} — enter one score per team.</p>
+          ${teams.map(t => {
+            const memberNames = (t.member_ids || []).map(mid => signupByMember[mid]?.members?.name || 'Member').join(', ');
+            // Use first team member's existing result for pre-fill
+            const firstMid = (t.member_ids || [])[0];
+            const existingScore = firstMid && rMap[firstMid] ? rMap[firstMid].score : '';
+            const existingPoints = firstMid && rMap[firstMid] ? rMap[firstMid].points : '';
+            return `
+            <div class="card" style="padding:10px 14px;margin-bottom:8px;">
+              <div class="flex-between">
+                <strong>Team ${t.team_number}</strong>
+                <span class="text-sm text-secondary">${(t.member_ids||[]).length} players</span>
+              </div>
+              <p class="text-sm text-secondary" style="margin:4px 0 8px 0;">${memberNames}</p>
+              <div style="display:flex;gap:8px;">
+                <input class="input" type="number" name="tscore_${t.id}" placeholder="Score" value="${existingScore||''}" style="margin:0;flex:1;">
+                <input class="input" type="number" name="tpoints_${t.id}" placeholder="Points" value="${existingPoints||''}" style="margin:0;flex:1;">
+              </div>
+              <input type="hidden" name="team_${t.id}" value='${JSON.stringify(t.member_ids||[])}'>
+            </div>`;
+          }).join('')}
+          <button class="btn btn-primary btn-full mt-8" type="submit">Save Results</button>
+        </form>
+      `;
+    } else {
+      // Per-player entry (stableford / medal / matchplay / fallback)
+      const pointsLabel = method === 'medal' ? 'Net' : method === 'matchplay' ? 'W/L' : 'Points';
+      formHtml = `
+        <form id="adminResultsEntryForm" style="margin-top:12px;">
+          ${(signups||[]).map(s => `
+            <div class="card" style="padding:10px 14px;margin-bottom:8px;">
+              <div class="flex-between">
+                <strong>${s.members?.name||'Unknown'}</strong>
+                <span class="text-sm text-secondary">HCP ${s.handicap_at_signup||'-'}</span>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <input class="input" type="number" name="score_${s.member_id}" placeholder="Score" value="${rMap[s.member_id]?.score||''}" style="margin:0;flex:1;">
+                <input class="input" type="number" name="points_${s.member_id}" placeholder="${pointsLabel}" value="${rMap[s.member_id]?.points||''}" style="margin:0;flex:1;">
+              </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <input class="input" type="number" name="score_${s.member_id}" placeholder="Score" value="${rMap[s.member_id]?.score||''}" style="margin:0;flex:1;">
-              <input class="input" type="number" name="points_${s.member_id}" placeholder="Points" value="${rMap[s.member_id]?.points||''}" style="margin:0;flex:1;">
-              <input type="hidden" name="mid_${s.member_id}" value="${s.member_id}">
-            </div>
-          </div>
-        `).join('')}
-        <button class="btn btn-primary btn-full mt-8" type="submit">Save Results</button>
-      </form>
+          `).join('')}
+          <button class="btn btn-primary btn-full mt-8" type="submit">Save Results</button>
+        </form>
+      `;
+    }
+
+    // Publish controls
+    const publishHtml = `
+      <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+        ${isPublished
+          ? `<div class="flex-between">
+               <span class="text-sm" style="color:var(--green);">✓ Published ${new Date(evt.results_published_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+               <button class="btn btn-sm btn-outline" onclick="unpublishResults(${eventId})">Unpublish</button>
+             </div>`
+          : `<button class="btn btn-sm btn-primary btn-full" onclick="publishResults(${eventId})">Publish results to members</button>`
+        }
+      </div>
     `;
+
+    document.getElementById('adminResultsForm').innerHTML = formHtml + publishHtml;
+
+    // Attach submit handler
     document.getElementById('adminResultsEntryForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      const entries = [];
-      (signups||[]).forEach(s => {
-        const score = parseInt(this.querySelector(`[name="score_${s.member_id}"]`).value);
-        const points = parseInt(this.querySelector(`[name="points_${s.member_id}"]`).value);
-        if (score || points) entries.push({ event_id: parseInt(eventId), member_id: s.member_id, score: score||null, points: points||null });
-      });
-      entries.sort((a,b) => (b.points||0)-(a.points||0));
-      entries.forEach((e,i) => e.position = i+1);
-      for (const entry of entries) {
-        if (rMap[entry.member_id]) {
-          await supabase.from('results').update(entry).eq('id', rMap[entry.member_id].id);
+      const btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        if (method === 'custom') {
+          // Custom: store a single result row with notes
+          const notes = this.querySelector('[name="custom_notes"]').value;
+          const entry = { event_id: eventId, member_id: currentUser.id, score: null, points: null, position: 1, notes };
+          if (existing && existing.length > 0) {
+            await supabase.from('results').update(entry).eq('id', existing[0].id);
+          } else {
+            await supabase.from('results').insert(entry);
+          }
+        } else if (isTeamFormat && teams.length > 0) {
+          // Team format: create a result row per team member
+          const teamEntries = [];
+          teams.forEach(t => {
+            const score = parseInt(this.querySelector(`[name="tscore_${t.id}"]`)?.value);
+            const points = parseInt(this.querySelector(`[name="tpoints_${t.id}"]`)?.value);
+            if (score || points) {
+              (t.member_ids || []).forEach(mid => {
+                teamEntries.push({ event_id: eventId, member_id: mid, team_id: t.id, score: score||null, points: points||null });
+              });
+            }
+          });
+          teamEntries.sort((a,b) => (b.points||0)-(a.points||0));
+          let pos = 1;
+          for (let i = 0; i < teamEntries.length; i++) {
+            // Same-score teams share position
+            if (i > 0 && teamEntries[i].points !== teamEntries[i-1].points) pos = i + 1;
+            teamEntries[i].position = pos;
+          }
+          // Delete existing and re-insert (simpler than diffing team results)
+          await supabase.from('results').delete().eq('event_id', eventId);
+          if (teamEntries.length > 0) {
+            await supabase.from('results').insert(teamEntries);
+          }
         } else {
-          await supabase.from('results').insert(entry);
+          // Per-player format
+          const entries = [];
+          (signups||[]).forEach(s => {
+            const score = parseInt(this.querySelector(`[name="score_${s.member_id}"]`)?.value);
+            const points = parseInt(this.querySelector(`[name="points_${s.member_id}"]`)?.value);
+            if (score || points) entries.push({ event_id: eventId, member_id: s.member_id, score: score||null, points: points||null });
+          });
+          entries.sort((a,b) => (b.points||0)-(a.points||0));
+          entries.forEach((e,i) => e.position = i+1);
+          for (const entry of entries) {
+            if (rMap[entry.member_id]) {
+              await supabase.from('results').update(entry).eq('id', rMap[entry.member_id].id);
+            } else {
+              await supabase.from('results').insert(entry);
+            }
+          }
         }
+        showToast('Results saved');
+        loadResultsForm(eventId);
+      } catch (err) {
+        console.error('Results save error:', err);
+        alert('Error saving results: ' + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Results';
       }
-      alert('Results saved!');
     });
+  }
+
+  async function publishResults(eventId) {
+    const { error } = await supabase.from('events').update({ results_published_at: new Date().toISOString() }).eq('id', eventId);
+    if (error) { alert('Error publishing: ' + error.message); return; }
+
+    // Auto-create broadcast message with winner announcement
+    const results = await getResults(eventId);
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    if (evt && results.length > 0) {
+      const winner = results.find(r => r.position === 1);
+      const winnerName = winner?.name || winner?.members?.name || 'Unknown';
+      const title = `Results: ${evt.title}`;
+      const body = `Results are in for ${evt.title} at ${evt.course} on ${formatDate(evt.date)}.\n\n` +
+        (winner.points
+          ? `Winner: ${winnerName} with ${winner.points} points (score: ${winner.score || '-'}).\n\n`
+          : `Winner: ${winnerName}.\n\n`) +
+        `Full leaderboard available in the Events tab.`;
+
+      await supabase.from('messages').insert({
+        title,
+        body,
+        priority: 'important',
+        society_id: SOCIETY_CONFIG._societyId
+      });
+      invalidateCache();
+    }
+
+    showToast('Results published — members notified');
+    loadResultsForm(eventId);
+  }
+
+  async function unpublishResults(eventId) {
+    await supabase.from('events').update({ results_published_at: null }).eq('id', eventId);
+    showToast('Results unpublished');
+    loadResultsForm(eventId);
   }
 
   // Society-code share helpers (admin Invite card).

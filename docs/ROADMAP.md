@@ -10,7 +10,7 @@ The "captain loop" is a 7-block flow: Course Intelligence → Interest Sounder �
 | B | Interest Sounder | ✅ shipped | 019 | `3af29b7` |
 | C | Format library + team generator | ✅ shipped | 020 | `92e795f` |
 | D | Results + push to members | ✅ shipped | 022 | — |
-| F | Sponsor (parallel-able with D/E) | ← **next** | — | — |
+| F | Sponsor | ✅ shipped | 023 | — |
 | E | Course intelligence (automation) | deferred | — | — |
 
 **Order in practice:** A → B → C → D → **F** → E. E is last because it depends on partner integrations and is the riskiest; A–D + F are pure UX wins.
@@ -79,20 +79,14 @@ Builds directly on Phase C — uses `event_teams` for team formats, `event_forma
 
 ---
 
-## Phase F — Sponsor (~half day, parallel-able)
+## Phase F — Sponsor ✅ shipped (2026-05-07)
 
-Light bolt-on; can be developed alongside D or E.
-
-**Schema:**
-- `society_sponsors` (society_id, name, logo_url, link_url, blurb, active_from, active_until).
-- `event_sponsors` (event_id, sponsor_id, role) — `'primary'` / `'supporting'` / `'prize_donor'`.
-
-**UI:**
-- Sponsor admin page (treasurer + admin only): add/edit logos, links, blurbs.
-- Event card surfaces sponsor logo: "Sponsored by Bonalba Pro Shop".
-- "Our Sponsors" member-side page with logos, links, dates active.
-
-The `sponsor` role from Phase A is the content-only soft role this delivers against — it grants visibility on the sponsor admin page, no other writes.
+- **Migration 023** — `society_sponsors` (name, logo_url, link_url, blurb, active_from/until, is_active) and `event_sponsors` (event_id, sponsor_id, role: primary/supporting/prize_donor). RLS: readable by same-society members, writable by admin/treasurer/sponsor roles.
+- **Admin page** — "Manage Sponsors" quick action (admin + treasurer). Full CRUD: add/edit/delete sponsors with name, logo URL, website URL, blurb, active date range, active toggle. Listed with logo thumbnails and status badges.
+- **Event linking** — Sponsor picker + role selector in Create Event form. Fetches active sponsors. After event creation, inserts `event_sponsors` row.
+- **Event cards** — "Sponsored by X" line in gold under the course name, batch-fetched for all visible events.
+- **Event detail** — Sponsor banner with logo, role label ("Sponsored by" / "Supported by" / "Prizes from"), linked name.
+- **Home tab** — "Our Sponsors" section at bottom of dashboard showing active sponsors with logos, blurbs, and website links.
 
 ---
 

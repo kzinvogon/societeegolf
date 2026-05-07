@@ -1112,6 +1112,7 @@
         <div id="latestResult"></div>
         <div id="latestMessage"></div>
         <div id="memberStats"></div>
+        <div id="sponsorsList"></div>
       </div>
 
       <!-- TAB: Events -->
@@ -3278,6 +3279,9 @@
         </div>
       </div>
     `;
+
+    // Sponsors section at bottom of home
+    if (supabase) renderSponsors();
   }
 
   // ===== RENDER: EVENTS TAB =====
@@ -3311,12 +3315,24 @@
       return;
     }
 
+    // Batch-fetch event sponsors for all visible events
+    const eventIds = filtered.map(e => e.id);
+    let sponsorMap = {};
+    if (supabase && eventIds.length > 0) {
+      const { data: allES } = await supabase.from('event_sponsors').select('event_id, society_sponsors(name)').in('event_id', eventIds);
+      (allES || []).forEach(es => {
+        if (!sponsorMap[es.event_id]) sponsorMap[es.event_id] = [];
+        if (es.society_sponsors?.name) sponsorMap[es.event_id].push(es.society_sponsors.name);
+      });
+    }
+
     let html = '';
     for (const evt of filtered) {
       const signed = isSignedUp(evt.id);
       const isPast = evt.date < today;
       const signupCount = supabase ? (await getSignups(evt.id)).length : DEMO_SIGNUPS.filter(s => s.event_id === evt.id).length;
       const cutoffPassed = evt.signup_cutoff && evt.signup_cutoff < today;
+      const sponsorNames = sponsorMap[evt.id] || [];
 
       html += `
         <div class="card event-card">
@@ -3328,6 +3344,7 @@
             <div class="event-info">
               <h3>${evt.title}</h3>
               <div class="text-sm text-secondary">${evt.course}</div>
+              ${sponsorNames.length > 0 ? `<div class="text-sm" style="color:var(--gold); margin-top:2px;">Sponsored by ${sponsorNames.join(', ')}</div>` : ''}
               <div class="event-meta">
                 <span class="event-meta-item">📍 ${evt.location}</span>
                 <span class="event-meta-item">🏌️ ${evt.format || ''}</span>
@@ -3365,6 +3382,13 @@
     const isPast = evt.date < today;
     const signups = !supabase ? DEMO_SIGNUPS.filter(s => s.event_id === eventId) : await getSignups(eventId);
 
+    // Fetch event sponsors
+    let eventSponsors = [];
+    if (supabase) {
+      const { data: es } = await supabase.from('event_sponsors').select('*, society_sponsors(name, logo_url, link_url)').eq('event_id', eventId);
+      eventSponsors = es || [];
+    }
+
     // Phase C: pull saved teams. Members see them only when published;
     // event-running roles see drafts too. RLS enforces this server-side
     // so the client query is the same in both cases.
@@ -3391,6 +3415,21 @@
       html += `<div class="card mt-16" style="background:var(--gold-light); border:none;">
         <p class="text-sm"><strong>Notes:</strong> ${evt.notes}</p>
       </div>`;
+    }
+
+    // Event sponsors
+    if (eventSponsors.length > 0) {
+      eventSponsors.forEach(es => {
+        const sp = es.society_sponsors;
+        if (!sp) return;
+        const roleLabel = es.role === 'primary' ? 'Sponsored by' : es.role === 'prize_donor' ? 'Prizes from' : 'Supported by';
+        html += `
+          <div style="display:flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; background:var(--surface-alt, #F9FAFB); border-radius:8px;">
+            ${sp.logo_url ? `<img src="${sp.logo_url}" alt="${sp.name}" style="width:28px; height:28px; object-fit:contain; border-radius:4px;">` : ''}
+            <span class="text-sm text-secondary">${roleLabel} <strong>${sp.link_url ? `<a href="${sp.link_url}" target="_blank" style="color:inherit;">${sp.name}</a>` : sp.name}</strong></span>
+          </div>
+        `;
+      });
     }
 
     // Lookup tables for rendering teams: signup → handicap, member id → name.
@@ -4001,6 +4040,14 @@
         </div>
       </div>
       ` : ''}
+      ${userIsAdmin() || userIsTreasurer() ? `
+      <div class="card" onclick="showAdminSponsors()" style="cursor:pointer;">
+        <div class="list-item" style="border:none;padding:4px 0;">
+          <div class="list-icon" style="background:#DBEAFE;">🤝</div>
+          <div class="list-text"><h4>Manage Sponsors</h4><p>Add or edit society sponsors and link to events</p></div>
+        </div>
+      </div>
+      ` : ''}
 
       <!-- Payment Reviews -->
       <div id="adminPaymentReviews">
@@ -4283,14 +4330,16 @@
     // Fetch the society's courses + its home course (for default
     // selection) + the format library (globals + this society's
     // customs) in parallel.
-    const [coursesRes, societyRes, formatsRes] = await Promise.all([
+    const [coursesRes, societyRes, formatsRes, sponsorsRes] = await Promise.all([
       supabase.from('courses').select('*').eq('society_id', currentUser.society_id).order('name'),
       supabase.from('societies').select('home_course_external_id, external_courses!societies_home_course_external_id_fkey(name)').eq('id', currentUser.society_id).maybeSingle(),
       supabase.from('event_formats')
         .select('id, code, name, description, team_size_min, team_size_max, scoring_method, sort_order, society_id')
         .or(`society_id.is.null,society_id.eq.${currentUser.society_id}`)
         .order('sort_order'),
+      supabase.from('society_sponsors').select('id, name').eq('society_id', currentUser.society_id).eq('is_active', true).order('name'),
     ]);
+    const activeSponsors = sponsorsRes?.data || [];
     const courses = coursesRes.data || [];
     const homeCourseName = societyRes?.data?.external_courses?.name || null;
     const courseOpts = courses.map(c =>
@@ -4395,6 +4444,18 @@
             <option value="12">12 min</option>
             <option value="15">15 min</option>
           </select>
+          ${activeSponsors.length > 0 ? `
+          <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Sponsor (optional)</label>
+          <select class="input" name="sponsor_id">
+            <option value="">No sponsor</option>
+            ${activeSponsors.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+          </select>
+          <select class="input" name="sponsor_role" style="margin-bottom:12px;">
+            <option value="primary">Primary sponsor</option>
+            <option value="supporting">Supporting sponsor</option>
+            <option value="prize_donor">Prize donor</option>
+          </select>
+          ` : ''}
           <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
           <button class="btn btn-primary btn-full" type="submit">Create Event</button>
         </form>
@@ -4458,7 +4519,7 @@
       }
 
       const interval = parseInt(f.tee_time_interval_minutes.value, 10);
-      const { error } = await supabase.from('events').insert({
+      const { data: newEvent, error } = await supabase.from('events').insert({
         title: f.title.value, date: f.date.value, course: courseName, location: f.location.value,
         format: formatLabel, format_id: formatId,
         cost: parseFloat(f.cost.value), payment_link: f.payment_link.value||null,
@@ -4468,8 +4529,20 @@
         tee_time_interval_minutes: Number.isFinite(interval) ? interval : null,
         notes: f.notes.value||null,
         society_id: currentUser.society_id,
-      });
+      }).select('id').single();
       if (error) { alert('Error: ' + error.message); return; }
+
+      // Link sponsor if selected
+      const sponsorId = f.sponsor_id?.value;
+      if (sponsorId && newEvent?.id) {
+        await supabase.from('event_sponsors').insert({
+          event_id: newEvent.id,
+          sponsor_id: sponsorId,
+          role: f.sponsor_role?.value || 'supporting'
+        });
+      }
+
+      invalidateCache();
       alert('Event created!');
       renderAdmin();
     });
@@ -5071,6 +5144,135 @@
     await supabase.from('events').update({ results_published_at: null }).eq('id', eventId);
     showToast('Results unpublished');
     loadResultsForm(eventId);
+  }
+
+  // ===== SPONSORS ADMIN =====
+  async function showAdminSponsors() {
+    if (!userIsAdmin() && !userIsTreasurer()) return;
+    const { data: sponsors } = await supabase.from('society_sponsors').select('*').eq('society_id', SOCIETY_CONFIG._societyId).order('name');
+    const list = sponsors || [];
+
+    document.getElementById('adminContent').innerHTML = `
+      <button class="btn-ghost mb-16" onclick="renderAdmin()">← Back</button>
+      <h3 class="section-title">Manage Sponsors</h3>
+      <button class="btn btn-primary btn-sm mb-16" onclick="showSponsorForm()">+ Add Sponsor</button>
+      <div id="sponsorFormArea"></div>
+      ${list.length === 0 ? '<p class="text-sm text-secondary">No sponsors yet.</p>' : ''}
+      ${list.map(s => `
+        <div class="card" style="margin-bottom:8px;">
+          <div class="flex-between">
+            <div style="display:flex; gap:10px; align-items:center;">
+              ${s.logo_url ? `<img src="${s.logo_url}" alt="${s.name}" style="width:40px; height:40px; object-fit:contain; border-radius:4px;">` : '<div style="width:40px;height:40px;background:var(--gold-light);border-radius:4px;display:flex;align-items:center;justify-content:center;">🤝</div>'}
+              <div>
+                <strong>${s.name}</strong>
+                ${s.blurb ? `<br><span class="text-sm text-secondary">${s.blurb.substring(0, 60)}${s.blurb.length > 60 ? '...' : ''}</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="badge badge-${s.is_active ? 'green' : 'red'}">${s.is_active ? 'Active' : 'Inactive'}</span>
+              <button class="btn btn-sm btn-outline" onclick="showSponsorForm('${s.id}')">Edit</button>
+            </div>
+          </div>
+          ${s.link_url ? `<p class="text-sm text-secondary" style="margin-top:4px;"><a href="${s.link_url}" target="_blank">${s.link_url}</a></p>` : ''}
+          ${s.active_from || s.active_until ? `<p class="text-sm text-secondary" style="margin-top:2px;">${s.active_from ? 'From ' + s.active_from : ''} ${s.active_until ? ' until ' + s.active_until : ''}</p>` : ''}
+        </div>
+      `).join('')}
+    `;
+  }
+
+  async function showSponsorForm(sponsorId) {
+    let sponsor = {};
+    if (sponsorId) {
+      const { data } = await supabase.from('society_sponsors').select('*').eq('id', sponsorId).single();
+      sponsor = data || {};
+    }
+
+    document.getElementById('sponsorFormArea').innerHTML = `
+      <div class="card" style="margin-bottom:16px; border:1px solid var(--gold);">
+        <h4 style="margin:0 0 12px 0;">${sponsorId ? 'Edit' : 'Add'} Sponsor</h4>
+        <form id="sponsorEntryForm">
+          <div class="form-row" style="display:flex;gap:8px;margin-bottom:8px;">
+            <input class="input" name="name" placeholder="Sponsor name *" value="${sponsor.name || ''}" required style="flex:1;margin:0;">
+          </div>
+          <input class="input" name="logo_url" placeholder="Logo URL (optional)" value="${sponsor.logo_url || ''}" style="margin-bottom:8px;">
+          <input class="input" name="link_url" placeholder="Website URL (optional)" value="${sponsor.link_url || ''}" style="margin-bottom:8px;">
+          <textarea class="input" name="blurb" placeholder="Short description (optional)" rows="2" style="margin-bottom:8px;">${sponsor.blurb || ''}</textarea>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <div style="flex:1;"><label class="text-sm">Active from</label><input class="input" type="date" name="active_from" value="${sponsor.active_from || ''}" style="margin:0;"></div>
+            <div style="flex:1;"><label class="text-sm">Active until</label><input class="input" type="date" name="active_until" value="${sponsor.active_until || ''}" style="margin:0;"></div>
+          </div>
+          ${sponsorId ? `
+          <div style="margin-bottom:8px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" name="is_active" ${sponsor.is_active !== false ? 'checked' : ''}> Active
+            </label>
+          </div>` : ''}
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" type="submit">${sponsorId ? 'Save' : 'Add'}</button>
+            <button class="btn btn-sm btn-outline" type="button" onclick="document.getElementById('sponsorFormArea').innerHTML=''">Cancel</button>
+            ${sponsorId ? `<button class="btn btn-sm btn-danger" type="button" onclick="deleteSponsor('${sponsorId}')">Delete</button>` : ''}
+          </div>
+          <input type="hidden" name="sponsor_id" value="${sponsorId || ''}">
+        </form>
+      </div>
+    `;
+
+    document.getElementById('sponsorEntryForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const f = this;
+      const row = {
+        name: f.name.value.trim(),
+        logo_url: f.logo_url.value.trim() || null,
+        link_url: f.link_url.value.trim() || null,
+        blurb: f.blurb.value.trim() || null,
+        active_from: f.active_from.value || null,
+        active_until: f.active_until.value || null,
+        society_id: SOCIETY_CONFIG._societyId
+      };
+      if (sponsorId) {
+        row.is_active = f.is_active.checked;
+        const { error } = await supabase.from('society_sponsors').update(row).eq('id', sponsorId);
+        if (error) { alert('Error: ' + error.message); return; }
+      } else {
+        const { error } = await supabase.from('society_sponsors').insert(row);
+        if (error) { alert('Error: ' + error.message); return; }
+      }
+      showToast(sponsorId ? 'Sponsor updated' : 'Sponsor added');
+      showAdminSponsors();
+    });
+  }
+
+  async function deleteSponsor(sponsorId) {
+    if (!confirm('Delete this sponsor? This will also remove it from any linked events.')) return;
+    await supabase.from('society_sponsors').delete().eq('id', sponsorId);
+    showToast('Sponsor deleted');
+    showAdminSponsors();
+  }
+
+  // ===== MEMBER-FACING SPONSORS =====
+  async function renderSponsors() {
+    const { data: sponsors } = await supabase.from('society_sponsors').select('*').eq('society_id', SOCIETY_CONFIG._societyId).eq('is_active', true).order('name');
+    const list = sponsors || [];
+    const container = document.getElementById('sponsorsList');
+    if (!container) return;
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">🤝</div><h3>No sponsors yet</h3></div>';
+      return;
+    }
+
+    container.innerHTML = list.map(s => `
+      <div class="card" style="margin-bottom:8px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          ${s.logo_url ? `<img src="${s.logo_url}" alt="${s.name}" style="width:48px; height:48px; object-fit:contain; border-radius:6px;">` : '<div style="width:48px;height:48px;background:var(--gold-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;">🤝</div>'}
+          <div style="flex:1;">
+            <strong>${s.name}</strong>
+            ${s.blurb ? `<br><span class="text-sm text-secondary">${s.blurb}</span>` : ''}
+            ${s.link_url ? `<br><a href="${s.link_url}" target="_blank" class="text-sm" style="color:var(--gold);">Visit website →</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
   }
 
   // Society-code share helpers (admin Invite card).

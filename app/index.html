@@ -3879,11 +3879,12 @@
     currentAdminScreen = null;
     if (!userCanManage()) return;
 
+    const sid = SOCIETY_CONFIG._societyId;
     const [eventsRes, membersRes, msgsRes, reqsRes] = await Promise.all([
-      supabase ? supabase.from('events').select('*').order('date', { ascending: false }) : { data: DEMO_EVENTS },
-      supabase ? supabase.from('members').select('*').order('name') : { data: DEMO_MEMBERS_LIST },
-      supabase ? supabase.from('messages').select('*').order('created_at', { ascending: false }) : { data: DEMO_MESSAGES },
-      supabase ? supabase.from('join_requests').select('*').order('created_at', { ascending: false }) : { data: [] }
+      supabase ? supabase.from('events').select('*').eq('society_id', sid).order('date', { ascending: false }) : { data: DEMO_EVENTS },
+      supabase ? supabase.from('members').select('*').eq('society_id', sid).order('name') : { data: DEMO_MEMBERS_LIST },
+      supabase ? supabase.from('messages').select('*').eq('society_id', sid).order('created_at', { ascending: false }) : { data: DEMO_MESSAGES },
+      supabase ? supabase.from('join_requests').select('*').eq('society_id', sid).order('created_at', { ascending: false }) : { data: [] }
     ]);
 
     const events = eventsRes.data || [];
@@ -6570,7 +6571,7 @@
           if (error) { alert('Error saving: ' + error.message); return; }
         }
         currentUser = { ...currentUser, ...updates };
-        alert('Profile updated!');
+        showToast('Profile updated');
         renderProfile();
       } catch (err) {
         alert('Error: ' + err.message);

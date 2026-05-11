@@ -1664,6 +1664,23 @@
     // a new one.
     if (!memberships || memberships.length === 0) {
       const email = session.user.email;
+
+      // Check for existing member row with null user_id (created by
+      // auto-approve join flow before the user had an auth account).
+      // Claim it by setting user_id, then proceed as normal.
+      const { data: orphanMember } = await supabase.from('members')
+        .select('*, societies(id, name, subdomain, config)')
+        .eq('email', email)
+        .is('user_id', null)
+        .maybeSingle();
+      if (orphanMember) {
+        await supabase.from('members').update({ user_id: session.user.id }).eq('id', orphanMember.id);
+        orphanMember.user_id = session.user.id;
+        await selectSocietyAndLogin(orphanMember, true, isFreshLogin);
+        return;
+      }
+
+      // Check for an approved join request and create the member row.
       const { data: req } = await supabase.from('join_requests').select('*').eq('email', email).eq('status', 'approved').maybeSingle();
       if (req) {
         const { data: newMember, error } = await supabase.from('members').insert({
@@ -2702,11 +2719,34 @@
       if (error) throw error;
 
       if (isInvited) {
-        // Send magic link so they can log in immediately
+        // Create member row immediately (with null user_id — loginWithSession
+        // will claim it when the user clicks the magic link).
+        await supabase.from('members').insert({
+          id: crypto.randomUUID(),
+          name, email,
+          phone: phone || null,
+          status: 'probation',
+          society_id: society.id
+        });
+
+        // Send magic link so they can log in
         await supabase.auth.signInWithOtp({
           email,
           options: { emailRedirectTo: window.location.origin + '/' }
         });
+
+        // Send branded welcome email
+        try {
+          await fetch('/.netlify/functions/send-status-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name, email,
+              society_name: society.name,
+              new_status: 'probation'
+            })
+          });
+        } catch (e) { console.warn('Welcome email failed:', e); }
       }
 
       document.getElementById('joinSocietyForm').classList.add('hidden');
@@ -6689,8 +6729,15 @@
         const { data: existing } = await supabase.from('members').select('id').eq('email', req.email).eq('society_id', req.society_id).maybeSingle();
         if (!existing) {
           const memberStatus = req.initial_member_status || 'applied';
+          // Look up auth user by email so we can set user_id
+          let authUserId = null;
+          try {
+            const { data: authLookup } = await supabase.from('members').select('user_id').eq('email', req.email).not('user_id', 'is', null).limit(1);
+            if (authLookup?.[0]?.user_id) authUserId = authLookup[0].user_id;
+          } catch(e) {}
           const { error: insErr } = await supabase.from('members').insert({
             id: crypto.randomUUID(),
+            user_id: authUserId,
             name: req.name,
             email: req.email,
             phone: req.phone,

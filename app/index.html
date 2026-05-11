@@ -3596,8 +3596,51 @@
       }
     }
 
+    // Share button
+    if (!isPast) {
+      html += `
+        <div class="mt-16">
+          <button class="btn btn-outline btn-full" onclick="shareEvent(${eventId})">Share this event</button>
+        </div>
+      `;
+    }
+
     document.getElementById('modalBody').innerHTML = html;
     document.getElementById('eventModal').classList.add('open');
+  }
+
+  function _eventShareText(evt) {
+    const date = formatDate(evt.date);
+    const cost = evt.cost ? '€' + evt.cost : 'TBC';
+    const origin = window.location.origin || 'https://app.societeegolf.app';
+    return `${evt.title}\n\n` +
+      `${evt.course} · ${date}\n` +
+      `Format: ${evt.format || 'TBC'} · Cost: ${cost}\n` +
+      (evt.notes ? `\n${evt.notes}\n` : '') +
+      `\nSign up on SocieteeGolf: ${origin}`;
+  }
+
+  async function shareEvent(eventId) {
+    const events = await getEvents();
+    const evt = events.find(e => e.id === eventId);
+    if (!evt) return;
+    const text = _eventShareText(evt);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: evt.title, text });
+        return;
+      } catch (e) {
+        if (e?.name === 'AbortError') return;
+      }
+    }
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Event details copied — paste into WhatsApp or email');
+    } catch (e) {
+      window.prompt('Copy this event info:', text);
+    }
   }
 
   function closeModal(e) {
@@ -4548,8 +4591,25 @@
         });
       }
 
+      // Auto-broadcast new event message
+      if (newEvent?.id) {
+        const evtDate = f.date.value ? formatDate(f.date.value) : '';
+        const evtCost = f.cost.value ? '€' + f.cost.value : '';
+        const msgBody = `New event: ${f.title.value}\n\n` +
+          `${courseName} · ${evtDate}\n` +
+          `Format: ${formatLabel || 'TBC'} · Cost: ${evtCost || 'TBC'}\n` +
+          (f.notes.value ? `\n${f.notes.value}\n` : '') +
+          `\nHead to the Events tab to sign up.`;
+        await supabase.from('messages').insert({
+          title: 'New Event: ' + f.title.value,
+          body: msgBody,
+          priority: 'important',
+          society_id: currentUser.society_id
+        });
+      }
+
       invalidateCache();
-      alert('Event created!');
+      showToast('Event created — members notified');
       renderAdmin();
     });
 

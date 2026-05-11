@@ -4641,8 +4641,49 @@
       }
 
       invalidateCache();
-      showToast('Event created — members notified');
-      renderAdmin();
+
+      // Show share screen instead of going back to admin
+      const slug = SOCIETY_CONFIG._societySubdomain || '';
+      const shareLink = `${window.location.origin}/?society=${encodeURIComponent(slug)}&event=${newEvent.id}`;
+      const evtDate = f.date.value ? formatDate(f.date.value) : '';
+      const evtCost = f.cost.value ? '€' + f.cost.value : '';
+      const shareText = `${f.title.value}\n\n` +
+        `${courseName} · ${evtDate}\n` +
+        `Format: ${formatLabel || 'TBC'} · Cost: ${evtCost || 'TBC'}\n` +
+        (f.notes.value ? `\n${f.notes.value}\n` : '') +
+        `\nSign up: ${shareLink}`;
+
+      document.getElementById('adminContent').innerHTML = `
+        <div style="text-align:center; padding:20px 0;">
+          <div style="font-size:32px; margin-bottom:12px;">✓</div>
+          <h3 style="margin-bottom:4px;">Event Created</h3>
+          <p class="text-sm text-secondary" style="margin-bottom:20px;">Members have been notified in the app.</p>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <h4 style="margin-bottom:8px;">Share to WhatsApp</h4>
+          <p class="text-sm text-secondary" style="margin-bottom:12px;">Copy the message below and paste it into your WhatsApp group.</p>
+          <textarea id="shareEventText" readonly style="width:100%;min-height:120px;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.5;background:var(--surface-alt,#F9FAFB);resize:none;color:var(--text,#333);">${shareText}</textarea>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="
+              var t = document.getElementById('shareEventText').value;
+              navigator.clipboard.writeText(t).then(function(){ showToast('Copied — paste into WhatsApp'); }).catch(function(){ window.prompt('Copy this:', t); });
+            ">Copy to clipboard</button>
+            <button class="btn btn-outline" style="flex:1;" onclick="
+              var t = document.getElementById('shareEventText').value;
+              if (navigator.share) { navigator.share({title:'${f.title.value.replace(/'/g,"\\'")}',text:t}).catch(function(){}); }
+              else { window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); }
+            ">Share…</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <h4 style="margin-bottom:8px;">Event link</h4>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input class="input" readonly value="${shareLink}" style="margin:0; flex:1; font-size:12px;">
+            <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText('${shareLink}').then(function(){showToast('Link copied')})">Copy</button>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-full" onclick="renderAdmin()">Done</button>
+      `;
     });
 
     // If a home course was pre-selected, kick the rate auto-fill once

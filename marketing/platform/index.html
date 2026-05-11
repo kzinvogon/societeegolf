@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocieteeGolf — Platform Admin</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-secondary: #94a3b8;
+            --green: #2ecc71;
+            --green-bg: rgba(46, 204, 113, 0.1);
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --blue: #3b82f6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 { font-size: 18px; font-weight: 700; }
+        .header h1 span { color: var(--green); }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--green); }
+        .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); color: var(--text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .btn {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .btn-primary { background: var(--green); color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-ghost { background: none; color: var(--text-secondary); padding: 4px 0; }
+        .btn-ghost:hover { color: var(--text); }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+
+        .input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .input:focus { outline: none; border-color: var(--green); }
+
+        select.input { appearance: auto; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-green { background: rgba(46,204,113,0.15); color: #22c55e; }
+        .badge-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-gray { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
+        .msg { padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+        .msg-error { background: rgba(239,68,68,0.1); color: #f87171; }
+        .msg-success { background: rgba(46,204,113,0.1); color: #22c55e; }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-title { font-size: 15px; font-weight: 600; margin: 20px 0 10px 0; }
+
+        #authView { max-width: 400px; margin: 80px auto; }
+        .hidden { display: none !important; }
+
+        code { font-size: 12px; background: var(--bg); padding: 2px 6px; border-radius: 3px; }
+
+        @media (max-width: 640px) {
+            .detail-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Societee<span>.golf</span> Platform</h1>
+    <div id="headerRight">
+        <a href="/" class="btn btn-ghost">← Back to site</a>
+    </div>
+</div>
+
+<!-- Auth View -->
+<div id="authView" class="container">
+    <div class="card" style="text-align:center;">
+        <h2 style="font-size:20px; margin-bottom:16px;">Platform Admin</h2>
+        <p style="color:var(--text-secondary); margin-bottom:16px;">Enter your admin email to receive a login link.</p>
+        <input type="email" id="authEmail" class="input" placeholder="admin@societeegolf.app" style="text-align:center;">
+        <div id="authMsg" class="hidden"></div>
+        <button class="btn btn-primary" style="width:100%; margin-top:4px;" onclick="sendLoginLink()">Send Login Link</button>
+        <div id="otpSection" class="hidden" style="margin-top:16px;">
+            <p style="color:var(--text-secondary); margin-bottom:8px; font-size:13px;">Or enter the 6-digit code from your email:</p>
+            <input type="text" id="otpCode" class="input" placeholder="000000" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:8px;">
+            <button class="btn btn-primary" style="width:100%; margin-top:4px;" onclick="verifyOtp()">Verify Code</button>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard View -->
+<div id="dashView" class="container hidden">
+    <div id="dashContent"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+    const SUPABASE_URL = 'https://fxpgaiktflyvikxovjxo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_2YI9M0mJ0jaeBxAurdFtSA_PRP8vmYP';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const PLATFORM_ADMINS = ['david@davidh.com', 'jamesconaghan@hotmail.co.uk'];
+    let _authEmail = '';
+
+    // Check session on load
+    sb.auth.getSession().then(({ data: { session } }) => {
+        if (session && PLATFORM_ADMINS.includes(session.user.email)) {
+            showDashboard();
+        }
+    });
+
+    // Handle magic link redirect
+    sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session && PLATFORM_ADMINS.includes(session.user.email)) {
+            showDashboard();
+        }
+    });
+
+    async function sendLoginLink() {
+        const email = document.getElementById('authEmail').value.trim();
+        const msg = document.getElementById('authMsg');
+        if (!email) return;
+
+        if (!PLATFORM_ADMINS.includes(email)) {
+            msg.className = 'msg msg-error';
+            msg.textContent = 'Not a platform admin email.';
+            return;
+        }
+
+        _authEmail = email;
+        const { error } = await sb.auth.signInWithOtp({
+            email,
+            options: { emailRedirectTo: window.location.href }
+        });
+
+        if (error) {
+            msg.className = 'msg msg-error';
+            msg.textContent = 'Error: ' + error.message;
+        } else {
+            msg.className = 'msg msg-success';
+            msg.textContent = 'Check your inbox for the login link.';
+            document.getElementById('otpSection').classList.remove('hidden');
+        }
+    }
+
+    async function verifyOtp() {
+        const code = document.getElementById('otpCode').value.trim();
+        const msg = document.getElementById('authMsg');
+        if (!code || code.length !== 6) return;
+
+        const email = _authEmail || document.getElementById('authEmail').value.trim();
+        const { error } = await sb.auth.verifyOtp({ email, token: code, type: 'email' });
+
+        if (error) {
+            msg.className = 'msg msg-error';
+            msg.textContent = 'Invalid code: ' + error.message;
+        }
+        // onAuthStateChange handles the redirect to dashboard
+    }
+
+    function showDashboard() {
+        document.getElementById('authView').classList.add('hidden');
+        document.getElementById('dashView').classList.remove('hidden');
+        document.getElementById('headerRight').innerHTML = `
+            <span style="color:var(--text-secondary); font-size:13px; margin-right:12px;">Logged in</span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        `;
+        loadSocieties();
+    }
+
+    async function logout() {
+        await sb.auth.signOut();
+        document.getElementById('authView').classList.remove('hidden');
+        document.getElementById('dashView').classList.add('hidden');
+        document.getElementById('headerRight').innerHTML = '<a href="/" class="btn btn-ghost">← Back to site</a>';
+    }
+
+    async function loadSocieties() {
+        const content = document.getElementById('dashContent');
+        content.innerHTML = '<p style="color:var(--text-secondary);">Loading societies...</p>';
+
+        const [societiesRes, membersRes] = await Promise.all([
+            sb.from('societies').select('*').order('created_at', { ascending: false }),
+            sb.from('members').select('society_id'),
+        ]);
+
+        if (societiesRes.error) {
+            content.innerHTML = `<div class="msg msg-error">Error: ${societiesRes.error.message}</div>`;
+            return;
+        }
+
+        const societies = societiesRes.data || [];
+        const countMap = {};
+        (membersRes.data || []).forEach(m => { countMap[m.society_id] = (countMap[m.society_id] || 0) + 1; });
+        const totalMembers = membersRes.data?.length || 0;
+
+        const statusBadge = (s) => {
+            const map = { active: 'green', trialing: 'blue', trial: 'blue', past_due: 'amber', suspended: 'red', cancelled: 'red' };
+            return `<span class="badge badge-${map[s] || 'gray'}">${s || 'none'}</span>`;
+        };
+
+        content.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value">${societies.length}</div><div class="stat-label">Societies</div></div>
+                <div class="stat-card"><div class="stat-value">${totalMembers}</div><div class="stat-label">Total Members</div></div>
+                <div class="stat-card"><div class="stat-value">${societies.filter(s => ['active','trialing','trial'].includes(s.subscription_status)).length}</div><div class="stat-label">Active / Trial</div></div>
+                <div class="stat-card"><div class="stat-value">${societies.filter(s => s.is_demo).length}</div><div class="stat-label">Demo</div></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="font-size:16px;">All Societies</h3>
+                <button class="btn btn-outline btn-sm" onclick="loadSocieties()">Refresh</button>
+            </div>
+
+            <div class="card" style="padding:0; overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Society</th>
+                            <th>Code</th>
+                            <th>Members</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${societies.map(s => {
+                            const count = countMap[s.id] || 0;
+                            const created = new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+                            const demo = s.is_demo ? ' <span class="badge badge-gray">DEMO</span>' : '';
+                            return `<tr>
+                                <td><strong>${s.name}</strong>${demo}</td>
+                                <td><code>${s.subdomain || '-'}</code></td>
+                                <td>${count}</td>
+                                <td>${statusBadge(s.subscription_status)}</td>
+                                <td style="color:var(--text-secondary);">${created}</td>
+                                <td><button class="btn btn-outline btn-sm" onclick="viewSociety('${s.id}')">View</button></td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    async function viewSociety(societyId) {
+        const content = document.getElementById('dashContent');
+        content.innerHTML = '<p style="color:var(--text-secondary);">Loading...</p>';
+
+        const [societyRes, membersRes, eventsRes, sponsorsRes] = await Promise.all([
+            sb.from('societies').select('*').eq('id', societyId).single(),
+            sb.from('members').select('id, name, email, role, status, handicap, created_at').eq('society_id', societyId).order('name'),
+            sb.from('events').select('id, title, date, course, cost').eq('society_id', societyId).order('date', { ascending: false }).limit(10),
+            sb.from('society_sponsors').select('id, name, is_active').eq('society_id', societyId),
+        ]);
+
+        const s = societyRes.data;
+        if (!s) { content.innerHTML = '<div class="msg msg-error">Society not found.</div>'; return; }
+
+        const members = membersRes.data || [];
+        const events = eventsRes.data || [];
+        const sponsors = sponsorsRes.data || [];
+        const admins = members.filter(m => m.role === 'admin');
+
+        const statusOpts = ['active', 'trialing', 'trial', 'past_due', 'suspended', 'cancelled']
+            .map(st => `<option value="${st}" ${s.subscription_status === st ? 'selected' : ''}>${st}</option>`).join('');
+
+        const roleBadge = (r) => {
+            const map = { admin: 'green', captain: 'blue', vice_captain: 'blue', treasurer: 'amber', sponsor: 'gray', member: 'gray' };
+            return `<span class="badge badge-${map[r] || 'gray'}">${r}</span>`;
+        };
+        const statusMemberBadge = (st) => {
+            const map = { full_member: 'green', probation: 'blue', applied: 'amber', suspended: 'red' };
+            return `<span class="badge badge-${map[st] || 'gray'}">${st}</span>`;
+        };
+
+        content.innerHTML = `
+            <button class="btn btn-ghost" onclick="loadSocieties()" style="margin-bottom:16px;">← All societies</button>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:22px; margin-bottom:4px;">${s.name} ${s.is_demo ? '<span class="badge badge-gray">DEMO</span>' : ''}</h2>
+                    <p style="color:var(--text-secondary);">
+                        Code: <code>${s.subdomain || '-'}</code> &middot;
+                        ID: <code style="font-size:10px;">${s.id.substring(0, 8)}...</code>
+                    </p>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="stat-card"><div class="stat-value">${members.length}</div><div class="stat-label">Members</div></div>
+                <div class="stat-card"><div class="stat-value">${events.length}</div><div class="stat-label">Events (recent)</div></div>
+            </div>
+
+            <!-- Subscription -->
+            <div class="card">
+                <div class="section-title" style="margin-top:0;">Subscription</div>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                    <select id="statusSelect" class="input" style="width:auto; flex:1; margin:0;">
+                        ${statusOpts}
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="updateStatus('${s.id}')">Update</button>
+                </div>
+                <p style="color:var(--text-secondary); font-size:12px; margin-top:6px;">
+                    Plan: ${s.plan_id ? 'Set' : 'None'} &middot;
+                    Stripe: ${s.stripe_subscription_id ? '<span style="color:var(--green);">Connected</span>' : 'Not set up'} &middot;
+                    Created: ${new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+            </div>
+
+            <!-- Admins -->
+            <div class="section-title">Admins</div>
+            ${admins.length > 0 ? `<div class="card" style="padding:12px;">${admins.map(a => `<div style="margin-bottom:4px;"><strong>${a.name}</strong> <span style="color:var(--text-secondary);">— ${a.email}</span></div>`).join('')}</div>` : '<p style="color:var(--text-secondary);">No admins.</p>'}
+
+            <!-- Members -->
+            <div class="section-title">Members (${members.length})</div>
+            <div class="card" style="padding:0; overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>HCP</th></tr></thead>
+                    <tbody>
+                        ${members.map(m => `<tr>
+                            <td>${m.name}</td>
+                            <td style="font-size:12px; color:var(--text-secondary);">${m.email || '-'}</td>
+                            <td>${roleBadge(m.role)}</td>
+                            <td>${statusMemberBadge(m.status)}</td>
+                            <td>${m.handicap != null ? m.handicap : '-'}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Recent Events -->
+            <div class="section-title">Recent Events</div>
+            ${events.length > 0 ? `
+            <div class="card" style="padding:0; overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Event</th><th>Date</th><th>Course</th><th>Cost</th></tr></thead>
+                    <tbody>
+                        ${events.map(e => `<tr>
+                            <td>${e.title}</td>
+                            <td>${e.date}</td>
+                            <td>${e.course || '-'}</td>
+                            <td>${e.cost ? '€' + e.cost : '-'}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>` : '<p style="color:var(--text-secondary);">No events.</p>'}
+
+            <!-- Sponsors -->
+            ${sponsors.length > 0 ? `
+            <div class="section-title">Sponsors (${sponsors.length})</div>
+            <div class="card" style="padding:12px;">
+                ${sponsors.map(sp => `<div style="margin-bottom:4px;">${sp.name} ${sp.is_active ? '<span class="badge badge-green">active</span>' : '<span class="badge badge-gray">inactive</span>'}</div>`).join('')}
+            </div>` : ''}
+
+            <!-- Danger Zone -->
+            <div style="border-top:1px solid var(--border); padding-top:20px; margin-top:24px;">
+                <div class="section-title" style="color:var(--red);">Danger Zone</div>
+                <button class="btn btn-danger btn-sm" onclick="deleteSociety('${s.id}', '${s.name.replace(/'/g, "\\'")}')">Delete Society</button>
+                <p style="color:var(--text-secondary); font-size:12px; margin-top:6px;">Permanently deletes the society, all members, events, results, and sponsors.</p>
+            </div>
+        `;
+    }
+
+    async function updateStatus(societyId) {
+        const status = document.getElementById('statusSelect').value;
+        const { error } = await sb.from('societies').update({ subscription_status: status }).eq('id', societyId);
+        if (error) { alert('Error: ' + error.message); return; }
+        alert('Status updated to: ' + status);
+        viewSociety(societyId);
+    }
+
+    async function deleteSociety(societyId, name) {
+        if (!confirm('DELETE society "' + name + '"?\n\nThis will permanently delete all members, events, results, messages, and sponsors.\n\nThis cannot be undone.')) return;
+        const typed = prompt('Type the society name to confirm:');
+        if (typed !== name) { alert('Name does not match. Cancelled.'); return; }
+
+        // Cascade delete
+        const eventIds = ((await sb.from('events').select('id').eq('society_id', societyId)).data || []).map(e => e.id);
+        if (eventIds.length > 0) {
+            await sb.from('results').delete().in('event_id', eventIds);
+            await sb.from('signups').delete().in('event_id', eventIds);
+            await sb.from('event_teams').delete().in('event_id', eventIds);
+            await sb.from('event_sponsors').delete().in('event_id', eventIds);
+        }
+        await sb.from('events').delete().eq('society_id', societyId);
+        await sb.from('messages').delete().eq('society_id', societyId);
+        await sb.from('society_sponsors').delete().eq('society_id', societyId);
+        await sb.from('members').delete().eq('society_id', societyId);
+        await sb.from('join_requests').delete().eq('society_id', societyId);
+        const { error } = await sb.from('societies').delete().eq('id', societyId);
+        if (error) { alert('Error: ' + error.message); return; }
+        alert('Society "' + name + '" deleted.');
+        loadSocieties();
+    }
+</script>
+</body>
+</html>

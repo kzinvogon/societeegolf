@@ -3,87 +3,490 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Societee.golf | The Future of Golf Societies</title>
+    <title>SocieteeGolf — The Platform for Golf Societies</title>
+    <meta name="description" content="Run your golf society without the spreadsheets. Events, tee times, results, team draws, and member management — all in one place.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --golf-green: #2ecc71;
-            --deep-bg: #0f172a;
-            --text-main: #f8fafc;
+            --green: #2ecc71;
+            --green-dark: #27ae60;
+            --navy: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-secondary: #94a3b8;
+            --gold: #d4a843;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background-color: var(--deep-bg);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-
-        .container {
-            max-width: 600px;
-            padding: 2rem;
-        }
-
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            letter-spacing: -1px;
-        }
-
-        span.green {
-            color: var(--golf-green);
-        }
-
-        p {
-            font-size: 1.1rem;
-            color: #94a3b8;
+            background: var(--navy);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
             line-height: 1.6;
-            margin-bottom: 2rem;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .badge {
+        /* ===== NAV ===== */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+        }
+        .nav-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 64px;
+        }
+        .nav-brand { font-size: 20px; font-weight: 800; text-decoration: none; color: var(--text); }
+        .nav-brand span { color: var(--green); }
+        .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: var(--green); color: white; }
+        .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+        .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--green); color: var(--green); }
+        .btn-lg { padding: 14px 28px; font-size: 16px; }
+        .btn-ghost { background: none; color: var(--text-secondary); border: none; padding: 10px 16px; }
+
+        /* ===== HERO ===== */
+        .hero {
+            padding: 140px 24px 80px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .hero-badge {
             display: inline-block;
             background: rgba(46, 204, 113, 0.1);
-            color: var(--golf-green);
-            padding: 0.5rem 1rem;
+            color: var(--green);
+            padding: 6px 16px;
             border-radius: 20px;
             font-weight: 600;
-            font-size: 0.8rem;
-            margin-bottom: 1rem;
+            font-size: 13px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 56px);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        .hero h1 span { color: var(--green); }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin: 0 auto 32px;
+        }
+        .hero-ctas {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .cta-btn {
-            background-color: var(--golf-green);
-            color: white;
-            padding: 1rem 2rem;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
+        /* ===== SECTIONS ===== */
+        section { padding: 80px 24px; }
+        .section-inner { max-width: 1100px; margin: 0 auto; }
+        .section-label {
+            color: var(--green);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 17px;
+            max-width: 600px;
+            margin-bottom: 48px;
         }
 
-        footer {
+        /* ===== FEATURES GRID ===== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: border-color 0.2s;
+        }
+        .feature-card:hover { border-color: var(--green); }
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 16px;
+            width: 48px; height: 48px;
+            background: rgba(46, 204, 113, 0.1);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .feature-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+        .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+        /* ===== HOW IT WORKS ===== */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            counter-reset: step;
+        }
+        .step {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            counter-increment: step;
+            position: relative;
+        }
+        .step::before {
+            content: counter(step);
             position: absolute;
-            bottom: 2rem;
-            font-size: 0.75rem;
-            color: #475569;
+            top: 20px; right: 20px;
+            font-size: 48px; font-weight: 800;
+            color: rgba(46, 204, 113, 0.1);
+            line-height: 1;
+        }
+        .step h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+        .step p { font-size: 14px; color: var(--text-secondary); }
+
+        /* ===== FORMATS ===== */
+        .format-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        .format-tag {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* ===== TESTIMONIALS ===== */
+        .testimonials {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .testimonial {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+        }
+        .testimonial p { font-size: 15px; font-style: italic; color: var(--text-secondary); line-height: 1.7; }
+        .testimonial .stars { color: var(--gold); margin-bottom: 12px; }
+
+        /* ===== PRICING ===== */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .price-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+        }
+        .price-card.featured { border-color: var(--green); position: relative; }
+        .price-card.featured::after {
+            content: 'Most Popular';
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: var(--green); color: white;
+            padding: 4px 16px; border-radius: 12px;
+            font-size: 12px; font-weight: 600;
+        }
+        .price-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .price-card .price { font-size: 36px; font-weight: 800; margin: 16px 0 4px; }
+        .price-card .price span { font-size: 16px; font-weight: 400; color: var(--text-secondary); }
+        .price-card .price-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+        .price-card ul { list-style: none; margin-bottom: 24px; }
+        .price-card li { font-size: 14px; color: var(--text-secondary); padding: 6px 0; padding-left: 24px; position: relative; }
+        .price-card li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+
+        /* ===== CTA ===== */
+        .cta-section {
+            text-align: center;
+            padding: 80px 24px;
+            background: linear-gradient(180deg, var(--navy), var(--surface));
+        }
+        .cta-section h2 { font-size: 32px; font-weight: 700; margin-bottom: 16px; }
+        .cta-section p { color: var(--text-secondary); margin-bottom: 32px; font-size: 17px; }
+        .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        /* ===== FOOTER ===== */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        footer a { color: var(--text-secondary); text-decoration: none; }
+        footer a:hover { color: var(--green); }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .hero h1 { font-size: 32px; }
+            .features-grid, .testimonials, .pricing-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="badge">Beta Launch 2026</div>
-        <h1>Societee<span class="green">.golf</span></h1>
-        <p>The management platform for high-level golf societies. Real-time scoring and community flow.</p>
-        <a href="mailto:info@societee.golf" class="cta-btn">Coming Soon</a>
-    </div>
 
-    <footer>
-        &copy; 2026 Societee.golf | Part of the Serviflow &amp; Sustentus Family
-    </footer>
+<!-- NAV -->
+<nav>
+    <div class="nav-inner">
+        <a href="/" class="nav-brand">Societee<span>.golf</span></a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="https://app.societeegolf.app" class="btn btn-outline" style="padding:8px 16px;">Log In</a></li>
+            <li><a href="https://app.societeegolf.app" class="btn btn-primary" style="padding:8px 16px;">Get Started Free</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-badge">Now in Beta</div>
+    <h1>Run your golf society <span>without the spreadsheets</span></h1>
+    <p>Events, tee times, team draws, results, and member management. Everything a captain needs, in one place.</p>
+    <div class="hero-ctas">
+        <a href="https://app.societeegolf.app" class="btn btn-primary btn-lg">Start Free Trial</a>
+        <a href="https://app.societeegolf.app" class="btn btn-outline btn-lg" onclick="localStorage.setItem('sg_demo_intent','1')">Try the Demo</a>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+    <div class="section-inner">
+        <div class="section-label">Features</div>
+        <div class="section-title">Everything your society needs</div>
+        <div class="section-desc">From floating event ideas to publishing results. The full captain loop, handled.</div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📣</div>
+                <h3>Interest Sounder</h3>
+                <p>Float 2-4 course options before you book. Members tap "I'd play" and you promote the winner to a real event. No more chasing replies in WhatsApp.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Event Management</h3>
+                <p>Create events with course, format, cost, and tee times. Signup cutoffs auto-fill. Members sign up and pay in one tap. Capacity enforced.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏌️</div>
+                <h3>9 Competition Formats</h3>
+                <p>Stableford, Medal, Texas Scramble, Better Ball, Matchplay, Greensomes, Foursomes, Reverse Waltz — plus custom formats for your society.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3>Team Generator</h3>
+                <p>Snake-draft by handicap produces balanced teams in seconds. Nudge players between teams manually. Save as draft, publish when ready.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏆</div>
+                <h3>Results &amp; Leaderboard</h3>
+                <p>Enter scores per player or per team depending on the format. Publish results and members are notified instantly with the winner announcement.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💶</div>
+                <h3>Course Rate Cards</h3>
+                <p>Store your negotiated green-fee rates by season and player count. Auto-fill event cost when you pick a course and date. No more digging through emails.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤝</div>
+                <h3>Sponsors</h3>
+                <p>Add sponsors with logos, links, and active date ranges. Link them to events as primary sponsor, supporting, or prize donor. Members see them front and centre.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔐</div>
+                <h3>Roles &amp; Permissions</h3>
+                <p>Six roles: Member, Vice-Captain, Captain, Treasurer, Admin, Sponsor. Captains run events. Treasurers handle payments. Admins manage members. No overlap.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3>Works on Any Device</h3>
+                <p>Responsive web app — no app store download needed. Works on phones, tablets, and desktops. Members log in with a magic link, no passwords.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="background: var(--surface);">
+    <div class="section-inner">
+        <div class="section-label">How It Works</div>
+        <div class="section-title">Up and running in minutes</div>
+        <div class="section-desc">No installation, no training manual. Register your society and invite your members.</div>
+
+        <div class="steps">
+            <div class="step">
+                <h3>Register your society</h3>
+                <p>Pick a name, choose a plan, and you're the admin. 30-day free trial, no card upfront.</p>
+            </div>
+            <div class="step">
+                <h3>Invite your members</h3>
+                <p>Share your society join code via WhatsApp or email. Members sign up with their email — magic link login, no passwords.</p>
+            </div>
+            <div class="step">
+                <h3>Create your first event</h3>
+                <p>Pick a course, set the format, and open signups. The Interest Sounder lets you gauge demand before you commit to a booking.</p>
+            </div>
+            <div class="step">
+                <h3>Draw teams &amp; publish results</h3>
+                <p>Generate balanced teams, assign tee times, and publish to members. After the round, enter scores and the leaderboard goes live.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FORMATS -->
+<section>
+    <div class="section-inner" style="text-align:center;">
+        <div class="section-label">Competition Formats</div>
+        <div class="section-title" style="margin-left:auto;margin-right:auto;">Every format your society plays</div>
+        <div class="section-desc" style="margin-left:auto;margin-right:auto;">Built-in library of 9 global formats. Add your own custom formats per society.</div>
+        <div class="format-tags" style="justify-content:center;">
+            <span class="format-tag">Individual Stableford</span>
+            <span class="format-tag">Medal (Stroke Play)</span>
+            <span class="format-tag">Individual Matchplay</span>
+            <span class="format-tag">Pairs Matchplay</span>
+            <span class="format-tag">Better Ball (4BBB)</span>
+            <span class="format-tag">Greensomes</span>
+            <span class="format-tag">Foursomes</span>
+            <span class="format-tag">Texas Scramble</span>
+            <span class="format-tag">Reverse Waltz</span>
+            <span class="format-tag" style="border-color:var(--green); color:var(--green);">+ Your Custom Formats</span>
+        </div>
+    </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section style="background: var(--surface);">
+    <div class="section-inner">
+        <div class="section-label">What Members Say</div>
+        <div class="section-title">Built by golfers, for golfers</div>
+        <div class="section-desc">Real feedback from society members.</div>
+
+        <div class="testimonials">
+            <div class="testimonial">
+                <div class="stars">★★★★★</div>
+                <p>"I joined not knowing many people and within weeks I had a group of friends I will have for life. The golf is great but the friendships are even better."</p>
+            </div>
+            <div class="testimonial">
+                <div class="stars">★★★★★</div>
+                <p>"Everything a golf society should be — competitive enough to keep you sharp, friendly enough to keep you coming back."</p>
+            </div>
+            <div class="testimonial">
+                <div class="stars">★★★★★</div>
+                <p>"What I really like is the variety — Texas Scramble, Better Ball, Reverse Waltz, Stableford. The organisers really mix things up."</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+    <div class="section-inner">
+        <div class="section-label">Pricing</div>
+        <div class="section-title">Simple, flat-rate pricing</div>
+        <div class="section-desc">Per society, not per member. 30-day free trial on every plan.</div>
+
+        <div class="pricing-grid">
+            <div class="price-card">
+                <h3>Starter</h3>
+                <p style="color:var(--text-secondary); font-size:14px;">Up to 50 members</p>
+                <div class="price">&euro;5 <span>/month</span></div>
+                <div class="price-desc">or &euro;55/year (save 1 month)</div>
+                <ul>
+                    <li>All features included</li>
+                    <li>Events, teams, results</li>
+                    <li>Interest Sounder</li>
+                    <li>Course rate cards</li>
+                    <li>Sponsor management</li>
+                </ul>
+                <a href="https://app.societeegolf.app" class="btn btn-outline" style="width:100%; text-align:center;">Start Free Trial</a>
+            </div>
+            <div class="price-card featured">
+                <h3>Growth</h3>
+                <p style="color:var(--text-secondary); font-size:14px;">Up to 100 members</p>
+                <div class="price">&euro;10 <span>/month</span></div>
+                <div class="price-desc">or &euro;110/year (save 1 month)</div>
+                <ul>
+                    <li>Everything in Starter</li>
+                    <li>100 member capacity</li>
+                    <li>Priority support</li>
+                </ul>
+                <a href="https://app.societeegolf.app" class="btn btn-primary" style="width:100%; text-align:center;">Start Free Trial</a>
+            </div>
+            <div class="price-card">
+                <h3>Society+</h3>
+                <p style="color:var(--text-secondary); font-size:14px;">Up to 200 members</p>
+                <div class="price">&euro;20 <span>/month</span></div>
+                <div class="price-desc">or &euro;220/year (save 1 month)</div>
+                <ul>
+                    <li>Everything in Growth</li>
+                    <li>200 member capacity</li>
+                    <li>Dedicated support</li>
+                </ul>
+                <a href="https://app.societeegolf.app" class="btn btn-outline" style="width:100%; text-align:center;">Start Free Trial</a>
+            </div>
+        </div>
+
+        <p style="text-align:center; color:var(--text-secondary); font-size:14px; margin-top:20px;">Need more than 200 members? <a href="mailto:info@societeegolf.app" style="color:var(--green);">Contact us</a></p>
+    </div>
+</section>
+
+<!-- FINAL CTA -->
+<div class="cta-section">
+    <h2>Ready to ditch the spreadsheets?</h2>
+    <p>Start your 30-day free trial. No card required.</p>
+    <div class="cta-buttons">
+        <a href="https://app.societeegolf.app" class="btn btn-primary btn-lg">Get Started Free</a>
+        <a href="https://app.societeegolf.app" class="btn btn-outline btn-lg" onclick="localStorage.setItem('sg_demo_intent','1')">Try the Demo First</a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <p style="margin-bottom:8px;">
+        <a href="https://app.societeegolf.app">App</a> &nbsp;&middot;&nbsp;
+        <a href="mailto:info@societeegolf.app">Contact</a> &nbsp;&middot;&nbsp;
+        <a href="/platform/">Platform Admin</a>
+    </p>
+    <p>&copy; 2026 SocieteeGolf &nbsp;|&nbsp; Part of the Serviflow &amp; Sustentus Family</p>
+</footer>
+
 </body>
 </html>

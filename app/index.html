@@ -1772,6 +1772,14 @@
     }
 
     updateMessagesBadge();
+
+    // Deep-link: if we stored an event ID from the URL, open it now
+    if (window._deepLinkEvent && SOCIETY_CONFIG._societySubdomain === window._deepLinkEvent.society) {
+      const eid = window._deepLinkEvent.eventId;
+      delete window._deepLinkEvent;
+      switchTab('events');
+      setTimeout(() => openEventDetail(eid), 300);
+    }
   }
 
   function showSocietyPicker(memberships) {
@@ -3613,11 +3621,13 @@
     const date = formatDate(evt.date);
     const cost = evt.cost ? '€' + evt.cost : 'TBC';
     const origin = window.location.origin || 'https://app.societeegolf.app';
+    const slug = SOCIETY_CONFIG._societySubdomain || '';
+    const link = `${origin}/?society=${encodeURIComponent(slug)}&event=${evt.id}`;
     return `${evt.title}\n\n` +
       `${evt.course} · ${date}\n` +
       `Format: ${evt.format || 'TBC'} · Cost: ${cost}\n` +
       (evt.notes ? `\n${evt.notes}\n` : '') +
-      `\nSign up on SocieteeGolf: ${origin}`;
+      `\nSign up: ${link}`;
   }
 
   async function shareEvent(eventId) {
@@ -6665,10 +6675,142 @@
       }
     } catch (e) {}
 
+    // Deep-link event preview: ?society=xxx&event=123
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const dlSociety = params.get('society');
+      const dlEvent = params.get('event');
+      if (dlSociety && dlEvent) {
+        // Store for post-login redirect
+        window._deepLinkEvent = { society: dlSociety, eventId: parseInt(dlEvent) };
+        // Clean URL
+        params.delete('society');
+        params.delete('event');
+        const cleaned = params.toString() ? ('?' + params.toString()) : '';
+        window.history.replaceState({}, '', window.location.pathname + cleaned);
+        // If already authenticated and in the right society, open the event
+        if (isAuthenticated && SOCIETY_CONFIG._societySubdomain === dlSociety) {
+          switchTab('events');
+          setTimeout(() => openEventDetail(parseInt(dlEvent)), 300);
+        } else if (!isAuthenticated) {
+          // Show public event preview
+          showPublicEventPreview(dlSociety, parseInt(dlEvent));
+        }
+      }
+    } catch (e) { console.warn('[deep-link]', e); }
+
     // Browser back button support
     window.addEventListener('popstate', () => {
       goBack();
     });
+  }
+
+  // ===== PUBLIC EVENT PREVIEW (deep link) =====
+  async function showPublicEventPreview(societySlug, eventId) {
+    if (!supabase) return;
+    const container = document.getElementById('visitorView');
+
+    container.innerHTML = `
+      <div class="content-inner">
+        <div style="text-align:center; padding:24px;">
+          <p class="text-sm text-secondary">Loading event...</p>
+        </div>
+      </div>
+    `;
+
+    try {
+      // Fetch society info + events via anon-callable RPCs
+      const [societyRes, eventsRes] = await Promise.all([
+        supabase.rpc('society_for_slug', { slug: societySlug }),
+        supabase.rpc('events_for_society_slug', { slug: societySlug }),
+      ]);
+
+      const society = Array.isArray(societyRes.data) ? societyRes.data[0] : societyRes.data;
+      const events = eventsRes.data || [];
+      const evt = events.find(e => e.id === eventId);
+
+      if (!society || !evt) {
+        container.innerHTML = `
+          <div class="content-inner">
+            <div class="card" style="text-align:center;">
+              <h3>Event not found</h3>
+              <p class="text-sm text-secondary mt-8">This event may have been removed or the link is incorrect.</p>
+              <button class="btn btn-primary mt-16" onclick="renderVisitorView()">Back to home</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Count signups via the events list (signup_count may be included by RPC,
+      // otherwise we can't get it without auth — show "–")
+      const signupCount = evt.signup_count ?? '–';
+      const date = formatDate(evt.date);
+      const cost = evt.cost ? '€' + evt.cost : 'TBC';
+      const today = new Date().toISOString().split('T')[0];
+      const isPast = evt.date < today;
+
+      container.innerHTML = `
+        <div class="content-inner">
+          <button class="btn-ghost" onclick="renderVisitorView()" style="margin-bottom:12px;">← Back</button>
+
+          <div class="card" style="border:1px solid var(--gold);">
+            <p class="text-sm" style="color:var(--gold); margin-bottom:8px; font-weight:600;">${society.name}</p>
+            <h2 style="font-size:20px; margin-bottom:16px;">${evt.title}</h2>
+
+            <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${date}</span></div>
+            <div class="detail-row"><span class="detail-label">Course</span><span class="detail-value">${evt.course}</span></div>
+            ${evt.location ? `<div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${evt.location}</span></div>` : ''}
+            ${evt.format ? `<div class="detail-row"><span class="detail-label">Format</span><span class="detail-value">${evt.format}</span></div>` : ''}
+            <div class="detail-row"><span class="detail-label">Cost</span><span class="detail-value">${cost}</span></div>
+            ${evt.tee_time_start ? `<div class="detail-row"><span class="detail-label">Tee Off</span><span class="detail-value">${evt.tee_time_start}</span></div>` : ''}
+            <div class="detail-row"><span class="detail-label">Places</span><span class="detail-value">${signupCount} / ${evt.signup_limit || '∞'}</span></div>
+
+            ${evt.notes ? `<div class="card mt-16" style="background:var(--gold-light); border:none;">
+              <p class="text-sm"><strong>Notes:</strong> ${evt.notes}</p>
+            </div>` : ''}
+          </div>
+
+          ${!isPast ? `
+          <div class="card" style="text-align:center; margin-top:16px;">
+            <h3 style="font-size:16px; margin-bottom:8px;">Want to play?</h3>
+            <p class="text-sm text-secondary" style="margin-bottom:16px;">Join <strong>${society.name}</strong> to sign up for this event and see who else is playing.</p>
+            <button class="btn btn-primary btn-full" onclick="deepLinkJoinSociety('${societySlug}')">Join ${society.name}</button>
+            <p class="text-sm text-secondary" style="margin-top:12px;">Already a member? <a href="#" onclick="setMode('member'); return false;" style="color:var(--gold);">Log in</a></p>
+          </div>
+          ` : `
+          <div class="card" style="text-align:center; margin-top:16px;">
+            <p class="text-sm text-secondary">This event has already taken place.</p>
+            <button class="btn btn-outline mt-8" onclick="renderVisitorView()">Back to home</button>
+          </div>
+          `}
+        </div>
+      `;
+    } catch (e) {
+      console.warn('[event-preview]', e);
+      container.innerHTML = `
+        <div class="content-inner">
+          <div class="card" style="text-align:center;">
+            <h3>Couldn't load event</h3>
+            <p class="text-sm text-secondary mt-8">Please try again or go back.</p>
+            <button class="btn btn-primary mt-16" onclick="renderVisitorView()">Back to home</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function deepLinkJoinSociety(slug) {
+    // Pre-fill the join flow with this society
+    showJoinSocietyView();
+    // After the directory loads, auto-search for this society
+    setTimeout(() => {
+      const searchInput = document.getElementById('societySearch');
+      if (searchInput) {
+        searchInput.value = slug;
+        filterSocietyDirectory(slug);
+      }
+    }, 500);
   }
 
   init();

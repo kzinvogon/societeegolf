@@ -4472,7 +4472,7 @@
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
           <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Format</label>
-          <select class="input" name="format_id" id="appFormatSelect" required onchange="handleFormatChange(this)">
+          <select class="input" name="format_id" id="appFormatSelect" onchange="handleFormatChange(this)">
             <option value="">Select format...</option>
             ${formatOpts}
             <option value="__custom__">+ Custom format...</option>
@@ -4526,6 +4526,7 @@
           </select>
           ` : ''}
           <textarea class="input" name="notes" placeholder="Notes (optional)" style="min-height:60px;"></textarea>
+          <p id="createEventError" style="color:#dc2626;display:none;margin-bottom:8px;"></p>
           <button class="btn btn-primary btn-full" type="submit">Create Event</button>
         </form>
       </div>
@@ -4533,6 +4534,15 @@
     document.getElementById('appAdminEventForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const f = this;
+      const errEl = document.getElementById('createEventError');
+      errEl.style.display = 'none';
+
+      // Validate required fields
+      if (!f.title.value.trim()) { errEl.textContent = 'Please enter an event title.'; errEl.style.display = 'block'; return; }
+      if (!f.date.value) { errEl.textContent = 'Please select a date.'; errEl.style.display = 'block'; return; }
+      if (!f.course.value) { errEl.textContent = 'Please select a course.'; errEl.style.display = 'block'; return; }
+      if (!f.location.value.trim()) { errEl.textContent = 'Please enter a location.'; errEl.style.display = 'block'; return; }
+
       let courseName = f.course.value;
       if (courseName === '__new__') {
         courseName = f.newCourseName.value;

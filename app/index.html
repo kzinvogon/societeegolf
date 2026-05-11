@@ -2061,6 +2061,11 @@
         tabBar.classList.remove('visible');
         avatar.classList.add('hidden');
         updateBackButton();
+        // Always start the auth flow at the email-entry view. Without
+        // this, a prior session's "Check your inbox" view (with its
+        // stale 6-digit code prefilled) stays visible after logout →
+        // Member tab — the code is dead and verifying it fails silently.
+        if (typeof resetAuthForm === 'function') resetAuthForm();
         setTimeout(() => document.getElementById('authEmail')?.focus(), 200);
       }
     }

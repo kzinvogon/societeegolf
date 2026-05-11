@@ -3635,22 +3635,33 @@
     const evt = events.find(e => e.id === eventId);
     if (!evt) return;
     const text = _eventShareText(evt);
+    const slug = SOCIETY_CONFIG._societySubdomain || '';
+    const shareLink = `${window.location.origin || 'https://app.societeegolf.app'}/?society=${encodeURIComponent(slug)}&event=${evt.id}`;
+    const titleEsc = (evt.title || '').replace(/'/g, "\\'");
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: evt.title, text });
-        return;
-      } catch (e) {
-        if (e?.name === 'AbortError') return;
-      }
-    }
-    // Fallback: copy to clipboard
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast('Event details copied — paste into WhatsApp or email');
-    } catch (e) {
-      window.prompt('Copy this event info:', text);
-    }
+    document.getElementById('modalBody').innerHTML = `
+      <button class="btn-ghost" onclick="openEventDetail(${eventId})" style="margin-bottom:12px;">← Back to event</button>
+      <h3 style="margin-bottom:12px;">Share: ${evt.title}</h3>
+      <p class="text-sm text-secondary" style="margin-bottom:12px;">Copy the message below and paste it into your WhatsApp group, or use the share button.</p>
+      <textarea id="shareEventText" readonly style="width:100%;min-height:130px;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.5;background:var(--gold-light);resize:none;">${text}</textarea>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="
+          navigator.clipboard.writeText(document.getElementById('shareEventText').value)
+            .then(function(){ showToast('Copied — paste into WhatsApp'); })
+            .catch(function(){ window.prompt('Copy this:', document.getElementById('shareEventText').value); });
+        ">Copy to clipboard</button>
+        <button class="btn btn-outline" style="flex:1;" onclick="
+          window.open('https://wa.me/?text='+encodeURIComponent(document.getElementById('shareEventText').value),'_blank');
+        ">Open WhatsApp</button>
+      </div>
+      <div style="margin-top:16px;">
+        <h4 style="margin-bottom:8px; font-size:14px;">Event link</h4>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input class="input" readonly value="${shareLink}" style="margin:0; flex:1; font-size:12px;">
+          <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText('${shareLink}').then(function(){showToast('Link copied')})">Copy</button>
+        </div>
+      </div>
+    `;
   }
 
   function closeModal(e) {

@@ -4458,22 +4458,28 @@
             ${formatOpts}
             <option value="__custom__">+ Custom format...</option>
           </select>
-          <div id="appFormatCustom" style="display:none;margin-top:-4px;margin-bottom:12px;">
-            <input class="input" type="text" name="custom_format" placeholder="Custom format name" style="margin-bottom:6px;">
-            <select class="input" name="custom_team_size" style="margin-bottom:6px;">
-              <option value="1">Individual play</option>
-              <option value="2">Teams of 2 (pairs)</option>
+          <div id="appFormatCustom" style="display:none;margin-top:-4px;margin-bottom:12px;background:var(--surface-alt,#F9FAFB);padding:12px;border-radius:8px;">
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Format name</label>
+            <input class="input" type="text" name="custom_format" placeholder="e.g. Reverse Waltz Better Ball 3 from 4" style="margin-bottom:8px;">
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Team size</label>
+            <select class="input" name="custom_team_size" style="margin-bottom:8px;">
+              <option value="1">Individual (1 player)</option>
+              <option value="2">Pairs (2 players)</option>
               <option value="3">Teams of 3</option>
-              <option value="4">Teams of 4</option>
+              <option value="4" selected>Teams of 4</option>
             </select>
-            <select class="input" name="custom_scoring">
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Scoring method</label>
+            <select class="input" name="custom_scoring" style="margin-bottom:8px;">
               <option value="stableford">Stableford (points)</option>
               <option value="medal">Medal (strokes)</option>
-              <option value="scramble">Scramble (team gross)</option>
-              <option value="better_ball">Better Ball</option>
+              <option value="better_ball">Better Ball (best score from team)</option>
+              <option value="scramble">Scramble (team plays one ball)</option>
               <option value="matchplay">Matchplay</option>
               <option value="custom">Custom / free-form</option>
             </select>
+            <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Description <span style="font-weight:normal;color:var(--text-secondary);">(optional)</span></label>
+            <input class="input" type="text" name="custom_description" placeholder="e.g. Best 3 scores from 4 count on each hole">
+            <p class="text-sm text-secondary" style="margin-top:4px;">This format will be saved to your society library for future events.</p>
           </div>
           <p class="text-sm" id="appFormatHint" style="margin:-8px 0 12px 0;color:var(--text-secondary);min-height:18px;"></p>
           <input class="input" type="number" name="cost" id="appCostInput" placeholder="Cost (€)" required>
@@ -4543,6 +4549,7 @@
         if (!customName) { alert('Please enter a custom format name.'); return; }
         const teamSize = parseInt(f.custom_team_size.value, 10) || 1;
         const scoring = f.custom_scoring.value || 'custom';
+        const customDesc = (f.custom_description?.value || '').trim() || null;
         const codeFromName = customName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || ('custom_' + Date.now());
         const { data: newFmt, error: fmtErr } = await supabase
           .from('event_formats')
@@ -4550,6 +4557,7 @@
             society_id: currentUser.society_id,
             code: codeFromName,
             name: customName,
+            description: customDesc,
             team_size_min: teamSize,
             team_size_max: teamSize,
             scoring_method: scoring,

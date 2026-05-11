@@ -1513,6 +1513,7 @@
                 <a href="#">Privacy Policy</a>
                 <a href="#">Terms of Service</a>
                 <a href="#" class="admin-link" id="adminLink">Admin</a>
+                <a href="#" class="admin-link" id="platformLink" style="font-size:0.75rem;opacity:0.5;">Platform</a>
             </div>
         </div>
         <div class="footer-bottom">
@@ -1626,6 +1627,24 @@
                 <button class="close-btn" onclick="closeModal('helpModal')">&times;</button>
             </div>
             <div class="modal-body" id="siteHelpBody" style="font-size:0.9rem;line-height:1.7;"></div>
+        </div>
+    </div>
+
+    <!-- Platform Admin Modal -->
+    <div class="modal" id="platformModal">
+        <div class="modal-content" style="max-width: 960px;">
+            <div class="modal-header">
+                <h2>Platform Admin</h2>
+                <button class="close-btn" onclick="closeModal('platformModal')" style="background:var(--danger);color:white;border:none;padding:0.4rem 0.8rem;border-radius:4px;cursor:pointer;font-size:0.85rem;">Exit</button>
+            </div>
+            <div class="modal-body" id="platformContent">
+                <div id="platformAuth">
+                    <p style="margin-bottom:1rem;">Enter your platform admin email to receive a login link:</p>
+                    <input type="email" id="platformEmail" placeholder="admin@societeegolf.app" style="width:100%;padding:0.8rem;margin-bottom:0.5rem;border:1px solid var(--border);border-radius:4px;">
+                    <p id="platformAuthMsg" style="display:none;margin-bottom:0.5rem;"></p>
+                    <button class="btn btn-primary" onclick="platformSendLink()" style="width:100%;">Send Login Link</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3527,6 +3546,237 @@
                 await sb.from('courses').delete().eq('id', courseId);
                 showAdminTab('courses');
             }
+        }
+
+        // ===== PLATFORM ADMIN =====
+        const PLATFORM_ADMINS = ['david@davidh.com', 'jamesconaghan@hotmail.co.uk'];
+        let _platformSession = null;
+
+        document.getElementById('platformLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            openModal('platformModal');
+            // Check if already authenticated
+            sb.auth.getSession().then(({ data: { session } }) => {
+                if (session && PLATFORM_ADMINS.includes(session.user.email)) {
+                    _platformSession = session;
+                    showPlatformDashboard();
+                }
+            });
+        });
+
+        async function platformSendLink() {
+            const email = document.getElementById('platformEmail').value.trim();
+            const msg = document.getElementById('platformAuthMsg');
+            if (!email) return;
+            if (!PLATFORM_ADMINS.includes(email)) {
+                msg.style.display = 'block';
+                msg.style.color = '#dc2626';
+                msg.textContent = 'Not a platform admin email.';
+                return;
+            }
+            const { error } = await sb.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: window.location.origin + '?platform=1' }
+            });
+            if (error) {
+                msg.style.display = 'block';
+                msg.style.color = '#dc2626';
+                msg.textContent = 'Error: ' + error.message;
+            } else {
+                msg.style.display = 'block';
+                msg.style.color = 'var(--green)';
+                msg.textContent = 'Check your inbox for the login link.';
+            }
+        }
+
+        // Auto-open platform panel on redirect
+        if (new URLSearchParams(window.location.search).get('platform') === '1') {
+            sb.auth.getSession().then(({ data: { session } }) => {
+                if (session && PLATFORM_ADMINS.includes(session.user.email)) {
+                    _platformSession = session;
+                    openModal('platformModal');
+                    showPlatformDashboard();
+                    history.replaceState(null, '', window.location.pathname);
+                }
+            });
+        }
+
+        async function showPlatformDashboard() {
+            const content = document.getElementById('platformContent');
+            content.innerHTML = '<p>Loading societies...</p>';
+
+            const { data: societies, error } = await sb.from('societies').select('*').order('created_at', { ascending: false });
+            if (error) {
+                content.innerHTML = '<p style="color:#dc2626;">Error loading societies: ' + error.message + '</p>';
+                return;
+            }
+
+            // Get member counts per society
+            const { data: memberCounts } = await sb.from('members').select('society_id');
+            const countMap = {};
+            (memberCounts || []).forEach(m => {
+                countMap[m.society_id] = (countMap[m.society_id] || 0) + 1;
+            });
+
+            const rows = (societies || []).map(s => {
+                const count = countMap[s.id] || 0;
+                const status = s.subscription_status || 'none';
+                const statusColor = { active: 'green', trialing: 'blue', trial: 'blue', past_due: 'orange', suspended: 'red', cancelled: 'red' }[status] || 'gray';
+                const created = new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                const isDemo = s.is_demo ? ' <span style="background:#E5E7EB;padding:1px 6px;border-radius:3px;font-size:11px;">DEMO</span>' : '';
+                return `
+                    <tr>
+                        <td><strong>${s.name}</strong>${isDemo}</td>
+                        <td><code style="font-size:12px;">${s.subdomain || '-'}</code></td>
+                        <td>${count}</td>
+                        <td><span style="color:${statusColor};font-weight:600;">${status}</span></td>
+                        <td>${s.plan_id ? '✓' : '-'}</td>
+                        <td>${created}</td>
+                        <td>
+                            <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;" onclick="platformViewSociety('${s.id}')">View</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            content.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <strong>${societies.length}</strong> societies · <strong>${memberCounts?.length || 0}</strong> total members
+                    </div>
+                    <button class="btn btn-sm" onclick="showPlatformDashboard()">Refresh</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                        <thead>
+                            <tr style="border-bottom:2px solid var(--border);text-align:left;">
+                                <th style="padding:8px;">Society</th>
+                                <th style="padding:8px;">Code</th>
+                                <th style="padding:8px;">Members</th>
+                                <th style="padding:8px;">Status</th>
+                                <th style="padding:8px;">Plan</th>
+                                <th style="padding:8px;">Created</th>
+                                <th style="padding:8px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function platformViewSociety(societyId) {
+            const content = document.getElementById('platformContent');
+            content.innerHTML = '<p>Loading...</p>';
+
+            const [societyRes, membersRes, eventsRes, sponsorsRes] = await Promise.all([
+                sb.from('societies').select('*').eq('id', societyId).single(),
+                sb.from('members').select('id, name, email, role, status, created_at').eq('society_id', societyId).order('name'),
+                sb.from('events').select('id, title, date, course').eq('society_id', societyId).order('date', { ascending: false }).limit(10),
+                sb.from('society_sponsors').select('id, name, is_active').eq('society_id', societyId),
+            ]);
+
+            const s = societyRes.data;
+            const members = membersRes.data || [];
+            const events = eventsRes.data || [];
+            const sponsors = sponsorsRes.data || [];
+
+            if (!s) {
+                content.innerHTML = '<p style="color:#dc2626;">Society not found.</p>';
+                return;
+            }
+
+            const admins = members.filter(m => m.role === 'admin');
+            const statusOpts = ['active', 'trialing', 'trial', 'past_due', 'suspended', 'cancelled'].map(st =>
+                `<option value="${st}" ${s.subscription_status === st ? 'selected' : ''}>${st}</option>`
+            ).join('');
+
+            content.innerHTML = `
+                <button class="btn btn-sm" onclick="showPlatformDashboard()" style="margin-bottom:12px;">← All societies</button>
+                <h3 style="margin:0 0 4px 0;">${s.name} ${s.is_demo ? '<span style="background:#E5E7EB;padding:1px 6px;border-radius:3px;font-size:11px;">DEMO</span>' : ''}</h3>
+                <p style="color:var(--medium-gray);margin:0 0 16px 0;">ID: <code style="font-size:11px;">${s.id}</code> · Code: <code>${s.subdomain || '-'}</code></p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                    <div style="background:var(--light-gray);padding:12px;border-radius:8px;">
+                        <div style="font-size:24px;font-weight:700;">${members.length}</div>
+                        <div style="font-size:13px;color:var(--medium-gray);">Members</div>
+                    </div>
+                    <div style="background:var(--light-gray);padding:12px;border-radius:8px;">
+                        <div style="font-size:24px;font-weight:700;">${events.length}</div>
+                        <div style="font-size:13px;color:var(--medium-gray);">Events (recent)</div>
+                    </div>
+                </div>
+
+                <h4 style="margin:0 0 8px 0;">Subscription</h4>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+                    <select id="platformStatusSelect" style="padding:6px;border:1px solid var(--border);border-radius:4px;">
+                        ${statusOpts}
+                    </select>
+                    <button class="btn btn-sm btn-primary" onclick="platformUpdateStatus('${s.id}')">Update</button>
+                </div>
+
+                <h4 style="margin:0 0 8px 0;">Admins</h4>
+                ${admins.length > 0 ? `<ul style="margin:0 0 16px 0;padding-left:20px;">${admins.map(a => `<li>${a.name} — ${a.email}</li>`).join('')}</ul>` : '<p style="color:var(--medium-gray);">No admins.</p>'}
+
+                <h4 style="margin:0 0 8px 0;">Members (${members.length})</h4>
+                <div style="overflow-x:auto;margin-bottom:16px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr style="border-bottom:1px solid var(--border);text-align:left;">
+                            <th style="padding:6px;">Name</th><th style="padding:6px;">Email</th><th style="padding:6px;">Role</th><th style="padding:6px;">Status</th>
+                        </tr></thead>
+                        <tbody>${members.map(m => `
+                            <tr style="border-bottom:1px solid #f0f0f0;">
+                                <td style="padding:6px;">${m.name}</td>
+                                <td style="padding:6px;font-size:12px;">${m.email || '-'}</td>
+                                <td style="padding:6px;">${m.role}</td>
+                                <td style="padding:6px;">${m.status}</td>
+                            </tr>
+                        `).join('')}</tbody>
+                    </table>
+                </div>
+
+                <h4 style="margin:0 0 8px 0;">Recent Events</h4>
+                ${events.length > 0 ? `<ul style="margin:0 0 16px 0;padding-left:20px;">${events.map(e => `<li>${e.title} — ${e.course} (${e.date})</li>`).join('')}</ul>` : '<p style="color:var(--medium-gray);">No events.</p>'}
+
+                ${sponsors.length > 0 ? `
+                <h4 style="margin:0 0 8px 0;">Sponsors (${sponsors.length})</h4>
+                <ul style="margin:0 0 16px 0;padding-left:20px;">${sponsors.map(sp => `<li>${sp.name} ${sp.is_active ? '✓' : '(inactive)'}</li>`).join('')}</ul>
+                ` : ''}
+
+                <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+                    <button class="btn btn-sm" style="background:#dc2626;color:white;" onclick="platformDeleteSociety('${s.id}', '${s.name.replace(/'/g, "\\'")}')">Delete Society</button>
+                </div>
+            `;
+        }
+
+        async function platformUpdateStatus(societyId) {
+            const status = document.getElementById('platformStatusSelect').value;
+            const { error } = await sb.from('societies').update({ subscription_status: status }).eq('id', societyId);
+            if (error) { alert('Error: ' + error.message); return; }
+            alert('Status updated to: ' + status);
+            platformViewSociety(societyId);
+        }
+
+        async function platformDeleteSociety(societyId, name) {
+            if (!confirm('DELETE society "' + name + '"?\n\nThis will delete all members, events, signups, results, messages, and sponsors for this society.\n\nThis cannot be undone.')) return;
+            if (!confirm('Are you absolutely sure? Type the society name to confirm.')) return;
+            const typed = prompt('Type the society name to confirm deletion:');
+            if (typed !== name) { alert('Name does not match. Deletion cancelled.'); return; }
+
+            // Delete in order: results, signups, event_teams, event_sponsors, events, messages, sponsors, members, join_requests, society
+            await sb.from('results').delete().in('event_id', (await sb.from('events').select('id').eq('society_id', societyId)).data?.map(e => e.id) || []);
+            await sb.from('signups').delete().in('event_id', (await sb.from('events').select('id').eq('society_id', societyId)).data?.map(e => e.id) || []);
+            await sb.from('event_teams').delete().in('event_id', (await sb.from('events').select('id').eq('society_id', societyId)).data?.map(e => e.id) || []);
+            await sb.from('event_sponsors').delete().in('event_id', (await sb.from('events').select('id').eq('society_id', societyId)).data?.map(e => e.id) || []);
+            await sb.from('events').delete().eq('society_id', societyId);
+            await sb.from('messages').delete().eq('society_id', societyId);
+            await sb.from('society_sponsors').delete().eq('society_id', societyId);
+            await sb.from('members').delete().eq('society_id', societyId);
+            await sb.from('join_requests').delete().eq('society_id', societyId);
+            const { error } = await sb.from('societies').delete().eq('id', societyId);
+            if (error) { alert('Error deleting society: ' + error.message); return; }
+            alert('Society "' + name + '" deleted.');
+            showPlatformDashboard();
         }
     </script>
 </body>

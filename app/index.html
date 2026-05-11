@@ -2655,12 +2655,12 @@
         <button class="btn-ghost" onclick="showJoinSocietyView()" style="margin-bottom:12px;">← Back</button>
         <h2 class="section-title" style="margin-top:0;">Join ${name}</h2>
         <div class="card">
-          <p class="card-body mb-16">Tell us a little about yourself and the captain will be in touch.</p>
+          <p class="card-body mb-16">${window._deepLinkEvent ? 'Enter your details to join and sign up for the event.' : 'Tell us a little about yourself and the captain will be in touch.'}</p>
           <form id="joinSocietyForm" onsubmit="submitJoinSocietyForm(event, '${slug.replace(/'/g,"\\'")}')" novalidate>
             <input type="text" class="input" id="jsName" placeholder="Your full name" required>
             <input type="email" class="input" id="jsEmail" placeholder="Email address" required>
-            <input type="tel" class="input" id="jsPhone" placeholder="Phone (optional)">
-            <button type="submit" class="btn btn-primary btn-full" id="jsSubmitBtn">Request to join</button>
+            <input type="tel" class="input" id="jsPhone" placeholder="Phone / WhatsApp (optional)">
+            <button type="submit" class="btn btn-primary btn-full" id="jsSubmitBtn">${window._deepLinkEvent ? 'Join & sign up' : 'Request to join'}</button>
           </form>
           <div id="jsSuccess" class="hidden auth-message" style="margin-top:12px; background:#D1FAE5; color:#065F46;">
             Thanks — your request is on its way. You'll get an email once an admin approves you.
@@ -2689,15 +2689,32 @@
       const society = Array.isArray(societyRows) ? societyRows[0] : societyRows;
       if (!society) throw new Error('Society not found');
 
+      // If arriving via a deep-linked event (shared by captain/admin),
+      // auto-approve as probation member and send magic link immediately.
+      const isInvited = !!window._deepLinkEvent;
+
       const { error } = await supabase.from('join_requests').insert({
         name, email, phone: phone || null,
         society_id: society.id,
-        status: 'pending'
+        status: isInvited ? 'approved' : 'pending',
+        initial_member_status: isInvited ? 'probation' : null
       });
       if (error) throw error;
 
+      if (isInvited) {
+        // Send magic link so they can log in immediately
+        await supabase.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: window.location.origin + '/' }
+        });
+      }
+
       document.getElementById('joinSocietyForm').classList.add('hidden');
-      document.getElementById('jsSuccess').classList.remove('hidden');
+      const successEl = document.getElementById('jsSuccess');
+      if (isInvited) {
+        successEl.innerHTML = `Thanks for joining <strong>${society.name}</strong>! From now on you can log in with the email you used to register. Please check your email for your welcome message.`;
+      }
+      successEl.classList.remove('hidden');
     } catch (err) {
       console.warn('[join] submit failed', err);
       errEl.textContent = 'Could not submit your request — please try again.';

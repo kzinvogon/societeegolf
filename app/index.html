@@ -4382,16 +4382,22 @@
     `;
     document.getElementById('appEditMemberForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      const newStatus = this.status.value;
+      const oldStatus = m.status;
       const { error } = await supabase.from('members').update({
         name: this.name.value,
         email: this.email.value || null,
         phone: this.phone.value || null,
         handicap: parseFloat(this.handicap.value) || null,
-        status: this.status.value,
+        status: newStatus,
         role: this.role.value
       }).eq('id', memberId);
       if (error) { alert('Error: ' + error.message); return; }
-      alert('Member updated!');
+      // Send email if status changed
+      if (newStatus !== oldStatus) {
+        await notifyStatusChange(memberId, newStatus);
+      }
+      showToast('Member updated' + (newStatus !== oldStatus ? ' — status email sent' : ''));
       renderAdmin();
     });
   }
@@ -5826,9 +5832,32 @@
     openEventDetail(eventId);
   }
 
+  // Helper: send status change email notification
+  async function notifyStatusChange(memberId, newStatus, message) {
+    try {
+      const { data: member } = await supabase.from('members').select('name, email, society_id').eq('id', memberId).single();
+      if (!member?.email) return;
+      const societyName = SOCIETY_CONFIG.name || 'SocieteeGolf';
+      await fetch('/.netlify/functions/send-status-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: member.name,
+          email: member.email,
+          society_name: societyName,
+          new_status: newStatus,
+          message: message || null
+        })
+      });
+    } catch (e) {
+      console.warn('Status email failed:', e);
+    }
+  }
+
   async function adminApproveMember(memberId) {
     await supabase.from('members').update({ status: 'probation' }).eq('id', memberId);
-    alert('Member approved and set to probation!');
+    await notifyStatusChange(memberId, 'probation');
+    showToast('Member approved — email sent');
     renderAdmin();
   }
 
@@ -6686,6 +6715,8 @@
   async function adminRejectMember(memberId) {
     if (confirm('Reject this application? The member will be suspended.')) {
       await supabase.from('members').update({ status: 'suspended' }).eq('id', memberId);
+      await notifyStatusChange(memberId, 'suspended', 'Your application was not approved at this time. Please contact the society admin for more information.');
+      showToast('Member rejected — email sent');
       renderAdmin();
     }
   }
@@ -6714,7 +6745,8 @@
       recipients: memberId,
       society_id: currentUser.society_id,
     });
-    alert(memberName + ' promoted to Full Member!');
+    await notifyStatusChange(memberId, 'full_member');
+    showToast(memberName + ' promoted to Full Member — email sent');
     renderAdmin();
   }
 

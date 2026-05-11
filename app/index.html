@@ -4453,22 +4453,7 @@
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Location</label>
           <input class="input" type="text" name="location" placeholder="Location" id="appLocInput" required>
           <label class="text-sm" style="font-weight:600;display:block;margin-bottom:4px;">Format</label>
-          <select class="input" name="format_id" id="appFormatSelect" required onchange="
-            var custom = document.getElementById('appFormatCustom');
-            var hint = document.getElementById('appFormatHint');
-            if (this.value === '__custom__') {
-              custom.style.display = 'block';
-              hint.textContent = 'Enter a custom format name. We''ll save it to your society''s library after this event.';
-            } else if (this.value) {
-              custom.style.display = 'none';
-              var o = this.options[this.selectedIndex];
-              hint.textContent = (o.dataset.scoring ? 'Scoring: ' + o.dataset.scoring.replace(/_/g, ' ') : '') +
-                                 (o.dataset.teamMin ? ' · Team size: ' + (o.dataset.teamMin === o.dataset.teamMax ? o.dataset.teamMin : (o.dataset.teamMin + '–' + o.dataset.teamMax)) : '');
-            } else {
-              custom.style.display = 'none';
-              hint.textContent = '';
-            }
-          ">
+          <select class="input" name="format_id" id="appFormatSelect" required onchange="handleFormatChange(this)">
             <option value="">Select format...</option>
             ${formatOpts}
             <option value="__custom__">+ Custom format...</option>
@@ -6070,6 +6055,23 @@
   // ===== EVENT FORM: auto-fill cost from rate card =====
   // Looks up the negotiated rate for the picked course on the event
   // date and pre-fills the per-player cost. Only overwrites the cost
+  function handleFormatChange(sel) {
+    var custom = document.getElementById('appFormatCustom');
+    var hint = document.getElementById('appFormatHint');
+    if (sel.value === '__custom__') {
+      custom.style.display = 'block';
+      hint.textContent = 'Enter a custom format name. It will be saved to your society library.';
+    } else if (sel.value) {
+      custom.style.display = 'none';
+      var o = sel.options[sel.selectedIndex];
+      hint.textContent = (o.dataset.scoring ? 'Scoring: ' + o.dataset.scoring.replace(/_/g, ' ') : '') +
+                         (o.dataset.teamMin ? ' · Team size: ' + (o.dataset.teamMin === o.dataset.teamMax ? o.dataset.teamMin : (o.dataset.teamMin + '–' + o.dataset.teamMax)) : '');
+    } else {
+      custom.style.display = 'none';
+      hint.textContent = '';
+    }
+  }
+
   // field if the admin hasn't already typed a value (tracked via
   // dataset.manual) — so a manual override stays sticky.
   async function applyRateToEventForm() {

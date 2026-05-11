@@ -3963,7 +3963,7 @@
     try {
       const { data } = await supabase
         .from('societies')
-        .select('name, subdomain, plan_id, is_billable, subscription_status, trial_ends_at, billing_currency, billing_interval, stripe_subscription_id, plans(name, member_cap)')
+        .select('name, subdomain, plan_id, is_billable, subscription_status, trial_ends_at, billing_currency, billing_interval, stripe_subscription_id, home_course_external_id, plans(name, member_cap)')
         .eq('id', currentUser.society_id)
         .single();
       societyRow = data || null;
@@ -4038,8 +4038,27 @@
         </div>`;
     }
 
+    // Home course setup prompt
+    let homeCourseCard = '';
+    if (userIsAdmin() && societyRow && !societyRow.home_course_external_id) {
+      const courseCount = await supabase.from('courses').select('id', { count: 'exact', head: true }).eq('society_id', currentUser.society_id);
+      const hasCourses = (courseCount?.count || 0) > 0;
+      homeCourseCard = `
+        <div class="card" style="border:2px solid var(--amber); margin-bottom:12px;">
+          <h3 class="card-title" style="margin-bottom:4px;">Set up your home course</h3>
+          <p class="text-sm text-secondary" style="margin-bottom:12px;">
+            ${hasCourses ? 'You have courses added but no home course set.' : 'Add your home course so it appears first when creating events.'}
+            Search the library below to find and set your home course.
+          </p>
+          <input class="input" type="search" id="homeCourseSearch" placeholder="Search e.g. 'javea' or 'bonalba'..." oninput="searchHomeCourse(this.value)">
+          <div id="homeCourseResults" style="margin-top:8px;"></div>
+        </div>
+      `;
+    }
+
     document.getElementById('adminContent').innerHTML = `
       ${capBanner}
+      ${homeCourseCard}
       ${inviteCard}
       ${subscriptionCard}
       <!-- Quick Stats -->
@@ -5744,6 +5763,59 @@
   // way the rest of the society's events spell it.
 
   let _courseLibSearchTimer = null;
+
+  // ===== HOME COURSE SETUP =====
+  let _homeCourseTimer = null;
+  function searchHomeCourse(query) {
+    clearTimeout(_homeCourseTimer);
+    _homeCourseTimer = setTimeout(async () => {
+      const el = document.getElementById('homeCourseResults');
+      if (!el || !supabase) return;
+      if (!query || query.length < 2) { el.innerHTML = ''; return; }
+      const { data, error } = await supabase.rpc('search_external_courses', {
+        p_query: query.trim(),
+        p_country: null,
+        p_region: null,
+        p_limit: 10,
+      });
+      if (error || !data || !data.length) {
+        el.innerHTML = data ? '<p class="text-sm text-secondary">No matches found.</p>' : '';
+        return;
+      }
+      el.innerHTML = data.map(c => {
+        const nameEsc = (c.name||'').replace(/'/g, "\\'");
+        const cityEsc = (c.city||'').replace(/'/g, "\\'");
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <div>
+              <strong style="font-size:14px;">${c.name}</strong>
+              <br><span class="text-sm text-secondary">${[c.city, c.region].filter(Boolean).join(' · ')}</span>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="setHomeCourse('${c.id}', '${nameEsc}', '${cityEsc}')">Set as home</button>
+          </div>
+        `;
+      }).join('');
+    }, 300);
+  }
+
+  async function setHomeCourse(externalCourseId, name, city) {
+    if (!supabase || !currentUser) return;
+    const sid = currentUser.society_id;
+
+    // 1. Set as home course on the society
+    const { error: socErr } = await supabase.from('societies').update({ home_course_external_id: externalCourseId }).eq('id', sid);
+    if (socErr) { alert('Error setting home course: ' + socErr.message); return; }
+
+    // 2. Add to society's courses list if not already there
+    const { data: existing } = await supabase.from('courses').select('id').eq('name', name).eq('society_id', sid).maybeSingle();
+    if (!existing) {
+      await supabase.from('courses').insert({ name, location: city, society_id: sid });
+    }
+
+    showToast(name + ' set as home course');
+    invalidateCache();
+    renderAdmin();
+  }
 
   function toggleCourseLibrary() {
     const panel = document.getElementById('courseLibraryPanel');
